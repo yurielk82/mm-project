@@ -18,6 +18,7 @@ from datetime import datetime
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.utils import formataddr
 import time
 import io
 from jinja2 import Template
@@ -42,6 +43,8 @@ APP_SUBTITLE = "CSO 정산서 자동 발송 시스템"
 VERSION = "2.3.0"
 
 # SMTP 설정 우선순위: st.secrets > session_state > 수동 입력
+# 발신자 기본 이름
+DEFAULT_SENDER_NAME = "한국유니온제약"
 
 STEPS = ["파일 업로드", "컬럼 설정", "데이터 검토", "템플릿 편집", "발송"]
 
@@ -335,14 +338,22 @@ def create_smtp_connection(config, max_retries=3):
     return None, f"연결 실패: {last_error} - 잠시 후 다시 시도하세요."
 
 
-def send_email(server, sender, recipient, subject, html_content):
+def send_email(server, sender_email, recipient, subject, html_content, sender_name=None):
+    """
+    이메일 발송 함수
+    sender_name: 발신자 표시 이름 (예: '한국유니온제약')
+    """
     try:
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
-        msg['From'] = sender
+        # 발신자 이름 + 이메일 형식: "한국유니온제약 <qwe@ukp.co.kr>"
+        if sender_name:
+            msg['From'] = formataddr((sender_name, sender_email))
+        else:
+            msg['From'] = formataddr((DEFAULT_SENDER_NAME, sender_email))
         msg['To'] = recipient
         msg.attach(MIMEText(html_content, 'html', 'utf-8'))
-        server.sendmail(sender, recipient, msg.as_string())
+        server.sendmail(sender_email, recipient, msg.as_string())
         return True, None
     except Exception as e:
         return False, str(e)
