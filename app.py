@@ -702,8 +702,15 @@ def render_local_guide_dialog():
         
         # Step 2
         st.markdown('<div class="guide-step"><strong>Step 2.</strong> 프로젝트 다운로드</div>', unsafe_allow_html=True)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.link_button("📦 ZIP 다운로드", "https://github.com/yurielk82/mm-project/archive/refs/heads/main.zip", use_container_width=True)
+        with col2:
+            st.link_button("🔗 GitHub 열기", "https://github.com/yurielk82/mm-project", use_container_width=True)
+        
         st.markdown('<div class="guide-code">git clone https://github.com/yurielk82/mm-project.git<br>cd mm-project</div>', unsafe_allow_html=True)
-        st.caption("또는 GitHub에서 ZIP 다운로드 후 압축 해제")
+        st.caption("ZIP 다운로드 후 압축 해제하거나, 위 명령어로 클론")
         
         # Step 3
         st.markdown('<div class="guide-step"><strong>Step 3.</strong> 필수 패키지 설치</div>', unsafe_allow_html=True)
@@ -743,29 +750,31 @@ streamlit run app.py""", language="bash")
 
 
 def render_smtp_sidebar():
-    """사이드바 - 제목 → SMTP상태 → 현재상태 → 처음부터 다시 → SMTP설정 → 가이드 → 저작권"""
+    """사이드바 - SMTP상태(최상단) → 제목 → 현재상태 → SMTP설정 → 가이드 → 저작권"""
     with st.sidebar:
         
         # ============================================================
-        # 0. 앱 제목 + SMTP 상태 (최상단, 가장 중요한 정보)
+        # 0. SMTP 상태 (최상단 - 가장 중요한 정보)
+        # ============================================================
+        if st.session_state.smtp_config:
+            st.success("✅ 발송 준비 완료", icon=None)
+        else:
+            st.info("📧 SMTP 연결이 필요합니다", icon=None)
+        
+        # ============================================================
+        # 1. 앱 제목
         # ============================================================
         st.markdown(f"""
-        <div style="text-align: center; margin-bottom: 0.5rem;">
-            <span style="font-size: 1.5rem; font-weight: 700;">{APP_TITLE}</span>
-            <span style="font-size: 0.65rem; opacity: 0.5;">v{VERSION}</span>
+        <div style="text-align: center; margin: 0.5rem 0;">
+            <span style="font-size: 1.4rem; font-weight: 700;">{APP_TITLE}</span>
+            <span style="font-size: 0.6rem; opacity: 0.4;">v{VERSION}</span>
         </div>
         """, unsafe_allow_html=True)
-        
-        # SMTP 상태를 제목 바로 아래에 눈에 띄게 배치
-        if st.session_state.smtp_config:
-            st.success("✅ SMTP 연결됨", icon=None)
-        else:
-            st.info("📧 SMTP를 연결해 주세요", icon=None)
         
         st.divider()
         
         # ============================================================
-        # 1. 현재 상태 (데이터/발송대상)
+        # 2. 현재 상태 (데이터/발송대상) + 처음부터
         # ============================================================
         col1, col2 = st.columns(2)
         with col1:
@@ -783,9 +792,6 @@ def render_smtp_sidebar():
             else:
                 st.metric("발송", "0")
         
-        # ============================================================
-        # 2. 처음부터 다시
-        # ============================================================
         if st.button("🔄 처음부터", use_container_width=True):
             reset_workflow()
             st.rerun()
