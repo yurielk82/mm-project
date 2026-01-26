@@ -11,6 +11,7 @@ Version: 3.0.0 - Enterprise Dashboard UI
 """
 
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Optional, Tuple, Any
@@ -1642,21 +1643,18 @@ def render_step4():
                 st.markdown(f"**📋 제목:** {subject_preview}")
                 st.markdown(f"**📊 데이터:** {sample_data.get('row_count', 0)}행")
             
-            # 이메일 본문 미리보기 (확장 가능)
-            with st.expander("📬 이메일 본문 미리보기", expanded=True):
-                # 테이블 가로 크기에 맞춰 컨테이너 확장
-                col_count = len(display_cols) if display_cols else 1
-                
-                st.markdown(f"""
-                <div style="
-                    overflow-x: auto; 
-                    border: 1px solid #dee2e6; 
-                    border-radius: 8px;
-                    background: white;
-                ">
-                    {email_html}
-                </div>
-                """, unsafe_allow_html=True)
+            # 이메일 본문 미리보기
+            st.markdown("**📬 이메일 본문 미리보기**")
+            
+            # 행 수에 따라 높이 동적 계산
+            row_count = len(sample_data.get('rows', []))
+            base_height = 400  # 기본 높이 (헤더, 인사말, 푸터)
+            row_height = 40    # 행당 높이
+            calculated_height = base_height + (row_count * row_height)
+            iframe_height = min(max(calculated_height, 500), 1200)  # 최소 500, 최대 1200
+            
+            # components.html로 실제 HTML 렌더링
+            components.html(email_html, height=iframe_height, scrolling=True)
                 
         except Exception as e:
             st.error(f"미리보기 오류: {e}")
