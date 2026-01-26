@@ -760,7 +760,7 @@ def render_smtp_sidebar():
         if st.session_state.smtp_config:
             st.success("✅ SMTP 연결됨", icon=None)
         else:
-            st.error("🔌 SMTP 미연결", icon=None)
+            st.info("📧 SMTP를 연결해 주세요", icon=None)
         
         st.divider()
         
