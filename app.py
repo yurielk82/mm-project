@@ -546,13 +546,25 @@ def render_email_content(group_key, group_data, display_cols, amount_cols, templ
     }
     
     try:
-        greeting = Template(templates['greeting']).render(**template_vars)
-        info_message = Template(templates['info']).render(**template_vars)
-        additional = Template(templates['additional']).render(**template_vars)
-        footer = Template(templates['footer']).render(**template_vars)
-    except:
-        greeting, info_message = templates['greeting'], templates['info']
-        additional, footer = templates['additional'], templates['footer']
+        # 새로운 단순 본문 형식 지원
+        greeting_text = templates.get('greeting', '')
+        # 줄바꿈을 <br>로 변환
+        greeting = Template(greeting_text).render(**template_vars)
+        greeting = greeting.replace('\n', '<br>')
+        
+        info_text = templates.get('info', '')
+        info_message = Template(info_text).render(**template_vars) if info_text else ''
+        
+        additional_text = templates.get('additional', '')
+        additional = Template(additional_text).render(**template_vars) if additional_text else ''
+        
+        footer_text = templates.get('footer', '')
+        footer = Template(footer_text).render(**template_vars) if footer_text else ''
+    except Exception as e:
+        greeting = templates.get('greeting', '').replace('\n', '<br>')
+        info_message = templates.get('info', '')
+        additional = templates.get('additional', '')
+        footer = templates.get('footer', '')
     
     return render_email(
         subject=templates['subject'],
@@ -1253,124 +1265,134 @@ def render_step3():
 
 
 def render_step4():
-    """Step 4: 템플릿 편집 - 넓은 편집 UI"""
+    """Step 4: 템플릿 편집 - 간단한 에디터 박스"""
     
-    # 탭으로 편집/미리보기 분리 (더 넓은 공간 확보)
-    tab_edit, tab_preview = st.tabs(["✏️ 템플릿 편집", "👁️ 미리보기"])
+    # 이메일 제목
+    st.markdown("##### 📧 이메일 제목")
+    subject = st.text_input(
+        "제목", 
+        st.session_state.subject_template,
+        label_visibility="collapsed",
+        placeholder="예: [한국유니온제약] {{ company_name }} {{ period }} 정산서"
+    )
+    st.session_state.subject_template = subject
     
-    with tab_edit:
-        st.markdown("""
-        <div style="background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%); 
-                    padding: 12px 16px; border-radius: 8px; margin-bottom: 16px;">
-            <b>💡 사용 가능한 변수</b><br>
-            <code style="background:#333;padding:2px 6px;border-radius:3px;color:#fff;">{{ company_name }}</code> 업체명 &nbsp;
-            <code style="background:#333;padding:2px 6px;border-radius:3px;color:#fff;">{{ period }}</code> 정산월 &nbsp;
-            <code style="background:#333;padding:2px 6px;border-radius:3px;color:#fff;">{{ total_amount }}</code> 합계금액
-        </div>
-        """, unsafe_allow_html=True)
+    st.markdown("---")
+    
+    # 본문 편집 (하나의 큰 에디터)
+    col_edit, col_preview = st.columns([1, 1])
+    
+    with col_edit:
+        st.markdown("##### ✏️ 본문 내용")
+        st.caption("테이블 위에 표시될 내용을 자유롭게 작성하세요")
         
-        # 제목 & 헤더 (한 줄)
-        col1, col2 = st.columns([2, 1])
-        with col1:
-            subject = st.text_input(
-                "📧 이메일 제목", 
-                st.session_state.subject_template,
-                placeholder="예: [한국유니온제약] {{ period }} 정산서 안내"
-            )
-            st.session_state.subject_template = subject
-        with col2:
-            header = st.text_input(
-                "📌 헤더 타이틀", 
-                st.session_state.header_title,
-                placeholder="예: 월별 정산서"
-            )
-            st.session_state.header_title = header
+        # 전체 본문을 하나의 텍스트로 관리
+        if 'email_body_text' not in st.session_state:
+            # 기본 템플릿 생성
+            st.session_state.email_body_text = """안녕하세요, {{ company_name }} 담당자님.
+
+{{ period }} 정산 내역을 안내드립니다.
+아래 표를 확인해 주시기 바랍니다.
+
+문의사항이 있으시면 회신 부탁드립니다.
+감사합니다."""
         
-        st.markdown("---")
-        
-        # 인사말 (넓고 높게)
-        greeting = st.text_area(
-            "👋 인사말", 
-            st.session_state.greeting_template, 
-            height=180,
-            placeholder="안녕하세요, {{ company_name }} 담당자님.\n\n{{ period }} 정산 내역을 안내드립니다."
+        body_text = st.text_area(
+            "본문",
+            st.session_state.email_body_text,
+            height=300,
+            label_visibility="collapsed",
+            placeholder="안녕하세요, {{ company_name }} 담당자님..."
         )
-        st.session_state.greeting_template = greeting
+        st.session_state.email_body_text = body_text
         
-        # 정보 박스 & 추가 메시지 (2열, 높이 증가)
-        col1, col2 = st.columns(2)
-        with col1:
-            info = st.text_area(
-                "ℹ️ 정보 박스 (하이라이트)", 
-                st.session_state.info_template, 
-                height=150,
-                placeholder="정산 기간: {{ period }}\n합계 금액: {{ total_amount }}"
-            )
-            st.session_state.info_template = info
-        with col2:
-            additional = st.text_area(
-                "📝 추가 메시지", 
-                st.session_state.additional_template, 
-                height=150,
-                placeholder="문의사항이 있으시면 연락 부탁드립니다."
-            )
-            st.session_state.additional_template = additional
+        # 변수 설명
+        with st.expander("💡 사용 가능한 변수", expanded=False):
+            st.markdown("""
+            | 변수 | 설명 | 예시 |
+            |------|------|------|
+            | `{{ company_name }}` | 업체명 | 에스투비 |
+            | `{{ period }}` | 정산월 | 2024년 12월 |
+            | `{{ company_code }}` | 업체코드 | 에스투비 |
+            """)
         
-        # Footer 편집 (높이 증가)
-        with st.expander("🔧 푸터 편집 (선택)", expanded=False):
-            footer = st.text_area(
-                "푸터 텍스트",
-                st.session_state.footer_template,
-                height=120,
-                placeholder="본 메일은 발신 전용입니다."
-            )
-            st.session_state.footer_template = footer
+        # 기존 템플릿 변수에 매핑 (호환성 유지)
+        st.session_state.greeting_template = body_text
+        st.session_state.info_template = ""
+        st.session_state.additional_template = ""
     
-    with tab_preview:
+    with col_preview:
+        st.markdown("##### 👁️ 미리보기")
+        
         grouped = st.session_state.grouped_data
         valid_list = [(k, v) for k, v in grouped.items() if v['recipient_email'] and validate_email(v['recipient_email'])]
         
         if valid_list:
             # 미리보기 대상 선택
-            preview_options = [f"{k} ({v['recipient_email']})" for k, v in valid_list[:20]]
+            preview_options = [f"{k}" for k, v in valid_list[:10]]
             selected_idx = st.selectbox(
-                "미리보기 대상 선택",
+                "업체 선택",
                 range(len(preview_options)),
-                format_func=lambda x: preview_options[x]
+                format_func=lambda x: preview_options[x],
+                label_visibility="collapsed"
             )
             
             sample_key, sample_data = valid_list[selected_idx]
-            templates = {
-                'subject': st.session_state.subject_template, 
-                'header_title': st.session_state.header_title, 
-                'greeting': st.session_state.greeting_template,
-                'info': st.session_state.info_template, 
-                'additional': st.session_state.additional_template, 
-                'footer': st.session_state.footer_template
-            }
             
-            # 제목 미리보기
+            # 변수 치환해서 미리보기
             try:
-                from jinja2 import Template
-                subject_preview = Template(st.session_state.subject_template).render(
+                preview_text = Template(body_text).render(
                     company_name=sample_key,
-                    period=st.session_state.get('settlement_period', '2024년 12월')
+                    company_code=sample_key,
+                    period=datetime.now().strftime('%Y년 %m월')
                 )
-                st.info(f"**제목:** {subject_preview}", icon="📧")
-            except:
-                pass
-            
-            # HTML 미리보기 (더 큰 높이)
-            try:
-                html = render_email_content(sample_key, sample_data,
-                    st.session_state.display_cols, st.session_state.amount_cols, templates)
-                st.components.v1.html(html, height=600, scrolling=True)
+                
+                # 제목 미리보기
+                subject_preview = Template(subject).render(
+                    company_name=sample_key,
+                    period=datetime.now().strftime('%Y년 %m월')
+                )
+                
+                st.info(f"**제목:** {subject_preview}")
+                
+                # 본문 미리보기 (박스)
+                st.markdown(f"""
+                <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; 
+                            border: 1px solid #dee2e6; white-space: pre-wrap; 
+                            font-size: 14px; line-height: 1.6;">
+{preview_text}
+
+━━━━━━━━━━━━━━━━━━━━
+📊 [정산 테이블 {sample_data['row_count']}행]
+━━━━━━━━━━━━━━━━━━━━
+                </div>
+                """, unsafe_allow_html=True)
+                
             except Exception as e:
-                st.error(f"미리보기 오류: {e}", icon="❌")
+                st.error(f"미리보기 오류: {e}")
         else:
-            st.info("미리보기할 데이터가 없습니다. 이메일이 있는 업체가 필요합니다.", icon="ℹ️")
+            st.info("미리보기할 데이터가 없습니다", icon="ℹ️")
     
-    # 네비게이션 (하단 고정)
+    # 고급 설정 (접힘)
+    with st.expander("🔧 고급 설정 (헤더/푸터)", expanded=False):
+        col1, col2 = st.columns(2)
+        with col1:
+            header = st.text_input(
+                "헤더 타이틀", 
+                st.session_state.header_title,
+                placeholder="정산 내역 안내"
+            )
+            st.session_state.header_title = header
+        with col2:
+            footer = st.text_area(
+                "푸터",
+                st.session_state.footer_template,
+                height=100,
+                placeholder="본 메일은 발신 전용입니다."
+            )
+            st.session_state.footer_template = footer
+    
+    # 네비게이션
     st.divider()
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
