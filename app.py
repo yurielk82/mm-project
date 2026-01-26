@@ -829,9 +829,10 @@ def render_smtp_sidebar():
 
 def render_step1():
     """Step 1: 파일 업로드"""
+    
+    # 파일 업로드
     with st.container(border=True):
-        st.markdown("##### 엑셀 파일 업로드")
-        st.caption("정산서 데이터가 포함된 Excel 파일을 선택하세요")
+        st.markdown("##### 📂 엑셀 파일 업로드")
         
         uploaded_file = st.file_uploader(
             "파일 선택", 
@@ -849,28 +850,26 @@ def render_step1():
         st.session_state.excel_file = xlsx
         st.session_state.sheet_names = sheet_names
         
+        # 시트 선택 - 가로 배치
         with st.container(border=True):
-            st.markdown("##### 시트 선택")
+            st.markdown("##### 📑 시트 선택")
             
             col1, col2 = st.columns(2)
             
             with col1:
-                st.markdown("**정산 데이터 시트**")
                 data_sheet = st.selectbox(
-                    "데이터 시트", 
+                    "정산 데이터 시트", 
                     sheet_names,
                     index=sheet_names.index('정산서') if '정산서' in sheet_names else 0,
-                    label_visibility="collapsed",
-                    help="정산 데이터가 있는 시트를 선택하세요"
+                    help="정산 데이터가 있는 시트"
                 )
                 st.session_state.selected_data_sheet = data_sheet
             
             with col2:
-                st.markdown("**이메일 정보 시트**")
                 use_separate = st.checkbox(
-                    "별도 시트에 있음",
+                    "이메일이 별도 시트에 있음",
                     value=any('사업자' in s for s in sheet_names),
-                    help="이메일 주소가 다른 시트에 있는 경우 체크"
+                    help="이메일 주소가 다른 시트에 있는 경우"
                 )
                 st.session_state.use_separate_email_sheet = use_separate
                 
@@ -886,16 +885,15 @@ def render_step1():
                         )
                         st.session_state.selected_email_sheet = email_sheet
         
-        # 데이터 로드 및 미리보기
+        # 데이터 로드
         if xlsx and data_sheet:
             df_data, err = load_sheet(xlsx, data_sheet)
             if not err and df_data is not None:
                 st.session_state.df = df_data
                 st.session_state.df_original = df_data.copy()
-                
-                with st.expander(f"데이터 미리보기 ({len(df_data):,}행)", expanded=False):
-                    st.dataframe(df_data.head(10), use_container_width=True, hide_index=True)
         
+        # 이메일 시트 로드
+        email_info = None
         if use_separate and st.session_state.get('selected_email_sheet'):
             df_email, err = load_sheet(xlsx, st.session_state.selected_email_sheet)
             if not err and df_email is not None:
@@ -903,8 +901,27 @@ def render_step1():
                 email_col_candidates = [c for c in df_email.columns if '이메일' in c or 'mail' in c.lower()]
                 if email_col_candidates:
                     cnt = df_email[email_col_candidates[0]].notna().sum()
-                    st.info(f"이메일 보유: {cnt}개 / 전체 {len(df_email)}개 업체", icon="📧")
+                    email_info = (cnt, len(df_email))
         
+        # 데이터 미리보기 & 이메일 정보 - 같은 줄에
+        if st.session_state.df is not None:
+            col1, col2 = st.columns([2, 1])
+            
+            with col1:
+                with st.expander(f"📋 데이터 미리보기 ({len(st.session_state.df):,}행)", expanded=False):
+                    st.dataframe(st.session_state.df.head(10), use_container_width=True, hide_index=True)
+            
+            with col2:
+                if email_info:
+                    st.success(f"📧 이메일 보유: **{email_info[0]}개** / 전체 {email_info[1]}개 업체")
+                elif not use_separate:
+                    # 데이터 시트에서 이메일 컬럼 찾기
+                    email_cols = [c for c in st.session_state.df.columns if '이메일' in c or 'mail' in c.lower()]
+                    if email_cols:
+                        cnt = st.session_state.df[email_cols[0]].notna().sum()
+                        st.success(f"📧 이메일 보유: **{cnt}개** / 전체 {len(st.session_state.df)}행")
+        
+        # 네비게이션
         st.divider()
         
         col1, col2 = st.columns([1, 1])
