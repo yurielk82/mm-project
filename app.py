@@ -278,22 +278,61 @@ def validate_email(email: str) -> bool:
     return bool(re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email.strip()))
 
 
-def create_smtp_connection(config):
-    try:
-        if config['port'] == 465:
-            server = smtplib.SMTP_SSL(config['server'], config['port'], timeout=30)
-        else:
-            server = smtplib.SMTP(config['server'], config['port'], timeout=30)
-            server.ehlo()
-            if config.get('use_tls', True):
-                server.starttls()
+def create_smtp_connection(config, max_retries=3):
+    """
+    SMTP 연결 생성 (SSL Handshake 최적화 + 재시도 로직)
+    하이웍스 등 일부 서버는 특수 SSL 설정이 필요함
+    """
+    import ssl
+    last_error = None
+    
+    for attempt in range(max_retries):
+        try:
+            if config['port'] == 465:
+                # SSL 컨텍스트 최적화 (하이웍스 호환)
+                context = ssl.create_default_context()
+                context.check_hostname = False
+                context.verify_mode = ssl.CERT_NONE
+                context.set_ciphers('DEFAULT@SECLEVEL=1')
+                
+                server = smtplib.SMTP_SSL(
+                    config['server'], 
+                    config['port'], 
+                    context=context,
+                    timeout=30
+                )
+            else:
+                server = smtplib.SMTP(config['server'], config['port'], timeout=30)
                 server.ehlo()
-        server.login(config['username'], config['password'])
-        return server, None
-    except smtplib.SMTPAuthenticationError:
-        return None, "인증 실패: 이메일/비밀번호를 확인하세요."
-    except Exception as e:
-        return None, f"연결 오류: {str(e)}"
+                if config.get('use_tls', True):
+                    server.starttls()
+                    server.ehlo()
+            
+            server.login(config['username'], config['password'])
+            return server, None
+            
+        except smtplib.SMTPAuthenticationError as e:
+            error_str = str(e)
+            # 454 = 임시 인증 실패 (서버 문제) → 재시도
+            if '454' in error_str or 'Temporary' in error_str:
+                last_error = f"서버 임시 오류 (시도 {attempt+1}/{max_retries})"
+                time.sleep(2)
+                continue
+            # 535 = 인증 거부
+            if '535' in error_str:
+                return None, "인증 거부: 이메일/비밀번호 또는 SMTP 설정을 확인하세요."
+            return None, f"인증 실패: {error_str[:100]}"
+            
+        except Exception as e:
+            error_str = str(e)
+            # SSL 핸드셰이크 실패 → 재시도
+            if 'handshake' in error_str.lower() or 'ssl' in error_str.lower():
+                last_error = f"SSL 연결 오류 (시도 {attempt+1}/{max_retries})"
+                time.sleep(2)
+                continue
+            return None, f"연결 오류: {error_str[:100]}"
+    
+    return None, f"연결 실패: {last_error} - 잠시 후 다시 시도하세요."
 
 
 def send_email(server, sender, recipient, subject, html_content):
