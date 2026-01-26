@@ -714,8 +714,8 @@ def render_smtp_sidebar():
         # ============================================================
         st.markdown(f"""
         <div style="text-align: center; margin-bottom: 0.5rem;">
-            <span style="font-size: 1.3rem;">📨</span>
-            <span style="font-size: 1rem; font-weight: 600; color: #1e3c72;">{APP_TITLE}</span>
+            <span style="font-size: 1.5rem;">📨</span>
+            <span style="font-size: 1.25rem; font-weight: 600; color: #1e3c72;">{APP_TITLE}</span>
             <span style="font-size: 0.65rem; color: #adb5bd;">v{VERSION}</span>
         </div>
         """, unsafe_allow_html=True)
