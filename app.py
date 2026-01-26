@@ -67,22 +67,9 @@ DEFAULT_BATCH_DELAY = 30
 
 CUSTOM_CSS = """
 <style>
-    /* ============================================
-       가변 색상 (라이트/다크 모드 지원)
-       ============================================ */
-    :root {
-        --text-primary: inherit;
-        --text-secondary: #6c757d;
-        --bg-card: rgba(128, 128, 128, 0.1);
-        --border-color: rgba(128, 128, 128, 0.2);
-        --accent-color: #4a9eff;
-        --success-color: #28a745;
-        --warning-color: #ffc107;
-    }
-    
-    /* 전체 폰트 및 배경 */
+    /* 전체 레이아웃 */
     .main .block-container {
-        padding-top: 70px;
+        padding-top: 1rem;
         padding-bottom: 1rem;
     }
     
@@ -99,92 +86,6 @@ CUSTOM_CSS = """
     }
     [data-testid="stSidebar"] .stAlert {
         text-align: center;
-    }
-    
-    /* ============================================
-       파이프라인 바 (최상단 고정)
-       ============================================ */
-    .pipeline-bar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        z-index: 999999;
-        background: var(--bg-card);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border-bottom: 1px solid var(--border-color);
-        padding: 12px 20px;
-    }
-    
-    .pipeline-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 8px;
-        max-width: 800px;
-        margin: 0 auto;
-    }
-    
-    .pipeline-step {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        transition: all 0.2s ease;
-    }
-    
-    .pipeline-step.completed {
-        background: rgba(40, 167, 69, 0.15);
-        color: var(--success-color);
-    }
-    .pipeline-step.completed .step-num {
-        background: var(--success-color);
-        color: white;
-    }
-    
-    .pipeline-step.current {
-        background: rgba(74, 158, 255, 0.2);
-        color: var(--accent-color);
-        font-weight: 600;
-    }
-    .pipeline-step.current .step-num {
-        background: var(--accent-color);
-        color: white;
-    }
-    
-    .pipeline-step.pending {
-        opacity: 0.5;
-    }
-    .pipeline-step.pending .step-num {
-        background: var(--border-color);
-    }
-    
-    .step-num {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 22px;
-        height: 22px;
-        border-radius: 50%;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }
-    
-    .step-label {
-        white-space: nowrap;
-    }
-    
-    /* 모바일 반응형 */
-    @media (max-width: 768px) {
-        .step-label {
-            display: none;
-        }
-        .pipeline-step {
-            padding: 6px 10px;
-        }
     }
     
     /* 버튼 스타일 */
@@ -689,36 +590,27 @@ def render_header():
 
 
 def render_step_indicator():
-    """파이프라인 스타일 스텝 표시기 - 최상단 고정"""
+    """스텝 진행 상태 표시 (Streamlit 네이티브)"""
     current = st.session_state.current_step
     
-    # 파이프라인 스텝 생성
-    steps_html = []
-    for i, step_name in enumerate(STEPS, 1):
-        if i < current:
-            status = "completed"
-            num_display = "✓"
-        elif i == current:
-            status = "current"
-            num_display = str(i)
-        else:
-            status = "pending"
-            num_display = str(i)
-        
-        steps_html.append(f'''
-            <div class="pipeline-step {status}">
-                <span class="step-num">{num_display}</span>
-                <span class="step-label">{step_name}</span>
-            </div>
-        ''')
+    # 스텝 컬럼 생성
+    cols = st.columns(len(STEPS))
     
-    st.markdown(f'''
-    <div class="pipeline-bar">
-        <div class="pipeline-container">
-            {''.join(steps_html)}
-        </div>
-    </div>
-    ''', unsafe_allow_html=True)
+    for i, (col, step_name) in enumerate(zip(cols, STEPS), 1):
+        with col:
+            if i < current:
+                # 완료된 스텝 - 클릭하면 이동
+                if st.button(f"✓ {step_name}", key=f"step_{i}", use_container_width=True):
+                    st.session_state.current_step = i
+                    st.rerun()
+            elif i == current:
+                # 현재 스텝
+                st.button(f"● {step_name}", key=f"step_{i}", type="primary", disabled=True, use_container_width=True)
+            else:
+                # 대기 스텝
+                st.button(f"{i}. {step_name}", key=f"step_{i}", disabled=True, use_container_width=True)
+    
+    st.divider()
 
 
 def get_smtp_config() -> dict:
