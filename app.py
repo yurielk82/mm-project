@@ -846,23 +846,22 @@ def render_smtp_sidebar():
             """)
         
         # ============================================================
-        # 6. 저작권 (하단 고정, 배경 없음)
+        # 6. 저작권 (하단 고정, 사이드바 너비 맞춤)
         # ============================================================
         st.markdown("""
         <style>
-        .sidebar-footer {
+        [data-testid="stSidebar"] .sidebar-footer {
             position: fixed;
             bottom: 0;
             left: 0;
-            width: 100%;
-            max-width: 336px;
+            width: 260px;
             text-align: center;
-            padding: 10px;
+            padding: 8px 16px;
         }
-        .sidebar-footer p {
-            font-size: 0.65rem;
-            color: #e0e0e0;
-            line-height: 1.5;
+        [data-testid="stSidebar"] .sidebar-footer p {
+            font-size: 0.6rem;
+            color: #f0f0f0;
+            line-height: 1.4;
             margin: 0;
         }
         </style>
