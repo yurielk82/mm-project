@@ -740,12 +740,6 @@ def render_smtp_sidebar():
         else:
             st.metric("발송 대상", "0")
         
-        # SMTP 상태 표시
-        if st.session_state.smtp_config:
-            st.success("✅ SMTP 연결됨", icon=None)
-        else:
-            st.warning("⚠️ SMTP 미설정", icon=None)
-        
         # ============================================================
         # 2. 처음부터 다시 (현재상태 바로 아래)
         # ============================================================
@@ -756,11 +750,17 @@ def render_smtp_sidebar():
         st.divider()
         
         # ============================================================
-        # 3. SMTP 설정 (접을 수 있게 - 한번 성공하면 안 봄)
+        # 3. SMTP 상태 표시 (SMTP 설정 바로 위)
         # ============================================================
-        smtp_connected = st.session_state.smtp_config is not None
+        if st.session_state.smtp_config:
+            st.success("✅ SMTP 연결됨", icon=None)
+        else:
+            st.warning("⚠️ SMTP 미설정", icon=None)
         
-        with st.expander("⚙️ SMTP 설정", expanded=not smtp_connected):
+        # ============================================================
+        # 4. SMTP 설정 (항상 닫힌 상태로 시작)
+        # ============================================================
+        with st.expander("⚙️ SMTP 설정", expanded=False):
             smtp_defaults = get_smtp_config()
             from_secrets = smtp_defaults['from_secrets']
             
