@@ -72,65 +72,140 @@ CUSTOM_CSS = """
         display: none !important;
     }
     
-    /* 상단 여백 제거 */
+    /* 전체 배경색 통일 */
+    .stApp {
+        background-color: #f8f9fa;
+    }
+    
+    /* 상단 여백 */
     .main .block-container {
         padding-top: 0.5rem;
         padding-bottom: 1rem;
     }
     
-    /* 스텝 탭 상단 고정 */
-    .fixed-step-container {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        z-index: 9999;
-        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-        padding: 10px 20px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    }
-    
-    /* 메트릭 카드 스타일 */
-    [data-testid="stMetric"] {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 1rem;
-        border-radius: 10px;
-        color: white;
-    }
-    [data-testid="stMetric"] label {
-        color: rgba(255,255,255,0.8) !important;
-    }
-    [data-testid="stMetric"] [data-testid="stMetricValue"] {
-        color: white !important;
-        font-size: 1.8rem !important;
-    }
-    
-    /* 버튼 스타일 */
+    /* ========== 버튼 통일 스타일 ========== */
+    /* 기본 버튼 - 깔끔한 아웃라인 스타일 */
     .stButton > button {
-        border-radius: 8px;
-        font-weight: 500;
-        transition: all 0.2s ease;
+        background: white !important;
+        border: 2px solid #1e3c72 !important;
+        color: #1e3c72 !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        padding: 0.5rem 1rem !important;
+        transition: all 0.2s ease !important;
+        box-shadow: none !important;
     }
     .stButton > button:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        background: #1e3c72 !important;
+        color: white !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 12px rgba(30, 60, 114, 0.3) !important;
     }
     
-    /* Primary 버튼 */
+    /* Primary 버튼 - 채워진 스타일 */
     .stButton > button[kind="primary"] {
-        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%) !important;
+        border: none !important;
+        color: white !important;
+    }
+    .stButton > button[kind="primary"]:hover {
+        background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 20px rgba(30, 60, 114, 0.4) !important;
     }
     
-    /* 데이터프레임 스타일 */
+    /* 비활성화 버튼 */
+    .stButton > button:disabled {
+        background: #e9ecef !important;
+        border-color: #dee2e6 !important;
+        color: #adb5bd !important;
+        cursor: not-allowed !important;
+        transform: none !important;
+        box-shadow: none !important;
+    }
+    
+    /* ========== 메트릭 카드 ========== */
+    [data-testid="stMetric"] {
+        background: white;
+        padding: 1rem;
+        border-radius: 12px;
+        border: 1px solid #e9ecef;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    [data-testid="stMetric"] label {
+        color: #6c757d !important;
+        font-size: 0.85rem !important;
+    }
+    [data-testid="stMetric"] [data-testid="stMetricValue"] {
+        color: #1e3c72 !important;
+        font-size: 1.6rem !important;
+        font-weight: 700 !important;
+    }
+    
+    /* ========== 컨테이너/카드 ========== */
+    [data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"] {
+        background: white !important;
+        border-radius: 12px !important;
+        border: 1px solid #e9ecef !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
+    }
+    
+    /* ========== 데이터프레임 ========== */
     .stDataFrame {
         border-radius: 8px;
         overflow: hidden;
     }
     
-    /* Expander 스타일 */
+    /* ========== Expander ========== */
     .streamlit-expanderHeader {
         font-weight: 600;
         color: #1e3c72;
+        background: white !important;
+        border-radius: 8px !important;
+    }
+    
+    /* ========== 입력 필드 ========== */
+    .stTextInput > div > div > input,
+    .stTextArea > div > div > textarea,
+    .stSelectbox > div > div > div {
+        border-radius: 8px !important;
+        border: 1px solid #dee2e6 !important;
+    }
+    .stTextInput > div > div > input:focus,
+    .stTextArea > div > div > textarea:focus {
+        border-color: #1e3c72 !important;
+        box-shadow: 0 0 0 2px rgba(30, 60, 114, 0.1) !important;
+    }
+    
+    /* ========== 성공/경고/에러 메시지 ========== */
+    .stSuccess {
+        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%) !important;
+        border-left: 4px solid #28a745 !important;
+        border-radius: 8px !important;
+    }
+    .stWarning {
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%) !important;
+        border-left: 4px solid #ffc107 !important;
+        border-radius: 8px !important;
+    }
+    .stError {
+        background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%) !important;
+        border-left: 4px solid #dc3545 !important;
+        border-radius: 8px !important;
+    }
+    
+    /* ========== 사이드바 ========== */
+    [data-testid="stSidebar"] {
+        background: white !important;
+        border-right: 1px solid #e9ecef;
+    }
+    [data-testid="stSidebar"] .stButton > button {
+        background: #f8f9fa !important;
+        border: 1px solid #dee2e6 !important;
+    }
+    [data-testid="stSidebar"] .stButton > button:hover {
+        background: #1e3c72 !important;
+        color: white !important;
     }
     
     /* 섹션 제목 */
