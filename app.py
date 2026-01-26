@@ -1465,6 +1465,64 @@ def render_step3():
 def render_step4():
     """Step 4: 템플릿 편집 - 세로 레이아웃, 미리보기 버튼"""
     
+    # 템플릿 프리셋 정의
+    TEMPLATE_PRESETS = {
+        "기본 (정산서)": {
+            "subject": "[한국유니온제약] {{ company_name }} {{ period }} 정산서",
+            "header": "정산 내역 안내",
+            "body": """안녕하세요, {{ company_name }} 담당자님.
+
+{{ period }} 정산 내역을 안내드립니다.
+아래 표를 확인해 주시기 바랍니다.
+
+문의사항이 있으시면 회신 부탁드립니다.
+감사합니다.""",
+            "footer": "본 메일은 발신 전용입니다.\n문의: 영업관리팀"
+        },
+        "간단형": {
+            "subject": "{{ company_name }} {{ period }} 정산 안내",
+            "header": "정산서",
+            "body": """{{ company_name }} 담당자님께,
+
+{{ period }} 정산 내역 송부드립니다.
+확인 부탁드립니다.""",
+            "footer": ""
+        },
+        "상세형": {
+            "subject": "[한국유니온제약] {{ company_name }} 귀하 - {{ period }} 월간 정산서",
+            "header": "{{ period }} 월간 정산 내역서",
+            "body": """안녕하세요, {{ company_name }} 담당자님.
+
+항상 저희 한국유니온제약과 협력해 주셔서 감사합니다.
+
+{{ period }} 정산 내역을 아래와 같이 송부 드리오니 
+내용 확인 후 이상이 있으시면 연락 부탁드립니다.
+
+감사합니다.""",
+            "footer": "본 메일은 자동 발송되었습니다.\n문의사항: 영업관리팀 (내선 XXX)"
+        }
+    }
+    
+    # 템플릿 선택
+    col_preset, col_apply = st.columns([3, 1])
+    with col_preset:
+        preset_name = st.selectbox(
+            "📋 템플릿 프리셋",
+            list(TEMPLATE_PRESETS.keys()),
+            label_visibility="collapsed",
+            help="미리 정의된 템플릿을 선택하세요"
+        )
+    with col_apply:
+        if st.button("적용", use_container_width=True):
+            preset = TEMPLATE_PRESETS[preset_name]
+            st.session_state.subject_template = preset["subject"]
+            st.session_state.header_title = preset["header"]
+            st.session_state.email_body_text = preset["body"]
+            st.session_state.footer_template = preset["footer"]
+            st.rerun()
+    
+    st.divider()
+    
     # 1. 이메일 제목
     st.markdown("##### 📧 이메일 제목")
     subject = st.text_input(
@@ -1490,18 +1548,12 @@ def render_step4():
     st.caption("테이블 위에 표시될 내용 ({{ company_name }}, {{ period }} 변수 사용 가능)")
     
     if 'email_body_text' not in st.session_state:
-        st.session_state.email_body_text = """안녕하세요, {{ company_name }} 담당자님.
-
-{{ period }} 정산 내역을 안내드립니다.
-아래 표를 확인해 주시기 바랍니다.
-
-문의사항이 있으시면 회신 부탁드립니다.
-감사합니다."""
+        st.session_state.email_body_text = TEMPLATE_PRESETS["기본 (정산서)"]["body"]
     
     body_text = st.text_area(
         "본문",
         st.session_state.email_body_text,
-        height=200,
+        height=180,
         label_visibility="collapsed",
         placeholder="안녕하세요, {{ company_name }} 담당자님..."
     )
@@ -1519,7 +1571,7 @@ def render_step4():
     footer = st.text_area(
         "푸터",
         st.session_state.footer_template,
-        height=80,
+        height=60,
         label_visibility="collapsed",
         placeholder="본 메일은 발신 전용입니다. 문의: 담당자 연락처"
     )
@@ -1552,7 +1604,7 @@ def render_step4():
                 label_visibility="collapsed"
             )
         with col_btn:
-            show_preview = st.button("👁️ 미리보기", use_container_width=True)
+            show_preview = st.button("👁️ 미리보기", use_container_width=True, type="primary")
         
         # 미리보기 표시 (버튼 클릭 시 또는 세션에 저장된 상태)
         if 'show_email_preview' not in st.session_state:
@@ -1560,53 +1612,72 @@ def render_step4():
         
         if show_preview:
             st.session_state.show_email_preview = True
+            st.session_state.preview_selected_idx = selected_idx
         
         if st.session_state.show_email_preview and valid_list:
-            sample_key, sample_data = valid_list[selected_idx]
+            preview_idx = st.session_state.get('preview_selected_idx', selected_idx)
+            if preview_idx >= len(valid_list):
+                preview_idx = 0
+            sample_key, sample_data = valid_list[preview_idx]
             
-            with st.container(border=True):
-                st.markdown("##### 📬 이메일 미리보기")
+            try:
+                # 제목 렌더링
+                subject_preview = Template(subject).render(
+                    company_name=sample_key,
+                    period=datetime.now().strftime('%Y년 %m월')
+                )
                 
-                try:
-                    # 제목 미리보기
-                    subject_preview = Template(subject).render(
-                        company_name=sample_key,
-                        period=datetime.now().strftime('%Y년 %m월')
-                    )
-                    st.markdown(f"**제목:** {subject_preview}")
+                # 인사말 렌더링
+                greeting_rendered = Template(body_text).render(
+                    company_name=sample_key,
+                    company_code=sample_key,
+                    period=datetime.now().strftime('%Y년 %m월')
+                ).replace('\n', '<br>')
+                
+                # 실제 이메일 HTML 생성 (테이블 포함)
+                display_cols = st.session_state.get('display_cols', [])
+                amount_cols = st.session_state.get('amount_cols', [])
+                
+                email_html = render_email(
+                    subject=subject_preview,
+                    header_title=header,
+                    greeting=greeting_rendered,
+                    columns=display_cols,
+                    rows=sample_data.get('rows', []),
+                    amount_columns=amount_cols,
+                    totals=sample_data.get('totals'),
+                    footer_text=footer.replace('\n', '<br>') if footer else None
+                )
+                
+                # 미리보기 표시
+                st.markdown("##### 📬 이메일 미리보기")
+                st.markdown(f"**수신자:** {sample_data.get('recipient_email', 'N/A')}")
+                st.markdown(f"**제목:** {subject_preview}")
+                
+                # 테이블 가로 크기에 맞춰 컨테이너 확장
+                col_count = len(display_cols)
+                container_width = max(800, col_count * 120)  # 컬럼당 120px, 최소 800px
+                
+                st.markdown(f"""
+                <div style="
+                    max-width: {container_width}px; 
+                    overflow-x: auto; 
+                    border: 1px solid #dee2e6; 
+                    border-radius: 8px;
+                    margin: 10px 0;
+                ">
+                    {email_html}
+                </div>
+                """, unsafe_allow_html=True)
+                
+                if st.button("❌ 미리보기 닫기", use_container_width=True):
+                    st.session_state.show_email_preview = False
+                    st.rerun()
                     
-                    # 본문 미리보기
-                    preview_text = Template(body_text).render(
-                        company_name=sample_key,
-                        company_code=sample_key,
-                        period=datetime.now().strftime('%Y년 %m월')
-                    )
-                    
-                    st.markdown(f"""
-                    <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; 
-                                border: 1px solid #dee2e6; margin: 10px 0;">
-                        <div style="text-align: center; font-size: 18px; font-weight: bold; 
-                                    color: #2c3e50; margin-bottom: 16px;">{header}</div>
-                        <div style="white-space: pre-wrap; font-size: 14px; line-height: 1.6;">
-{preview_text}
-                        </div>
-                        <div style="background: #e9ecef; padding: 12px; margin: 16px 0; 
-                                    border-radius: 4px; text-align: center;">
-                            📊 [정산 테이블 {sample_data['row_count']}행]
-                        </div>
-                        <div style="font-size: 12px; color: #6c757d; margin-top: 16px; 
-                                    border-top: 1px solid #dee2e6; padding-top: 12px;">
-                            {footer if footer else ''}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    if st.button("미리보기 닫기"):
-                        st.session_state.show_email_preview = False
-                        st.rerun()
-                        
-                except Exception as e:
-                    st.error(f"미리보기 오류: {e}")
+            except Exception as e:
+                st.error(f"미리보기 오류: {e}")
+                import traceback
+                st.code(traceback.format_exc())
     else:
         st.info("미리보기할 데이터가 없습니다", icon="ℹ️")
     
