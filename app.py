@@ -295,8 +295,12 @@ def group_data_with_wildcard(df, group_key_col, email_col, amount_cols, display_
         if not base_key_str or base_key_str.lower() in ['nan', 'none', '(비어 있음)']:
             continue
         
-        unique_emails = [str(e).strip() for e in group_df[email_col].dropna().unique()
-                        if str(e).strip() and str(e).strip().lower() not in ['nan', 'none', '']]
+        # 이메일 컬럼 존재 여부 확인
+        if email_col and email_col in group_df.columns:
+            unique_emails = [str(e).strip() for e in group_df[email_col].dropna().unique()
+                            if str(e).strip() and str(e).strip().lower() not in ['nan', 'none', '']]
+        else:
+            unique_emails = []
         
         has_conflict = len(unique_emails) > 1
         if len(unique_emails) == 0:
@@ -306,10 +310,10 @@ def group_data_with_wildcard(df, group_key_col, email_col, amount_cols, display_
         else:
             if conflict_resolution == 'first':
                 recipient_email = unique_emails[0]
-            elif conflict_resolution == 'most_common':
+            elif conflict_resolution == 'most_common' and email_col and email_col in group_df.columns:
                 recipient_email = str(group_df[email_col].value_counts().index[0])
             else:
-                recipient_email = None
+                recipient_email = unique_emails[0] if unique_emails else None
             conflicts.append({'group_key': base_key_str, 'emails': unique_emails,
                             'selected': recipient_email})
         
