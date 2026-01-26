@@ -869,6 +869,62 @@ def render_step1():
         st.session_state.excel_file = xlsx
         st.session_state.sheet_names = sheet_names
         
+        # ============================================================
+        # 데이터 분석 요약 (파일 업로드 직후 표시)
+        # ============================================================
+        def analyze_data(df_data, df_email, use_separate, group_col=None):
+            """데이터 분석 및 통계 계산"""
+            stats = {
+                'total_rows': 0,
+                'total_groups': 0,
+                'has_email': 0,
+                'no_email': 0,
+                'no_data': 0,
+                'valid_for_send': 0
+            }
+            
+            if df_data is None or df_data.empty:
+                return stats
+            
+            stats['total_rows'] = len(df_data)
+            
+            # 그룹 컬럼 자동 탐지
+            if group_col is None:
+                group_candidates = [c for c in df_data.columns if 'CSO' in c or '관리업체' in c]
+                group_col = group_candidates[0] if group_candidates else df_data.columns[0]
+            
+            # 유니크 그룹 수 (업체 수)
+            unique_groups = df_data[group_col].dropna().unique()
+            # 합계 행 제외
+            unique_groups = [g for g in unique_groups if not str(g).endswith(' 합계') and str(g).lower() not in ['nan', 'none', '']]
+            stats['total_groups'] = len(unique_groups)
+            
+            # 이메일 분석
+            if use_separate and df_email is not None:
+                # 별도 이메일 시트 사용
+                email_col_candidates = [c for c in df_email.columns if '이메일' in c or 'mail' in c.lower()]
+                if email_col_candidates:
+                    email_col = email_col_candidates[0]
+                    stats['has_email'] = df_email[email_col].notna().sum()
+                    stats['no_email'] = len(df_email) - stats['has_email']
+            else:
+                # 같은 시트에서 이메일
+                email_cols = [c for c in df_data.columns if '이메일' in c or 'mail' in c.lower()]
+                if email_cols:
+                    email_col = email_cols[0]
+                    # 그룹별 이메일 보유 여부
+                    for g in unique_groups:
+                        group_data = df_data[df_data[group_col] == g]
+                        if group_data[email_col].notna().any():
+                            stats['has_email'] += 1
+                        else:
+                            stats['no_email'] += 1
+            
+            # 데이터 없는 그룹 (행이 0인 경우는 없으므로 0으로 유지)
+            stats['valid_for_send'] = stats['has_email']
+            
+            return stats
+        
         # 시트 선택 - 세로 배치
         with st.container(border=True):
             st.markdown("##### 📑 시트 선택")
@@ -909,29 +965,50 @@ def render_step1():
                 st.session_state.df_original = df_data.copy()
         
         # 이메일 시트 로드
-        email_info = None
+        df_email_loaded = None
         if use_separate and st.session_state.get('selected_email_sheet'):
             df_email, err = load_sheet(xlsx, st.session_state.selected_email_sheet)
             if not err and df_email is not None:
                 st.session_state.df_email = df_email
-                email_col_candidates = [c for c in df_email.columns if '이메일' in c or 'mail' in c.lower()]
-                if email_col_candidates:
-                    cnt = df_email[email_col_candidates[0]].notna().sum()
-                    email_info = (cnt, len(df_email))
+                df_email_loaded = df_email
         
-        # 데이터 미리보기 & 이메일 정보 - 세로 배치
+        # ============================================================
+        # 📊 데이터 분석 요약 (파일 업로드 직후 - 초록색 박스)
+        # ============================================================
+        if st.session_state.df is not None:
+            stats = analyze_data(
+                st.session_state.df, 
+                df_email_loaded, 
+                use_separate
+            )
+            
+            # 분석 결과 표시 (초록색 success 박스)
+            summary_parts = []
+            
+            # 전체 데이터 행
+            summary_parts.append(f"📊 전체 데이터: **{stats['total_rows']:,}행**")
+            
+            # 전체 업체 수
+            if stats['total_groups'] > 0:
+                summary_parts.append(f"🏢 전체 업체: **{stats['total_groups']}개**")
+            
+            # 이메일 보유/미보유
+            if stats['has_email'] > 0 or stats['no_email'] > 0:
+                summary_parts.append(f"✉️ 이메일 보유: **{stats['has_email']}개**")
+                if stats['no_email'] > 0:
+                    summary_parts.append(f"❌ 이메일 없음: **{stats['no_email']}개**")
+            
+            # 발송 가능
+            if stats['valid_for_send'] > 0:
+                summary_parts.append(f"🚀 발송 가능: **{stats['valid_for_send']}개**")
+            
+            # 요약 표시
+            st.success(" | ".join(summary_parts))
+        
+        # 데이터 미리보기 (접힘)
         if st.session_state.df is not None:
             with st.expander(f"📋 데이터 미리보기 ({len(st.session_state.df):,}행)", expanded=False):
                 st.dataframe(st.session_state.df.head(10), use_container_width=True, hide_index=True)
-            
-            if email_info:
-                st.success(f"📧 이메일 보유: **{email_info[0]}개** / 전체 {email_info[1]}개 업체")
-            elif not use_separate:
-                # 데이터 시트에서 이메일 컬럼 찾기
-                email_cols = [c for c in st.session_state.df.columns if '이메일' in c or 'mail' in c.lower()]
-                if email_cols:
-                    cnt = st.session_state.df[email_cols[0]].notna().sum()
-                    st.success(f"📧 이메일 보유: **{cnt}개** / 전체 {len(st.session_state.df)}행")
         
         # 네비게이션
         st.divider()
