@@ -67,9 +67,9 @@ DEFAULT_BATCH_DELAY = 30
 
 CUSTOM_CSS = """
 <style>
-    /* 전체 폰트 및 배경 */
+    /* 전체 폰트 및 배경 - 상단 파이프라인 여백 */
     .main .block-container {
-        padding-top: 1rem;
+        padding-top: 70px !important;
         padding-bottom: 1rem;
     }
     
@@ -123,6 +123,107 @@ CUSTOM_CSS = """
     .stDataFrame {
         border-radius: 8px;
         overflow: hidden;
+    }
+    
+    /* ====== 파이프라인 스텝 바 (최상단 고정) ====== */
+    .pipeline-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 56px;
+        background: var(--background-color, #0e1117);
+        border-bottom: 1px solid var(--secondary-background-color, #262730);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 99999;
+        padding: 0 20px;
+    }
+    
+    .pipeline-container {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        max-width: 700px;
+        width: 100%;
+    }
+    
+    .pipeline-step {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 10px 12px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: var(--text-color, rgba(255,255,255,0.4));
+        position: relative;
+        transition: all 0.3s ease;
+    }
+    
+    .pipeline-step.completed {
+        color: #00d26a;
+    }
+    .pipeline-step.current {
+        color: var(--text-color, #fff);
+        font-weight: 700;
+    }
+    .pipeline-step.pending {
+        color: var(--text-color, rgba(255,255,255,0.3));
+    }
+    
+    /* 파이프라인 연결선 */
+    .pipeline-step:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        right: -8px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 16px;
+        height: 2px;
+        background: var(--secondary-background-color, #262730);
+    }
+    .pipeline-step.completed:not(:last-child)::after {
+        background: #00d26a;
+    }
+    
+    /* 스텝 번호 원 */
+    .step-num {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border: 2px solid currentColor;
+        flex-shrink: 0;
+    }
+    .pipeline-step.completed .step-num {
+        background: #00d26a;
+        border-color: #00d26a;
+        color: #000;
+    }
+    .pipeline-step.current .step-num {
+        background: var(--primary-color, #ff4b4b);
+        border-color: var(--primary-color, #ff4b4b);
+        color: #fff;
+    }
+    
+    .step-label {
+        white-space: nowrap;
+    }
+    
+    @media (max-width: 768px) {
+        .step-label {
+            display: none;
+        }
+        .pipeline-step {
+            padding: 8px;
+        }
     }
     
     /* Expander 스타일 */
@@ -635,47 +736,36 @@ def render_header():
 
 
 def render_step_indicator():
-    """단계 표시기 - 깔끔한 프로그레스"""
+    """파이프라인 스타일 스텝 표시기 - 최상단 고정"""
     current = st.session_state.current_step
     
-    cols = st.columns(len(STEPS))
-    for i, (col, step_name) in enumerate(zip(cols, STEPS), 1):
-        with col:
-            if i < current:
-                # 완료
-                st.markdown(f"""
-                <div style="text-align: center;">
-                    <div style="width: 36px; height: 36px; border-radius: 50%; background: #28a745; color: white;
-                                display: inline-flex; align-items: center; justify-content: center; font-weight: bold;">
-                        ✓
-                    </div>
-                    <p style="margin: 8px 0 0 0; font-size: 0.8rem; color: #28a745; font-weight: 500;">{step_name}</p>
-                </div>
-                """, unsafe_allow_html=True)
-            elif i == current:
-                # 현재
-                st.markdown(f"""
-                <div style="text-align: center;">
-                    <div style="width: 36px; height: 36px; border-radius: 50%; background: #1e3c72; color: white;
-                                display: inline-flex; align-items: center; justify-content: center; font-weight: bold;">
-                        {i}
-                    </div>
-                    <p style="margin: 8px 0 0 0; font-size: 0.8rem; color: #1e3c72; font-weight: 600;">{step_name}</p>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                # 대기
-                st.markdown(f"""
-                <div style="text-align: center;">
-                    <div style="width: 36px; height: 36px; border-radius: 50%; background: #e9ecef; color: #adb5bd;
-                                display: inline-flex; align-items: center; justify-content: center; font-weight: bold;">
-                        {i}
-                    </div>
-                    <p style="margin: 8px 0 0 0; font-size: 0.8rem; color: #adb5bd;">{step_name}</p>
-                </div>
-                """, unsafe_allow_html=True)
+    # 파이프라인 스텝 생성
+    steps_html = []
+    for i, step_name in enumerate(STEPS, 1):
+        if i < current:
+            status = "completed"
+            num_display = "✓"
+        elif i == current:
+            status = "current"
+            num_display = str(i)
+        else:
+            status = "pending"
+            num_display = str(i)
+        
+        steps_html.append(f'''
+            <div class="pipeline-step {status}">
+                <span class="step-num">{num_display}</span>
+                <span class="step-label">{step_name}</span>
+            </div>
+        ''')
     
-    st.divider()
+    st.markdown(f'''
+    <div class="pipeline-bar">
+        <div class="pipeline-container">
+            {''.join(steps_html)}
+        </div>
+    </div>
+    ''', unsafe_allow_html=True)
 
 
 def get_smtp_config() -> dict:
@@ -729,8 +819,8 @@ def render_smtp_sidebar():
         # ============================================================
         st.markdown(f"""
         <div style="text-align: center; margin-bottom: 0.5rem;">
-            <span style="font-size: 1.5rem; font-weight: 700; color: #1a1a2e;">{APP_TITLE}</span>
-            <span style="font-size: 0.65rem; color: #adb5bd;">v{VERSION}</span>
+            <span style="font-size: 1.5rem; font-weight: 700;">{APP_TITLE}</span>
+            <span style="font-size: 0.65rem; opacity: 0.5;">v{VERSION}</span>
         </div>
         """, unsafe_allow_html=True)
         
