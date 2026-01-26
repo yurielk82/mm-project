@@ -706,14 +706,14 @@ def clear_session_credentials():
 
 
 def render_smtp_sidebar():
-    """사이드바 - 제목 → 현재상태 → 처음부터 다시 → SMTP설정 → 가이드"""
+    """사이드바 - 제목 → 현재상태 → 처음부터 다시 → SMTP설정 → 가이드 → 저작권"""
     with st.sidebar:
         
         # ============================================================
-        # 0. 앱 제목 (컴팩트)
+        # 0. 앱 제목 (컴팩트, 가운데 정렬)
         # ============================================================
         st.markdown(f"""
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 0.5rem;">
+        <div style="text-align: center; margin-bottom: 0.5rem;">
             <span style="font-size: 1.3rem;">📨</span>
             <span style="font-size: 1rem; font-weight: 600; color: #1e3c72;">{APP_TITLE}</span>
             <span style="font-size: 0.65rem; color: #adb5bd;">v{VERSION}</span>
@@ -723,9 +723,8 @@ def render_smtp_sidebar():
         st.divider()
         
         # ============================================================
-        # 1. 현재 상태 (세로 나열)
+        # 1. 현재 상태 (아이콘/글씨 삭제, 가운데 정렬)
         # ============================================================
-        st.markdown("#### 📊 현재 상태")
         
         if st.session_state.df is not None:
             st.metric("데이터", f"{len(st.session_state.df):,}행")
@@ -829,7 +828,7 @@ def render_smtp_sidebar():
                     st.warning("이메일과 비밀번호 입력 필요", icon="⚠")
         
         # ============================================================
-        # 4. 설정 가이드 (가장 아래)
+        # 5. 설정 가이드 (가장 아래)
         # ============================================================
         with st.expander("📖 설정 가이드", expanded=False):
             st.markdown("""
@@ -845,6 +844,19 @@ def render_smtp_sidebar():
             
             ⚠️ `.gitignore`에 추가 필수!
             """)
+        
+        # ============================================================
+        # 6. 저작권 (맨 아래, 아주 작게, 연하게)
+        # ============================================================
+        st.markdown("""
+        <div style="text-align: center; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #eee;">
+            <p style="font-size: 0.55rem; color: #ccc; line-height: 1.4; margin: 0;">
+                © 2026. Kwon Daehwan<br>
+                Planned & Built by Sales Management Team, KUP<br>
+                In collaboration with Genspark & Gemini
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
 
 
 def render_step1():
