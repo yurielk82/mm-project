@@ -696,110 +696,134 @@ def clear_session_credentials():
 
 
 def render_smtp_sidebar():
-    """사이드바 SMTP 설정"""
+    """사이드바 - 순서: 현재상태 → 처음부터 다시 → SMTP설정 → 가이드"""
     with st.sidebar:
-        st.markdown("#### SMTP 설정")
         
-        smtp_defaults = get_smtp_config()
-        from_secrets = smtp_defaults['from_secrets']
+        # ============================================================
+        # 1. 현재 상태 (항상 상단에 표시)
+        # ============================================================
+        st.markdown("#### 📊 현재 상태")
         
-        if from_secrets:
-            st.success("Secrets 자동 로드", icon="🔐")
-        
-        provider_list = list(SMTP_PROVIDERS.keys())
-        default_provider_idx = 0
-        if smtp_defaults['provider'] in provider_list:
-            default_provider_idx = provider_list.index(smtp_defaults['provider'])
-        
-        provider = st.selectbox(
-            "메일 서비스", 
-            provider_list, 
-            index=default_provider_idx, 
-            key="smtp_provider",
-            help="사용할 SMTP 서버를 선택하세요"
-        )
-        
-        if provider == "직접 입력":
-            smtp_server = st.text_input("SMTP 서버", key="smtp_server_input")
-            smtp_port = st.number_input("포트", value=587, key="smtp_port_input")
-        else:
-            smtp_server = SMTP_PROVIDERS[provider]["server"]
-            smtp_port = SMTP_PROVIDERS[provider]["port"]
-            st.caption(f"`{smtp_server}:{smtp_port}`")
-        
-        smtp_username = st.text_input(
-            "발신자 이메일", 
-            value=smtp_defaults['username'],
-            key="smtp_user",
-            placeholder="example@company.com"
-        )
-        
-        smtp_password = st.text_input(
-            "앱 비밀번호", 
-            type="password",
-            value=smtp_defaults['password'],
-            key="smtp_pass",
-            help="2차 인증용 앱 비밀번호를 입력하세요"
-        )
-        
-        if st.button("연결 테스트", use_container_width=True, type="primary"):
-            final_username = smtp_username if smtp_username else smtp_defaults['username']
-            final_password = smtp_password if smtp_password else smtp_defaults['password']
-            
-            if final_username and final_password:
-                config = {
-                    'server': smtp_server, 
-                    'port': smtp_port,
-                    'username': final_username, 
-                    'password': final_password, 
-                    'use_tls': True
-                }
-                with st.spinner("연결 중..."):
-                    server, error = create_smtp_connection(config)
-                    if server:
-                        st.success("연결 성공!", icon="✅")
-                        server.quit()
-                        st.session_state.smtp_config = config
-                        if not from_secrets:
-                            save_to_session(provider, final_username, final_password)
-                    else:
-                        st.error(f"{error}", icon="❌")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.session_state.df is not None:
+                st.metric("데이터", f"{len(st.session_state.df):,}행")
             else:
-                st.warning("이메일과 비밀번호를 입력하세요", icon="⚠")
+                st.metric("데이터", "없음")
         
+        with col2:
+            if st.session_state.grouped_data:
+                valid = sum(1 for g in st.session_state.grouped_data.values() 
+                           if g['recipient_email'] and validate_email(g['recipient_email']))
+                total = len(st.session_state.grouped_data)
+                st.metric("발송 대상", f"{valid}/{total}")
+            else:
+                st.metric("발송 대상", "-")
+        
+        # SMTP 상태 표시
         if st.session_state.smtp_config:
-            st.success("SMTP 준비 완료", icon="✅")
+            st.success("✅ SMTP 연결됨", icon=None)
+        else:
+            st.warning("⚠️ SMTP 미설정", icon=None)
         
-        st.divider()
-        
-        # 현재 상태 요약
-        st.markdown("#### 현재 상태")
-        
-        if st.session_state.df is not None:
-            st.metric("데이터 행", f"{len(st.session_state.df):,}")
-        
-        if st.session_state.grouped_data:
-            valid = sum(1 for g in st.session_state.grouped_data.values() 
-                       if g['recipient_email'] and validate_email(g['recipient_email']))
-            total = len(st.session_state.grouped_data)
-            st.metric("발송 가능", f"{valid}/{total}")
-        
-        st.divider()
-        
-        if st.button("처음부터 다시", use_container_width=True):
+        # ============================================================
+        # 2. 처음부터 다시 (현재상태 바로 아래)
+        # ============================================================
+        if st.button("🔄 처음부터 다시", use_container_width=True):
             reset_workflow()
             st.rerun()
         
-        with st.expander("설정 가이드"):
+        st.divider()
+        
+        # ============================================================
+        # 3. SMTP 설정 (접을 수 있게 - 한번 성공하면 안 봄)
+        # ============================================================
+        smtp_connected = st.session_state.smtp_config is not None
+        
+        with st.expander("⚙️ SMTP 설정", expanded=not smtp_connected):
+            smtp_defaults = get_smtp_config()
+            from_secrets = smtp_defaults['from_secrets']
+            
+            if from_secrets:
+                st.caption("🔐 Secrets에서 자동 로드됨")
+            
+            provider_list = list(SMTP_PROVIDERS.keys())
+            default_provider_idx = 0
+            if smtp_defaults['provider'] in provider_list:
+                default_provider_idx = provider_list.index(smtp_defaults['provider'])
+            
+            provider = st.selectbox(
+                "메일 서비스", 
+                provider_list, 
+                index=default_provider_idx, 
+                key="smtp_provider",
+                label_visibility="collapsed"
+            )
+            
+            if provider == "직접 입력":
+                smtp_server = st.text_input("SMTP 서버", key="smtp_server_input")
+                smtp_port = st.number_input("포트", value=587, key="smtp_port_input")
+            else:
+                smtp_server = SMTP_PROVIDERS[provider]["server"]
+                smtp_port = SMTP_PROVIDERS[provider]["port"]
+                st.caption(f"`{smtp_server}:{smtp_port}`")
+            
+            smtp_username = st.text_input(
+                "발신자 이메일", 
+                value=smtp_defaults['username'],
+                key="smtp_user",
+                placeholder="example@company.com"
+            )
+            
+            smtp_password = st.text_input(
+                "앱 비밀번호", 
+                type="password",
+                value=smtp_defaults['password'],
+                key="smtp_pass"
+            )
+            
+            if st.button("연결 테스트", use_container_width=True, type="primary"):
+                final_username = smtp_username if smtp_username else smtp_defaults['username']
+                final_password = smtp_password if smtp_password else smtp_defaults['password']
+                
+                if final_username and final_password:
+                    config = {
+                        'server': smtp_server, 
+                        'port': smtp_port,
+                        'username': final_username, 
+                        'password': final_password, 
+                        'use_tls': True
+                    }
+                    with st.spinner("연결 중..."):
+                        server, error = create_smtp_connection(config)
+                        if server:
+                            st.success("연결 성공!", icon="✅")
+                            server.quit()
+                            st.session_state.smtp_config = config
+                            if not from_secrets:
+                                save_to_session(provider, final_username, final_password)
+                            st.rerun()  # 접히도록 새로고침
+                        else:
+                            st.error(f"{error}", icon="❌")
+                else:
+                    st.warning("이메일과 비밀번호 입력 필요", icon="⚠")
+        
+        # ============================================================
+        # 4. 설정 가이드 (가장 아래)
+        # ============================================================
+        with st.expander("📖 설정 가이드", expanded=False):
             st.markdown("""
             **secrets.toml 설정**
             ```toml
             SMTP_ID = "email@company.com"
             SMTP_PW = "app_password"
+            SMTP_PROVIDER = "Hiworks (하이웍스)"
+            SENDER_NAME = "회사명"
             ```
             
-            **보안 주의**  
-            `.gitignore`에 추가하세요
+            📁 위치: `.streamlit/secrets.toml`
+            
+            ⚠️ `.gitignore`에 추가 필수!
             """)
 
 
