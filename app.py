@@ -655,12 +655,99 @@ def clear_session_credentials():
             del st.session_state[key]
 
 
+def render_local_guide_dialog():
+    """로컬 실행 가이드 다이얼로그"""
+    
+    @st.dialog("💻 로컬에서 실행하기", width="large")
+    def show_guide():
+        st.markdown("""
+        <style>
+        .guide-step {
+            background: rgba(74, 158, 255, 0.1);
+            border-left: 4px solid #4a9eff;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .guide-code {
+            background: rgba(0,0,0,0.3);
+            padding: 0.8rem 1rem;
+            border-radius: 6px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+            margin: 0.5rem 0;
+            overflow-x: auto;
+        }
+        .guide-note {
+            background: rgba(255, 193, 7, 0.15);
+            border-left: 4px solid #ffc107;
+            padding: 0.8rem 1rem;
+            margin: 0.5rem 0;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.9rem;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("### 🎯 왜 로컬 실행이 필요한가요?")
+        st.info("하이웍스 SMTP는 **허용된 IP에서만** 메일 발송이 가능합니다. 회사 네트워크(로컬)에서 실행하면 정상 작동합니다.", icon="💡")
+        
+        st.markdown("---")
+        st.markdown("### 📋 설치 및 실행 가이드")
+        
+        # Step 1
+        st.markdown('<div class="guide-step"><strong>Step 1.</strong> Python 설치 확인</div>', unsafe_allow_html=True)
+        st.markdown('<div class="guide-code">python --version</div>', unsafe_allow_html=True)
+        st.caption("Python 3.8 이상 필요 → [python.org](https://www.python.org/downloads/) 에서 다운로드")
+        
+        # Step 2
+        st.markdown('<div class="guide-step"><strong>Step 2.</strong> 프로젝트 다운로드</div>', unsafe_allow_html=True)
+        st.markdown('<div class="guide-code">git clone https://github.com/yurielk82/mm-project.git<br>cd mm-project</div>', unsafe_allow_html=True)
+        st.caption("또는 GitHub에서 ZIP 다운로드 후 압축 해제")
+        
+        # Step 3
+        st.markdown('<div class="guide-step"><strong>Step 3.</strong> 필수 패키지 설치</div>', unsafe_allow_html=True)
+        st.markdown('<div class="guide-code">pip install -r requirements.txt</div>', unsafe_allow_html=True)
+        
+        # Step 4
+        st.markdown('<div class="guide-step"><strong>Step 4.</strong> SMTP 설정 파일 생성 (선택)</div>', unsafe_allow_html=True)
+        st.markdown("`.streamlit/secrets.toml` 파일 생성:")
+        st.markdown('''<div class="guide-code">SMTP_ID = "your_email@company.com"<br>SMTP_PW = "your_app_password"<br>SMTP_PROVIDER = "Hiworks (하이웍스)"<br>SENDER_NAME = "발신자명"</div>''', unsafe_allow_html=True)
+        
+        # Step 5
+        st.markdown('<div class="guide-step"><strong>Step 5.</strong> 앱 실행</div>', unsafe_allow_html=True)
+        st.markdown('<div class="guide-code">streamlit run app.py</div>', unsafe_allow_html=True)
+        st.caption("브라우저가 자동으로 열립니다 (http://localhost:8501)")
+        
+        st.markdown("---")
+        
+        # 주의사항
+        st.markdown('<div class="guide-note">⚠️ <strong>주의:</strong> secrets.toml 파일은 절대 GitHub에 업로드하지 마세요!</div>', unsafe_allow_html=True)
+        
+        # 빠른 복사용
+        with st.expander("📋 전체 명령어 복사"):
+            st.code("""# 1. 프로젝트 다운로드
+git clone https://github.com/yurielk82/mm-project.git
+cd mm-project
+
+# 2. 패키지 설치
+pip install -r requirements.txt
+
+# 3. 앱 실행
+streamlit run app.py""", language="bash")
+        
+        if st.button("닫기", use_container_width=True, type="primary"):
+            st.rerun()
+    
+    return show_guide
+
+
 def render_smtp_sidebar():
-    """사이드바 - 제목 → 현재상태 → 처음부터 다시 → SMTP설정 → 가이드 → 저작권"""
+    """사이드바 - 제목 → SMTP상태 → 현재상태 → 처음부터 다시 → SMTP설정 → 가이드 → 저작권"""
     with st.sidebar:
         
         # ============================================================
-        # 0. 앱 제목 (컴팩트, 가운데 정렬)
+        # 0. 앱 제목 + SMTP 상태 (최상단, 가장 중요한 정보)
         # ============================================================
         st.markdown(f"""
         <div style="text-align: center; margin-bottom: 0.5rem;">
@@ -669,44 +756,44 @@ def render_smtp_sidebar():
         </div>
         """, unsafe_allow_html=True)
         
+        # SMTP 상태를 제목 바로 아래에 눈에 띄게 배치
+        if st.session_state.smtp_config:
+            st.success("✅ SMTP 연결됨", icon=None)
+        else:
+            st.error("🔌 SMTP 미연결", icon=None)
+        
         st.divider()
         
         # ============================================================
-        # 1. 현재 상태 (아이콘/글씨 삭제, 가운데 정렬)
+        # 1. 현재 상태 (데이터/발송대상)
         # ============================================================
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.session_state.df is not None:
+                st.metric("데이터", f"{len(st.session_state.df):,}")
+            else:
+                st.metric("데이터", "0")
         
-        if st.session_state.df is not None:
-            st.metric("데이터", f"{len(st.session_state.df):,}행")
-        else:
-            st.metric("데이터", "0")
-        
-        if st.session_state.grouped_data:
-            valid = sum(1 for g in st.session_state.grouped_data.values() 
-                       if g['recipient_email'] and validate_email(g['recipient_email']))
-            total = len(st.session_state.grouped_data)
-            st.metric("발송 대상", f"{valid}/{total}")
-        else:
-            st.metric("발송 대상", "0")
+        with col2:
+            if st.session_state.grouped_data:
+                valid = sum(1 for g in st.session_state.grouped_data.values() 
+                           if g['recipient_email'] and validate_email(g['recipient_email']))
+                total = len(st.session_state.grouped_data)
+                st.metric("발송", f"{valid}/{total}")
+            else:
+                st.metric("발송", "0")
         
         # ============================================================
-        # 2. 처음부터 다시 (현재상태 바로 아래)
+        # 2. 처음부터 다시
         # ============================================================
-        if st.button("처음부터 다시", use_container_width=True):
+        if st.button("🔄 처음부터", use_container_width=True):
             reset_workflow()
             st.rerun()
         
         st.divider()
         
         # ============================================================
-        # 3. SMTP 상태 표시 (SMTP 설정 바로 위)
-        # ============================================================
-        if st.session_state.smtp_config:
-            st.success("✅ SMTP 연결됨", icon=None)
-        else:
-            st.warning("⚠️ SMTP 미설정", icon=None)
-        
-        # ============================================================
-        # 4. SMTP 설정 (항상 닫힌 상태로 시작)
+        # 3. SMTP 설정 (항상 닫힌 상태로 시작)
         # ============================================================
         with st.expander("⚙️ SMTP 설정", expanded=False):
             smtp_defaults = get_smtp_config()
@@ -770,14 +857,14 @@ def render_smtp_sidebar():
                             st.session_state.smtp_config = config
                             if not from_secrets:
                                 save_to_session(provider, final_username, final_password)
-                            st.rerun()  # 접히도록 새로고침
+                            st.rerun()
                         else:
                             st.error(f"{error}", icon="❌")
                 else:
                     st.warning("이메일과 비밀번호 입력 필요", icon="⚠")
         
         # ============================================================
-        # 5. 설정 가이드 (가장 아래)
+        # 4. 설정 가이드
         # ============================================================
         with st.expander("📖 설정 가이드", expanded=False):
             st.markdown("""
@@ -795,7 +882,15 @@ def render_smtp_sidebar():
             """)
         
         # ============================================================
-        # 6. 저작권 (고정 해제, 맨 아래)
+        # 5. 로컬 실행 가이드 버튼 (눈에 띄게)
+        # ============================================================
+        st.markdown("")  # 간격
+        if st.button("💻 로컬에서 실행하기", use_container_width=True, help="회사 네트워크에서 직접 실행하는 방법"):
+            st.session_state.show_local_guide = True
+            st.rerun()
+        
+        # ============================================================
+        # 6. 저작권 (맨 아래)
         # ============================================================
         st.markdown("""
         <div style="text-align: center; margin-top: 2rem; padding-top: 1rem;">
@@ -1770,6 +1865,13 @@ def main():
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
     
     init_session_state()
+    
+    # 로컬 실행 가이드 다이얼로그
+    if st.session_state.get('show_local_guide', False):
+        show_guide = render_local_guide_dialog()
+        show_guide()
+        st.session_state.show_local_guide = False
+    
     render_smtp_sidebar()
     render_step_indicator()
     
