@@ -1,0 +1,22 @@
+# =============================================================================
+# 📧 지능형 그룹핑 메일머지 시스템 - Dependencies
+# =============================================================================
+
+# Core Framework
+streamlit>=1.28.0
+
+# Data Processing
+pandas>=2.0.0
+numpy>=1.24.0
+openpyxl>=3.1.0        # Excel .xlsx 파일 읽기/쓰기
+xlrd>=2.0.0            # Excel .xls 파일 읽기 (레거시)
+
+# Template Engine
+Jinja2>=3.1.0
+
+# Data Validation
+pydantic>=2.0.0
+email-validator>=2.0.0  # 이메일 형식 검증
+
+# Utilities
+python-dateutil>=2.8.0  # 날짜 파싱
