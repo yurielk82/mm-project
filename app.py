@@ -1807,24 +1807,21 @@ def render_step5():
     grouped = st.session_state.grouped_data
     valid_groups = {k: v for k, v in grouped.items() if v['recipient_email'] and validate_email(v['recipient_email'])}
     
-    # 발송 요약 (상단 메트릭 카드)
+    # 발송 요약 (상단 메트릭 카드) - SMTP는 사이드바에 있으므로 제외
     st.markdown("##### 📊 발송 요약")
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
     
     with col1:
         st.metric("발송 대상", f"{len(valid_groups)}건", help="유효한 이메일이 있는 업체 수")
     with col2:
-        smtp_status = "✅ 준비됨" if st.session_state.smtp_config else "⚠️ 필요"
-        st.metric("SMTP", smtp_status)
-    with col3:
         success_cnt = sum(1 for r in st.session_state.get('send_results', []) if r.get('상태') == '성공')
-        st.metric("성공", f"{success_cnt}건", delta=None if success_cnt == 0 else f"+{success_cnt}")
-    with col4:
+        st.metric("발송 성공", f"{success_cnt}건", delta=None if success_cnt == 0 else f"+{success_cnt}")
+    with col3:
         fail_cnt = sum(1 for r in st.session_state.get('send_results', []) if r.get('상태') == '실패')
         if fail_cnt > 0:
-            st.metric("실패", f"{fail_cnt}건", delta=f"-{fail_cnt}", delta_color="inverse")
+            st.metric("발송 실패", f"{fail_cnt}건", delta=f"-{fail_cnt}", delta_color="inverse")
         else:
-            st.metric("실패", "0건")
+            st.metric("발송 실패", "0건")
     
     st.divider()
     
@@ -1832,46 +1829,59 @@ def render_step5():
         st.warning("📧 사이드바에서 SMTP 연결을 먼저 완료해 주세요", icon="⚠️")
     
     # 발송 설정 (이전 값 기억)
-    with st.expander("발송 설정", expanded=False):
-        col1, col2, col3, col4 = st.columns(4)
+    with st.expander("⚙️ 발송 설정", expanded=False):
+        st.caption("스팸 차단 방지를 위해 이메일 발송 간격을 조절합니다")
+        
+        col1, col2 = st.columns(2)
         with col1:
             batch_size = st.number_input(
-                "배치 크기", 
+                "📦 배치 크기", 
                 value=st.session_state.get('batch_size', DEFAULT_BATCH_SIZE), 
                 min_value=1, 
                 max_value=50,
-                help="한 번에 발송할 이메일 수"
+                help="연속으로 발송할 이메일 수. 예: 10이면 10통 발송 후 '배치 간격'만큼 대기"
             )
             st.session_state.batch_size = batch_size
         with col2:
-            email_delay_min = st.number_input(
-                "딜레이 최소(초)", 
-                value=st.session_state.get('email_delay_min', 5), 
-                min_value=1, 
-                max_value=30,
-                help="이메일 간 최소 대기 시간"
-            )
-            st.session_state.email_delay_min = email_delay_min
-        with col3:
-            email_delay_max = st.number_input(
-                "딜레이 최대(초)", 
-                value=st.session_state.get('email_delay_max', 10), 
-                min_value=email_delay_min, 
-                max_value=60,
-                help="이메일 간 최대 대기 시간"
-            )
-            st.session_state.email_delay_max = email_delay_max
-        with col4:
             batch_delay = st.number_input(
-                "배치 간격(초)", 
+                "⏸️ 배치 간격(초)", 
                 value=st.session_state.get('batch_delay', DEFAULT_BATCH_DELAY), 
                 min_value=5, 
                 max_value=120,
-                help="배치 완료 후 대기 시간"
+                help="배치 완료 후 다음 배치 시작 전 대기 시간. 예: 30이면 10통 발송 후 30초 휴식"
             )
             st.session_state.batch_delay = batch_delay
         
-        st.caption(f"💡 각 이메일 발송 후 **{email_delay_min}~{email_delay_max}초** 랜덤 대기")
+        st.divider()
+        
+        st.markdown("**이메일 간 딜레이 (랜덤)**")
+        col1, col2 = st.columns(2)
+        with col1:
+            email_delay_min = st.number_input(
+                "⏱️ 최소(초)", 
+                value=st.session_state.get('email_delay_min', 5), 
+                min_value=1, 
+                max_value=30,
+                help="각 이메일 발송 후 최소 대기 시간"
+            )
+            st.session_state.email_delay_min = email_delay_min
+        with col2:
+            email_delay_max = st.number_input(
+                "⏱️ 최대(초)", 
+                value=st.session_state.get('email_delay_max', 10), 
+                min_value=email_delay_min, 
+                max_value=60,
+                help="각 이메일 발송 후 최대 대기 시간"
+            )
+            st.session_state.email_delay_max = email_delay_max
+        
+        # 설정 요약
+        st.info(f"""
+        📧 **발송 패턴 예시** (배치 크기 {batch_size}, 딜레이 {email_delay_min}~{email_delay_max}초)
+        
+        1통 → {email_delay_min}~{email_delay_max}초 대기 → 2통 → ... → {batch_size}통 
+        → **{batch_delay}초 휴식** → {batch_size+1}통 → ...
+        """, icon="💡")
     
     st.divider()
     
