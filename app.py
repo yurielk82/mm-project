@@ -648,7 +648,7 @@ def render_smtp_sidebar():
                         if not from_secrets:
                             save_to_session(provider, final_username, final_password)
                     else:
-                        st.error(f"{error}", icon="✗")
+                        st.error(f"{error}", icon="❌")
             else:
                 st.warning("이메일과 비밀번호를 입력하세요", icon="⚠")
         
@@ -704,7 +704,7 @@ def render_step1():
     if uploaded_file:
         xlsx, sheet_names, error = load_excel_file(uploaded_file)
         if error:
-            st.error(error, icon="✗")
+            st.error(error, icon="❌")
             return
         
         st.session_state.excel_file = xlsx
@@ -957,7 +957,7 @@ def render_step2():
     with col2:
         if st.button("다음 단계 →", type="primary", use_container_width=True):
             if not display_cols:
-                st.error("표시할 컬럼을 1개 이상 선택하세요", icon="✗")
+                st.error("표시할 컬럼을 1개 이상 선택하세요", icon="❌")
             else:
                 with st.spinner("데이터 처리 중..."):
                     df_work = df.copy()
@@ -1135,7 +1135,7 @@ def render_step4():
                         st.session_state.display_cols, st.session_state.amount_cols, templates)
                     st.components.v1.html(html, height=400, scrolling=True)
                 except Exception as e:
-                    st.error(f"미리보기 오류: {e}", icon="✗")
+                    st.error(f"미리보기 오류: {e}", icon="❌")
             else:
                 st.info("미리보기할 데이터가 없습니다", icon="ℹ")
     
@@ -1259,9 +1259,9 @@ def render_step5():
                 if success:
                     st.success(f"테스트 메일 발송 완료 → {config['username']}", icon="✓")
                 else:
-                    st.error(f"발송 실패: {err}", icon="✗")
+                    st.error(f"발송 실패: {err}", icon="❌")
             else:
-                st.error(f"SMTP 연결 실패: {error}", icon="✗")
+                st.error(f"SMTP 연결 실패: {error}", icon="❌")
     
     # 전체 발송
     if send_btn and st.session_state.smtp_config and valid_groups:
@@ -1283,7 +1283,7 @@ def render_step5():
         
         server, error = create_smtp_connection(config)
         if not server:
-            st.error(f"SMTP 연결 실패: {error}", icon="✗")
+            st.error(f"SMTP 연결 실패: {error}", icon="❌")
         else:
             for i, (gk, gd) in enumerate(valid_groups.items()):
                 progress_bar.progress((i+1)/total)
