@@ -67,145 +67,53 @@ DEFAULT_BATCH_DELAY = 30
 
 CUSTOM_CSS = """
 <style>
-    /* Streamlit 기본 헤더 숨기기 */
-    header[data-testid="stHeader"] {
-        display: none !important;
-    }
-    
-    /* 전체 배경색 통일 */
-    .stApp {
-        background-color: #f8f9fa;
-    }
-    
-    /* 상단 여백 */
+    /* 전체 폰트 및 배경 */
     .main .block-container {
-        padding-top: 0.5rem;
+        padding-top: 1rem;
         padding-bottom: 1rem;
     }
     
-    /* ========== 버튼 통일 스타일 ========== */
-    /* 기본 버튼 - 깔끔한 아웃라인 스타일 */
-    .stButton > button {
-        background: white !important;
-        border: 2px solid #1e3c72 !important;
-        color: #1e3c72 !important;
-        border-radius: 8px !important;
-        font-weight: 600 !important;
-        padding: 0.5rem 1rem !important;
-        transition: all 0.2s ease !important;
-        box-shadow: none !important;
-    }
-    .stButton > button:hover {
-        background: #1e3c72 !important;
-        color: white !important;
-        transform: translateY(-2px) !important;
-        box-shadow: 0 4px 12px rgba(30, 60, 114, 0.3) !important;
-    }
-    
-    /* Primary 버튼 - 채워진 스타일 */
-    .stButton > button[kind="primary"] {
-        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%) !important;
-        border: none !important;
-        color: white !important;
-    }
-    .stButton > button[kind="primary"]:hover {
-        background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%) !important;
-        transform: translateY(-2px) !important;
-        box-shadow: 0 6px 20px rgba(30, 60, 114, 0.4) !important;
-    }
-    
-    /* 비활성화 버튼 */
-    .stButton > button:disabled {
-        background: #e9ecef !important;
-        border-color: #dee2e6 !important;
-        color: #adb5bd !important;
-        cursor: not-allowed !important;
-        transform: none !important;
-        box-shadow: none !important;
-    }
-    
-    /* ========== 메트릭 카드 ========== */
+    /* 메트릭 카드 스타일 */
     [data-testid="stMetric"] {
-        background: white;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         padding: 1rem;
-        border-radius: 12px;
-        border: 1px solid #e9ecef;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border-radius: 10px;
+        color: white;
     }
     [data-testid="stMetric"] label {
-        color: #6c757d !important;
-        font-size: 0.85rem !important;
+        color: rgba(255,255,255,0.8) !important;
     }
     [data-testid="stMetric"] [data-testid="stMetricValue"] {
-        color: #1e3c72 !important;
-        font-size: 1.6rem !important;
-        font-weight: 700 !important;
+        color: white !important;
+        font-size: 1.8rem !important;
     }
     
-    /* ========== 컨테이너/카드 ========== */
-    [data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"] {
-        background: white !important;
-        border-radius: 12px !important;
-        border: 1px solid #e9ecef !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
+    /* 버튼 스타일 */
+    .stButton > button {
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    .stButton > button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
     
-    /* ========== 데이터프레임 ========== */
+    /* Primary 버튼 */
+    .stButton > button[kind="primary"] {
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    }
+    
+    /* 데이터프레임 스타일 */
     .stDataFrame {
         border-radius: 8px;
         overflow: hidden;
     }
     
-    /* ========== Expander ========== */
+    /* Expander 스타일 */
     .streamlit-expanderHeader {
         font-weight: 600;
         color: #1e3c72;
-        background: white !important;
-        border-radius: 8px !important;
-    }
-    
-    /* ========== 입력 필드 ========== */
-    .stTextInput > div > div > input,
-    .stTextArea > div > div > textarea,
-    .stSelectbox > div > div > div {
-        border-radius: 8px !important;
-        border: 1px solid #dee2e6 !important;
-    }
-    .stTextInput > div > div > input:focus,
-    .stTextArea > div > div > textarea:focus {
-        border-color: #1e3c72 !important;
-        box-shadow: 0 0 0 2px rgba(30, 60, 114, 0.1) !important;
-    }
-    
-    /* ========== 성공/경고/에러 메시지 ========== */
-    .stSuccess {
-        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%) !important;
-        border-left: 4px solid #28a745 !important;
-        border-radius: 8px !important;
-    }
-    .stWarning {
-        background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%) !important;
-        border-left: 4px solid #ffc107 !important;
-        border-radius: 8px !important;
-    }
-    .stError {
-        background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%) !important;
-        border-left: 4px solid #dc3545 !important;
-        border-radius: 8px !important;
-    }
-    
-    /* ========== 사이드바 ========== */
-    [data-testid="stSidebar"] {
-        background: white !important;
-        border-right: 1px solid #e9ecef;
-    }
-    [data-testid="stSidebar"] .stButton > button {
-        background: #f8f9fa !important;
-        border: 1px solid #dee2e6 !important;
-    }
-    [data-testid="stSidebar"] .stButton > button:hover {
-        background: #1e3c72 !important;
-        color: white !important;
     }
     
     /* 섹션 제목 */
@@ -686,102 +594,73 @@ def render_email_content(group_key, group_data, display_cols, amount_cols, templ
 # UI COMPONENTS - Enterprise Dashboard Style
 # ============================================================================
 
-def render_step_tabs():
-    """상단 고정 스텝 탭 - HTML/CSS로 완전 고정"""
+def render_header():
+    """헤더 - 깔끔한 브랜딩"""
+    col1, col2 = st.columns([6, 1])
+    with col1:
+        st.markdown(f"""
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 0.5rem;">
+            <span style="font-size: 2rem;">📨</span>
+            <div>
+                <h1 style="margin: 0; font-size: 1.8rem; color: #1e3c72;">{APP_TITLE}</h1>
+                <p style="margin: 0; color: #6c757d; font-size: 0.9rem;">{APP_SUBTITLE}</p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col2:
+        st.markdown(f"""
+        <div style="text-align: right; padding-top: 0.5rem;">
+            <span style="background: #e9ecef; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; color: #6c757d;">
+                v{VERSION}
+            </span>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.divider()
+
+
+def render_step_indicator():
+    """단계 표시기 - 깔끔한 프로그레스"""
     current = st.session_state.current_step
     
-    # 스텝 탭 HTML 생성
-    step_buttons = []
-    for i, step_name in enumerate(STEPS, 1):
-        if i < current:
-            # 완료
-            step_buttons.append(f'<div class="step-btn completed" data-step="{i}">✓ {step_name}</div>')
-        elif i == current:
-            # 현재
-            step_buttons.append(f'<div class="step-btn current">{i}. {step_name}</div>')
-        else:
-            # 대기
-            step_buttons.append(f'<div class="step-btn pending">{i}. {step_name}</div>')
+    cols = st.columns(len(STEPS))
+    for i, (col, step_name) in enumerate(zip(cols, STEPS), 1):
+        with col:
+            if i < current:
+                # 완료
+                st.markdown(f"""
+                <div style="text-align: center;">
+                    <div style="width: 36px; height: 36px; border-radius: 50%; background: #28a745; color: white;
+                                display: inline-flex; align-items: center; justify-content: center; font-weight: bold;">
+                        ✓
+                    </div>
+                    <p style="margin: 8px 0 0 0; font-size: 0.8rem; color: #28a745; font-weight: 500;">{step_name}</p>
+                </div>
+                """, unsafe_allow_html=True)
+            elif i == current:
+                # 현재
+                st.markdown(f"""
+                <div style="text-align: center;">
+                    <div style="width: 36px; height: 36px; border-radius: 50%; background: #1e3c72; color: white;
+                                display: inline-flex; align-items: center; justify-content: center; font-weight: bold;">
+                        {i}
+                    </div>
+                    <p style="margin: 8px 0 0 0; font-size: 0.8rem; color: #1e3c72; font-weight: 600;">{step_name}</p>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                # 대기
+                st.markdown(f"""
+                <div style="text-align: center;">
+                    <div style="width: 36px; height: 36px; border-radius: 50%; background: #e9ecef; color: #adb5bd;
+                                display: inline-flex; align-items: center; justify-content: center; font-weight: bold;">
+                        {i}
+                    </div>
+                    <p style="margin: 8px 0 0 0; font-size: 0.8rem; color: #adb5bd;">{step_name}</p>
+                </div>
+                """, unsafe_allow_html=True)
     
-    # 상단 고정 스텝 바 (HTML)
-    st.markdown(f"""
-    <style>
-    /* 상단 고정 스텝 바 */
-    .step-bar-fixed {{
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 50px;
-        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        z-index: 99999;
-        padding: 0 16px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    }}
-    
-    .step-btn {{
-        padding: 8px 16px;
-        border-radius: 6px;
-        font-size: 0.85rem;
-        font-weight: 500;
-        cursor: default;
-        transition: all 0.2s;
-        white-space: nowrap;
-    }}
-    
-    .step-btn.completed {{
-        background: rgba(40, 167, 69, 0.9);
-        color: white;
-        cursor: pointer;
-    }}
-    .step-btn.completed:hover {{
-        background: #28a745;
-        transform: translateY(-1px);
-    }}
-    
-    .step-btn.current {{
-        background: white;
-        color: #1e3c72;
-        font-weight: 600;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    }}
-    
-    .step-btn.pending {{
-        background: rgba(255,255,255,0.15);
-        color: rgba(255,255,255,0.5);
-    }}
-    
-    /* 본문 상단 여백 */
-    section.main > div.block-container {{
-        padding-top: 60px !important;
-    }}
-    
-    @media (max-width: 768px) {{
-        .step-btn {{
-            padding: 6px 10px;
-            font-size: 0.75rem;
-        }}
-    }}
-    </style>
-    
-    <div class="step-bar-fixed">
-        {''.join(step_buttons)}
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # 완료된 단계로 이동 버튼 (숨김 처리)
-    if current > 1:
-        with st.expander("📍 이전 단계로 이동", expanded=False):
-            cols = st.columns(current - 1)
-            for i, col in enumerate(cols, 1):
-                with col:
-                    if st.button(f"← {STEPS[i-1]}", key=f"goto_step_{i}", use_container_width=True):
-                        st.session_state.current_step = i
-                        st.rerun()
+    st.divider()
 
 
 def get_smtp_config() -> dict:
@@ -827,28 +706,8 @@ def clear_session_credentials():
 
 
 def render_smtp_sidebar():
-    """사이드바 - 제목 → 현재상태 → 처음부터 다시 → SMTP설정 → 가이드"""
+    """사이드바 - 순서: 현재상태 → 처음부터 다시 → SMTP설정 → 가이드"""
     with st.sidebar:
-        
-        # ============================================================
-        # 0. 앱 제목 (사이드바 상단)
-        # ============================================================
-        st.markdown(f"""
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1rem;">
-            <span style="font-size: 1.8rem;">📨</span>
-            <div>
-                <div style="font-size: 1.2rem; font-weight: bold; color: #1e3c72;">{APP_TITLE}</div>
-                <div style="font-size: 0.75rem; color: #6c757d;">{APP_SUBTITLE}</div>
-            </div>
-        </div>
-        <div style="text-align: right; margin-bottom: 0.5rem;">
-            <span style="background: #e9ecef; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; color: #6c757d;">
-                v{VERSION}
-            </span>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.divider()
         
         # ============================================================
         # 1. 현재 상태 (세로 나열)
@@ -884,9 +743,11 @@ def render_smtp_sidebar():
         st.divider()
         
         # ============================================================
-        # 3. SMTP 설정 (항상 닫힌 상태로 시작)
+        # 3. SMTP 설정 (접을 수 있게 - 한번 성공하면 안 봄)
         # ============================================================
-        with st.expander("⚙️ SMTP 설정", expanded=False):
+        smtp_connected = st.session_state.smtp_config is not None
+        
+        with st.expander("⚙️ SMTP 설정", expanded=not smtp_connected):
             smtp_defaults = get_smtp_config()
             from_secrets = smtp_defaults['from_secrets']
             
@@ -1935,8 +1796,9 @@ def main():
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
     
     init_session_state()
+    render_header()
+    render_step_indicator()
     render_smtp_sidebar()
-    render_step_tabs()
     
     # 현재 단계 렌더링
     step = st.session_state.current_step
