@@ -67,9 +67,22 @@ DEFAULT_BATCH_DELAY = 30
 
 CUSTOM_CSS = """
 <style>
-    /* 전체 폰트 및 배경 - 상단 파이프라인 여백 */
+    /* ============================================
+       가변 색상 (라이트/다크 모드 지원)
+       ============================================ */
+    :root {
+        --text-primary: inherit;
+        --text-secondary: #6c757d;
+        --bg-card: rgba(128, 128, 128, 0.1);
+        --border-color: rgba(128, 128, 128, 0.2);
+        --accent-color: #4a9eff;
+        --success-color: #28a745;
+        --warning-color: #ffc107;
+    }
+    
+    /* 전체 폰트 및 배경 */
     .main .block-container {
-        padding-top: 70px !important;
+        padding-top: 70px;
         padding-bottom: 1rem;
     }
     
@@ -88,19 +101,90 @@ CUSTOM_CSS = """
         text-align: center;
     }
     
-    /* 메트릭 카드 스타일 */
-    [data-testid="stMetric"] {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 1rem;
-        border-radius: 10px;
+    /* ============================================
+       파이프라인 바 (최상단 고정)
+       ============================================ */
+    .pipeline-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 999999;
+        background: var(--bg-card);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--border-color);
+        padding: 12px 20px;
+    }
+    
+    .pipeline-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    .pipeline-step {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        transition: all 0.2s ease;
+    }
+    
+    .pipeline-step.completed {
+        background: rgba(40, 167, 69, 0.15);
+        color: var(--success-color);
+    }
+    .pipeline-step.completed .step-num {
+        background: var(--success-color);
         color: white;
     }
-    [data-testid="stMetric"] label {
-        color: rgba(255,255,255,0.8) !important;
+    
+    .pipeline-step.current {
+        background: rgba(74, 158, 255, 0.2);
+        color: var(--accent-color);
+        font-weight: 600;
     }
-    [data-testid="stMetric"] [data-testid="stMetricValue"] {
-        color: white !important;
-        font-size: 1.8rem !important;
+    .pipeline-step.current .step-num {
+        background: var(--accent-color);
+        color: white;
+    }
+    
+    .pipeline-step.pending {
+        opacity: 0.5;
+    }
+    .pipeline-step.pending .step-num {
+        background: var(--border-color);
+    }
+    
+    .step-num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .step-label {
+        white-space: nowrap;
+    }
+    
+    /* 모바일 반응형 */
+    @media (max-width: 768px) {
+        .step-label {
+            display: none;
+        }
+        .pipeline-step {
+            padding: 6px 10px;
+        }
     }
     
     /* 버튼 스타일 */
@@ -114,141 +198,10 @@ CUSTOM_CSS = """
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
     
-    /* Primary 버튼 */
-    .stButton > button[kind="primary"] {
-        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-    }
-    
     /* 데이터프레임 스타일 */
     .stDataFrame {
         border-radius: 8px;
         overflow: hidden;
-    }
-    
-    /* ====== 파이프라인 스텝 바 (최상단 고정) ====== */
-    .pipeline-bar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 56px;
-        background: var(--background-color, #0e1117);
-        border-bottom: 1px solid var(--secondary-background-color, #262730);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 99999;
-        padding: 0 20px;
-    }
-    
-    .pipeline-container {
-        display: flex;
-        align-items: center;
-        gap: 0;
-        max-width: 700px;
-        width: 100%;
-    }
-    
-    .pipeline-step {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        padding: 10px 12px;
-        font-size: 0.8rem;
-        font-weight: 500;
-        color: var(--text-color, rgba(255,255,255,0.4));
-        position: relative;
-        transition: all 0.3s ease;
-    }
-    
-    .pipeline-step.completed {
-        color: #00d26a;
-    }
-    .pipeline-step.current {
-        color: var(--text-color, #fff);
-        font-weight: 700;
-    }
-    .pipeline-step.pending {
-        color: var(--text-color, rgba(255,255,255,0.3));
-    }
-    
-    /* 파이프라인 연결선 */
-    .pipeline-step:not(:last-child)::after {
-        content: '';
-        position: absolute;
-        right: -8px;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 16px;
-        height: 2px;
-        background: var(--secondary-background-color, #262730);
-    }
-    .pipeline-step.completed:not(:last-child)::after {
-        background: #00d26a;
-    }
-    
-    /* 스텝 번호 원 */
-    .step-num {
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.75rem;
-        font-weight: 600;
-        border: 2px solid currentColor;
-        flex-shrink: 0;
-    }
-    .pipeline-step.completed .step-num {
-        background: #00d26a;
-        border-color: #00d26a;
-        color: #000;
-    }
-    .pipeline-step.current .step-num {
-        background: var(--primary-color, #ff4b4b);
-        border-color: var(--primary-color, #ff4b4b);
-        color: #fff;
-    }
-    
-    .step-label {
-        white-space: nowrap;
-    }
-    
-    @media (max-width: 768px) {
-        .step-label {
-            display: none;
-        }
-        .pipeline-step {
-            padding: 8px;
-        }
-    }
-    
-    /* Expander 스타일 */
-    .streamlit-expanderHeader {
-        font-weight: 600;
-        color: #1e3c72;
-    }
-    
-    /* 섹션 제목 */
-    .section-title {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: #1e3c72;
-        margin-bottom: 0.5rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid #e9ecef;
-    }
-    
-    /* 카드 컨테이너 */
-    .card-container {
-        background: white;
-        border-radius: 10px;
-        padding: 1.5rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        margin-bottom: 1rem;
     }
     
     /* 상태 배지 */
@@ -259,9 +212,9 @@ CUSTOM_CSS = """
         font-size: 0.85rem;
         font-weight: 500;
     }
-    .status-success { background: #d4edda; color: #155724; }
-    .status-warning { background: #fff3cd; color: #856404; }
-    .status-error { background: #f8d7da; color: #721c24; }
+    .status-success { background: rgba(40, 167, 69, 0.2); color: var(--success-color); }
+    .status-warning { background: rgba(255, 193, 7, 0.2); color: var(--warning-color); }
+    .status-error { background: rgba(220, 53, 69, 0.2); color: #dc3545; }
 </style>
 """
 
@@ -954,7 +907,7 @@ def render_smtp_sidebar():
         # ============================================================
         st.markdown("""
         <div style="text-align: center; margin-top: 2rem; padding-top: 1rem;">
-            <p style="font-size: 0.6rem; color: #e8e8e8; line-height: 1.4; margin: 0;">
+            <p style="font-size: 0.6rem; opacity: 0.3; line-height: 1.4; margin: 0;">
                 © 2026. Kwon Daehwan<br>
                 Planned & Built by Sales Management Team, KUP<br>
                 In collaboration with Genspark & Gemini
