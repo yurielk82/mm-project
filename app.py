@@ -706,8 +706,21 @@ def clear_session_credentials():
 
 
 def render_smtp_sidebar():
-    """사이드바 - 순서: 현재상태 → 처음부터 다시 → SMTP설정 → 가이드"""
+    """사이드바 - 제목 → 현재상태 → 처음부터 다시 → SMTP설정 → 가이드"""
     with st.sidebar:
+        
+        # ============================================================
+        # 0. 앱 제목 (컴팩트)
+        # ============================================================
+        st.markdown(f"""
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 0.5rem;">
+            <span style="font-size: 1.3rem;">📨</span>
+            <span style="font-size: 1rem; font-weight: 600; color: #1e3c72;">{APP_TITLE}</span>
+            <span style="font-size: 0.65rem; color: #adb5bd;">v{VERSION}</span>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.divider()
         
         # ============================================================
         # 1. 현재 상태 (세로 나열)
@@ -1796,9 +1809,8 @@ def main():
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
     
     init_session_state()
-    render_header()
-    render_step_indicator()
     render_smtp_sidebar()
+    render_step_indicator()
     
     # 현재 단계 렌더링
     step = st.session_state.current_step
