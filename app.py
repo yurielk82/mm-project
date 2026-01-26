@@ -700,25 +700,22 @@ def render_smtp_sidebar():
     with st.sidebar:
         
         # ============================================================
-        # 1. 현재 상태 (항상 상단에 표시)
+        # 1. 현재 상태 (세로 나열)
         # ============================================================
         st.markdown("#### 📊 현재 상태")
         
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.session_state.df is not None:
-                st.metric("데이터", f"{len(st.session_state.df):,}행")
-            else:
-                st.metric("데이터", "없음")
+        if st.session_state.df is not None:
+            st.metric("데이터", f"{len(st.session_state.df):,}행")
+        else:
+            st.metric("데이터", "없음")
         
-        with col2:
-            if st.session_state.grouped_data:
-                valid = sum(1 for g in st.session_state.grouped_data.values() 
-                           if g['recipient_email'] and validate_email(g['recipient_email']))
-                total = len(st.session_state.grouped_data)
-                st.metric("발송 대상", f"{valid}/{total}")
-            else:
-                st.metric("발송 대상", "-")
+        if st.session_state.grouped_data:
+            valid = sum(1 for g in st.session_state.grouped_data.values() 
+                       if g['recipient_email'] and validate_email(g['recipient_email']))
+            total = len(st.session_state.grouped_data)
+            st.metric("발송 대상", f"{valid}/{total}")
+        else:
+            st.metric("발송 대상", "-")
         
         # SMTP 상태 표시
         if st.session_state.smtp_config:
@@ -850,40 +847,37 @@ def render_step1():
         st.session_state.excel_file = xlsx
         st.session_state.sheet_names = sheet_names
         
-        # 시트 선택 - 가로 배치
+        # 시트 선택 - 세로 배치
         with st.container(border=True):
             st.markdown("##### 📑 시트 선택")
             
-            col1, col2 = st.columns(2)
+            data_sheet = st.selectbox(
+                "정산 데이터 시트", 
+                sheet_names,
+                index=sheet_names.index('정산서') if '정산서' in sheet_names else 0,
+                help="정산 데이터가 있는 시트"
+            )
+            st.session_state.selected_data_sheet = data_sheet
             
-            with col1:
-                data_sheet = st.selectbox(
-                    "정산 데이터 시트", 
-                    sheet_names,
-                    index=sheet_names.index('정산서') if '정산서' in sheet_names else 0,
-                    help="정산 데이터가 있는 시트"
-                )
-                st.session_state.selected_data_sheet = data_sheet
+            st.markdown("---")
             
-            with col2:
-                use_separate = st.checkbox(
-                    "이메일이 별도 시트에 있음",
-                    value=any('사업자' in s for s in sheet_names),
-                    help="이메일 주소가 다른 시트에 있는 경우"
-                )
-                st.session_state.use_separate_email_sheet = use_separate
-                
-                if use_separate:
-                    email_sheets = [s for s in sheet_names if s != data_sheet]
-                    if email_sheets:
-                        default_idx = next((i for i, s in enumerate(email_sheets) if '사업자' in s), 0)
-                        email_sheet = st.selectbox(
-                            "이메일 시트", 
-                            email_sheets, 
-                            index=default_idx,
-                            label_visibility="collapsed"
-                        )
-                        st.session_state.selected_email_sheet = email_sheet
+            use_separate = st.checkbox(
+                "이메일이 별도 시트에 있음",
+                value=any('사업자' in s for s in sheet_names),
+                help="이메일 주소가 다른 시트에 있는 경우"
+            )
+            st.session_state.use_separate_email_sheet = use_separate
+            
+            if use_separate:
+                email_sheets = [s for s in sheet_names if s != data_sheet]
+                if email_sheets:
+                    default_idx = next((i for i, s in enumerate(email_sheets) if '사업자' in s), 0)
+                    email_sheet = st.selectbox(
+                        "이메일 시트", 
+                        email_sheets, 
+                        index=default_idx
+                    )
+                    st.session_state.selected_email_sheet = email_sheet
         
         # 데이터 로드
         if xlsx and data_sheet:
@@ -903,23 +897,19 @@ def render_step1():
                     cnt = df_email[email_col_candidates[0]].notna().sum()
                     email_info = (cnt, len(df_email))
         
-        # 데이터 미리보기 & 이메일 정보 - 같은 줄에
+        # 데이터 미리보기 & 이메일 정보 - 세로 배치
         if st.session_state.df is not None:
-            col1, col2 = st.columns([2, 1])
+            with st.expander(f"📋 데이터 미리보기 ({len(st.session_state.df):,}행)", expanded=False):
+                st.dataframe(st.session_state.df.head(10), use_container_width=True, hide_index=True)
             
-            with col1:
-                with st.expander(f"📋 데이터 미리보기 ({len(st.session_state.df):,}행)", expanded=False):
-                    st.dataframe(st.session_state.df.head(10), use_container_width=True, hide_index=True)
-            
-            with col2:
-                if email_info:
-                    st.success(f"📧 이메일 보유: **{email_info[0]}개** / 전체 {email_info[1]}개 업체")
-                elif not use_separate:
-                    # 데이터 시트에서 이메일 컬럼 찾기
-                    email_cols = [c for c in st.session_state.df.columns if '이메일' in c or 'mail' in c.lower()]
-                    if email_cols:
-                        cnt = st.session_state.df[email_cols[0]].notna().sum()
-                        st.success(f"📧 이메일 보유: **{cnt}개** / 전체 {len(st.session_state.df)}행")
+            if email_info:
+                st.success(f"📧 이메일 보유: **{email_info[0]}개** / 전체 {email_info[1]}개 업체")
+            elif not use_separate:
+                # 데이터 시트에서 이메일 컬럼 찾기
+                email_cols = [c for c in st.session_state.df.columns if '이메일' in c or 'mail' in c.lower()]
+                if email_cols:
+                    cnt = st.session_state.df[email_cols[0]].notna().sum()
+                    st.success(f"📧 이메일 보유: **{cnt}개** / 전체 {len(st.session_state.df)}행")
         
         # 네비게이션
         st.divider()
@@ -1054,7 +1044,7 @@ def render_step2():
                 base_keys = [k for k in base_keys if k and k.lower() not in ['nan', '(비어 있음)']]
                 st.success(f"예상 그룹 수: **{len(base_keys)}개**", icon="📊")
     
-    # 데이터 타입 설정 (중복 선택 방지)
+    # 데이터 타입 설정 (세로 나열, 중복 선택 방지)
     with st.container(border=True):
         st.markdown("##### 컬럼 타입 설정")
         st.caption("금액, 날짜, ID 컬럼을 지정하면 자동 포맷팅됩니다 (중복 선택 불가)")
@@ -1069,30 +1059,26 @@ def render_step2():
         date_candidates = [c for c in columns if '월' in c or 'date' in c.lower()]
         id_candidates = [c for c in columns if '코드' in c or '번호' in c]
         
-        col1, col2 = st.columns(2)
+        # 금액 컬럼
+        amount_default = [c for c in saved_amount if c in columns] or [c for c in amount_candidates if c in columns]
+        amount_cols = st.multiselect(
+            "💰 금액 컬럼", 
+            columns, 
+            default=amount_default,
+            help="천단위 쉼표와 ₩ 기호가 적용됩니다"
+        )
+        st.session_state.amount_cols = amount_cols
         
-        with col1:
-            # 금액 컬럼 (날짜/ID와 겹치지 않게)
-            amount_default = [c for c in saved_amount if c in columns] or [c for c in amount_candidates if c in columns]
-            amount_cols = st.multiselect(
-                "💰 금액 컬럼", 
-                columns, 
-                default=amount_default,
-                help="천단위 쉼표와 ₩ 기호가 적용됩니다"
-            )
-            st.session_state.amount_cols = amount_cols
-        
-        with col2:
-            # 날짜 컬럼 (금액과 겹치지 않게)
-            available_for_date = [c for c in columns if c not in amount_cols]
-            date_default = [c for c in saved_date if c in available_for_date] or [c for c in date_candidates if c in available_for_date]
-            date_cols = st.multiselect(
-                "📅 날짜 컬럼", 
-                available_for_date, 
-                default=date_default,
-                help="YYYY-MM-DD 형식으로 통일됩니다"
-            )
-            st.session_state.date_cols = date_cols
+        # 날짜 컬럼 (금액과 겹치지 않게)
+        available_for_date = [c for c in columns if c not in amount_cols]
+        date_default = [c for c in saved_date if c in available_for_date] or [c for c in date_candidates if c in available_for_date]
+        date_cols = st.multiselect(
+            "📅 날짜 컬럼", 
+            available_for_date, 
+            default=date_default,
+            help="YYYY-MM-DD 형식으로 통일됩니다"
+        )
+        st.session_state.date_cols = date_cols
         
         # ID 컬럼 (금액/날짜와 겹치지 않게)
         available_for_id = [c for c in columns if c not in amount_cols and c not in date_cols]
@@ -1237,33 +1223,7 @@ def render_step3():
     
     st.divider()
     
-    # 발송 대상 목록
-    with st.container(border=True):
-        st.markdown("##### 발송 대상 목록")
-        
-        valid_list = [(k, v) for k, v in grouped.items() if v['recipient_email'] and validate_email(v['recipient_email'])]
-        
-        if valid_list:
-            preview_df = pd.DataFrame([
-                {'업체명': k, '이메일': v['recipient_email'], '데이터 행수': v['row_count']}
-                for k, v in valid_list
-            ])
-            
-            # 스타일링된 데이터프레임
-            st.dataframe(
-                preview_df,
-                use_container_width=True,
-                hide_index=True,
-                column_config={
-                    "업체명": st.column_config.TextColumn("업체명", width="medium"),
-                    "이메일": st.column_config.TextColumn("이메일", width="large"),
-                    "데이터 행수": st.column_config.NumberColumn("행수", format="%d", width="small")
-                }
-            )
-        else:
-            st.info("발송 가능한 대상이 없습니다", icon="ℹ")
-    
-    # 상세 검토
+    # 상세 검토 (위로 이동)
     with st.container(border=True):
         st.markdown("##### 상세 데이터 검토")
         st.caption("그룹을 선택하여 실제 발송될 데이터를 확인하세요")
@@ -1278,12 +1238,9 @@ def render_step3():
         if selected:
             g = grouped[selected]
             
-            col1, col2 = st.columns([1, 2])
-            with col1:
-                st.markdown(f"**수신자:** `{g['recipient_email'] or '없음'}`")
-            with col2:
-                if g['has_conflict']:
-                    st.warning(f"이메일 충돌: {', '.join(g['conflict_emails'])}", icon="⚠")
+            st.markdown(f"**수신자:** `{g['recipient_email'] or '없음'}`")
+            if g['has_conflict']:
+                st.warning(f"이메일 충돌: {', '.join(g['conflict_emails'])}", icon="⚠")
             
             st.dataframe(
                 pd.DataFrame(g['rows']), 
@@ -1291,6 +1248,31 @@ def render_step3():
                 hide_index=True,
                 height=250
             )
+    
+    # 발송 대상 목록 (아래로 이동)
+    with st.container(border=True):
+        st.markdown("##### 발송 대상 목록")
+        
+        valid_list = [(k, v) for k, v in grouped.items() if v['recipient_email'] and validate_email(v['recipient_email'])]
+        
+        if valid_list:
+            preview_df = pd.DataFrame([
+                {'업체명': k, '이메일': v['recipient_email'], '데이터 행수': v['row_count']}
+                for k, v in valid_list
+            ])
+            
+            st.dataframe(
+                preview_df,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "업체명": st.column_config.TextColumn("업체명", width="medium"),
+                    "이메일": st.column_config.TextColumn("이메일", width="large"),
+                    "데이터 행수": st.column_config.NumberColumn("행수", format="%d", width="small")
+                }
+            )
+        else:
+            st.info("발송 가능한 대상이 없습니다", icon="ℹ")
     
     # 네비게이션
     st.divider()
@@ -1306,9 +1288,9 @@ def render_step3():
 
 
 def render_step4():
-    """Step 4: 템플릿 편집 - 간단한 에디터 박스"""
+    """Step 4: 템플릿 편집 - 세로 레이아웃, 미리보기 버튼"""
     
-    # 이메일 제목
+    # 1. 이메일 제목
     st.markdown("##### 📧 이메일 제목")
     subject = st.text_input(
         "제목", 
@@ -1318,129 +1300,149 @@ def render_step4():
     )
     st.session_state.subject_template = subject
     
-    st.markdown("---")
+    # 2. 헤더
+    st.markdown("##### 🏷️ 헤더 타이틀")
+    header = st.text_input(
+        "헤더", 
+        st.session_state.header_title,
+        label_visibility="collapsed",
+        placeholder="정산 내역 안내"
+    )
+    st.session_state.header_title = header
     
-    # 본문 편집 (하나의 큰 에디터)
-    col_edit, col_preview = st.columns([1, 1])
+    # 3. 본문 내용
+    st.markdown("##### ✏️ 본문 내용")
+    st.caption("테이블 위에 표시될 내용 ({{ company_name }}, {{ period }} 변수 사용 가능)")
     
-    with col_edit:
-        st.markdown("##### ✏️ 본문 내용")
-        st.caption("테이블 위에 표시될 내용을 자유롭게 작성하세요")
-        
-        # 전체 본문을 하나의 텍스트로 관리
-        if 'email_body_text' not in st.session_state:
-            # 기본 템플릿 생성
-            st.session_state.email_body_text = """안녕하세요, {{ company_name }} 담당자님.
+    if 'email_body_text' not in st.session_state:
+        st.session_state.email_body_text = """안녕하세요, {{ company_name }} 담당자님.
 
 {{ period }} 정산 내역을 안내드립니다.
 아래 표를 확인해 주시기 바랍니다.
 
 문의사항이 있으시면 회신 부탁드립니다.
 감사합니다."""
-        
-        body_text = st.text_area(
-            "본문",
-            st.session_state.email_body_text,
-            height=300,
-            label_visibility="collapsed",
-            placeholder="안녕하세요, {{ company_name }} 담당자님..."
-        )
-        st.session_state.email_body_text = body_text
-        
-        # 변수 설명
-        with st.expander("💡 사용 가능한 변수", expanded=False):
-            st.markdown("""
-            | 변수 | 설명 | 예시 |
-            |------|------|------|
-            | `{{ company_name }}` | 업체명 | 에스투비 |
-            | `{{ period }}` | 정산월 | 2024년 12월 |
-            | `{{ company_code }}` | 업체코드 | 에스투비 |
-            """)
-        
-        # 기존 템플릿 변수에 매핑 (호환성 유지)
-        st.session_state.greeting_template = body_text
-        st.session_state.info_template = ""
-        st.session_state.additional_template = ""
     
-    with col_preview:
-        st.markdown("##### 👁️ 미리보기")
-        
-        grouped = st.session_state.grouped_data
-        valid_list = [(k, v) for k, v in grouped.items() if v['recipient_email'] and validate_email(v['recipient_email'])]
-        
-        if valid_list:
-            # 미리보기 대상 선택
-            preview_options = [f"{k}" for k, v in valid_list[:10]]
+    body_text = st.text_area(
+        "본문",
+        st.session_state.email_body_text,
+        height=200,
+        label_visibility="collapsed",
+        placeholder="안녕하세요, {{ company_name }} 담당자님..."
+    )
+    st.session_state.email_body_text = body_text
+    st.session_state.greeting_template = body_text
+    st.session_state.info_template = ""
+    st.session_state.additional_template = ""
+    
+    # 4. (표 위치) - 안내만
+    st.markdown("##### 📊 정산 테이블")
+    st.info("이 위치에 데이터 테이블이 자동으로 삽입됩니다", icon="📊")
+    
+    # 5. 푸터
+    st.markdown("##### 📝 푸터")
+    footer = st.text_area(
+        "푸터",
+        st.session_state.footer_template,
+        height=80,
+        label_visibility="collapsed",
+        placeholder="본 메일은 발신 전용입니다. 문의: 담당자 연락처"
+    )
+    st.session_state.footer_template = footer
+    
+    # 변수 설명 (접힘)
+    with st.expander("💡 사용 가능한 변수", expanded=False):
+        st.markdown("""
+        | 변수 | 설명 | 예시 |
+        |------|------|------|
+        | `{{ company_name }}` | 업체명 | 에스투비 |
+        | `{{ period }}` | 정산월 | 2024년 12월 |
+        | `{{ company_code }}` | 업체코드 | 에스투비 |
+        """)
+    
+    st.divider()
+    
+    # 미리보기 버튼
+    grouped = st.session_state.grouped_data
+    valid_list = [(k, v) for k, v in grouped.items() if v['recipient_email'] and validate_email(v['recipient_email'])]
+    
+    if valid_list:
+        col_select, col_btn = st.columns([3, 1])
+        with col_select:
+            preview_options = [f"{k}" for k, v in valid_list[:20]]
             selected_idx = st.selectbox(
-                "업체 선택",
+                "미리보기 대상",
                 range(len(preview_options)),
                 format_func=lambda x: preview_options[x],
                 label_visibility="collapsed"
             )
-            
+        with col_btn:
+            show_preview = st.button("👁️ 미리보기", use_container_width=True)
+        
+        # 미리보기 표시 (버튼 클릭 시 또는 세션에 저장된 상태)
+        if 'show_email_preview' not in st.session_state:
+            st.session_state.show_email_preview = False
+        
+        if show_preview:
+            st.session_state.show_email_preview = True
+        
+        if st.session_state.show_email_preview and valid_list:
             sample_key, sample_data = valid_list[selected_idx]
             
-            # 변수 치환해서 미리보기
-            try:
-                preview_text = Template(body_text).render(
-                    company_name=sample_key,
-                    company_code=sample_key,
-                    period=datetime.now().strftime('%Y년 %m월')
-                )
+            with st.container(border=True):
+                st.markdown("##### 📬 이메일 미리보기")
                 
-                # 제목 미리보기
-                subject_preview = Template(subject).render(
-                    company_name=sample_key,
-                    period=datetime.now().strftime('%Y년 %m월')
-                )
-                
-                st.info(f"**제목:** {subject_preview}")
-                
-                # 본문 미리보기 (박스)
-                st.markdown(f"""
-                <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; 
-                            border: 1px solid #dee2e6; white-space: pre-wrap; 
-                            font-size: 14px; line-height: 1.6;">
+                try:
+                    # 제목 미리보기
+                    subject_preview = Template(subject).render(
+                        company_name=sample_key,
+                        period=datetime.now().strftime('%Y년 %m월')
+                    )
+                    st.markdown(f"**제목:** {subject_preview}")
+                    
+                    # 본문 미리보기
+                    preview_text = Template(body_text).render(
+                        company_name=sample_key,
+                        company_code=sample_key,
+                        period=datetime.now().strftime('%Y년 %m월')
+                    )
+                    
+                    st.markdown(f"""
+                    <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; 
+                                border: 1px solid #dee2e6; margin: 10px 0;">
+                        <div style="text-align: center; font-size: 18px; font-weight: bold; 
+                                    color: #2c3e50; margin-bottom: 16px;">{header}</div>
+                        <div style="white-space: pre-wrap; font-size: 14px; line-height: 1.6;">
 {preview_text}
-
-━━━━━━━━━━━━━━━━━━━━
-📊 [정산 테이블 {sample_data['row_count']}행]
-━━━━━━━━━━━━━━━━━━━━
-                </div>
-                """, unsafe_allow_html=True)
-                
-            except Exception as e:
-                st.error(f"미리보기 오류: {e}")
-        else:
-            st.info("미리보기할 데이터가 없습니다", icon="ℹ️")
-    
-    # 고급 설정 (접힘)
-    with st.expander("🔧 고급 설정 (헤더/푸터)", expanded=False):
-        col1, col2 = st.columns(2)
-        with col1:
-            header = st.text_input(
-                "헤더 타이틀", 
-                st.session_state.header_title,
-                placeholder="정산 내역 안내"
-            )
-            st.session_state.header_title = header
-        with col2:
-            footer = st.text_area(
-                "푸터",
-                st.session_state.footer_template,
-                height=100,
-                placeholder="본 메일은 발신 전용입니다."
-            )
-            st.session_state.footer_template = footer
+                        </div>
+                        <div style="background: #e9ecef; padding: 12px; margin: 16px 0; 
+                                    border-radius: 4px; text-align: center;">
+                            📊 [정산 테이블 {sample_data['row_count']}행]
+                        </div>
+                        <div style="font-size: 12px; color: #6c757d; margin-top: 16px; 
+                                    border-top: 1px solid #dee2e6; padding-top: 12px;">
+                            {footer if footer else ''}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    if st.button("미리보기 닫기"):
+                        st.session_state.show_email_preview = False
+                        st.rerun()
+                        
+                except Exception as e:
+                    st.error(f"미리보기 오류: {e}")
+    else:
+        st.info("미리보기할 데이터가 없습니다", icon="ℹ️")
     
     # 네비게이션
     st.divider()
-    col1, col2, col3 = st.columns([1, 2, 1])
+    col1, col2 = st.columns(2)
     with col1:
         if st.button("← 이전", use_container_width=True):
             st.session_state.current_step = 3
             st.rerun()
-    with col3:
+    with col2:
         if st.button("발송 단계로 →", type="primary", use_container_width=True):
             st.session_state.current_step = 5
             st.rerun()
