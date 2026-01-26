@@ -1079,79 +1079,132 @@ def render_step3():
 
 
 def render_step4():
-    """Step 4: 템플릿 편집"""
-    col1, col2 = st.columns([1, 1])
+    """Step 4: 템플릿 편집 - 넓은 편집 UI"""
     
-    with col1:
-        with st.container(border=True):
-            st.markdown("##### 템플릿 편집")
-            st.caption("Jinja2 문법 사용 가능: {{ company_name }}, {{ period }}")
-            
+    # 탭으로 편집/미리보기 분리 (더 넓은 공간 확보)
+    tab_edit, tab_preview = st.tabs(["✏️ 템플릿 편집", "👁️ 미리보기"])
+    
+    with tab_edit:
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%); 
+                    padding: 12px 16px; border-radius: 8px; margin-bottom: 16px;">
+            <b>💡 사용 가능한 변수</b><br>
+            <code style="background:#333;padding:2px 6px;border-radius:3px;color:#fff;">{{ company_name }}</code> 업체명 &nbsp;
+            <code style="background:#333;padding:2px 6px;border-radius:3px;color:#fff;">{{ period }}</code> 정산월 &nbsp;
+            <code style="background:#333;padding:2px 6px;border-radius:3px;color:#fff;">{{ total_amount }}</code> 합계금액
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # 제목 & 헤더 (한 줄)
+        col1, col2 = st.columns([2, 1])
+        with col1:
             subject = st.text_input(
-                "이메일 제목", 
+                "📧 이메일 제목", 
                 st.session_state.subject_template,
-                help="예: [한국유니온제약] {{ period }} 정산서"
+                placeholder="예: [한국유니온제약] {{ period }} 정산서 안내"
             )
             st.session_state.subject_template = subject
-            
+        with col2:
             header = st.text_input(
-                "헤더 타이틀", 
-                st.session_state.header_title
+                "📌 헤더 타이틀", 
+                st.session_state.header_title,
+                placeholder="예: 월별 정산서"
             )
             st.session_state.header_title = header
-            
-            greeting = st.text_area(
-                "인사말", 
-                st.session_state.greeting_template, 
-                height=80
-            )
-            st.session_state.greeting_template = greeting
-            
+        
+        st.markdown("---")
+        
+        # 인사말 (넓게)
+        greeting = st.text_area(
+            "👋 인사말", 
+            st.session_state.greeting_template, 
+            height=120,
+            placeholder="안녕하세요, {{ company_name }} 담당자님.\n\n{{ period }} 정산 내역을 안내드립니다."
+        )
+        st.session_state.greeting_template = greeting
+        
+        # 정보 박스 & 추가 메시지 (2열)
+        col1, col2 = st.columns(2)
+        with col1:
             info = st.text_area(
-                "정보 박스", 
+                "ℹ️ 정보 박스 (하이라이트)", 
                 st.session_state.info_template, 
-                height=60
+                height=100,
+                placeholder="정산 기간: {{ period }}\n합계 금액: {{ total_amount }}"
             )
             st.session_state.info_template = info
-            
+        with col2:
             additional = st.text_area(
-                "추가 메시지", 
+                "📝 추가 메시지", 
                 st.session_state.additional_template, 
-                height=60
+                height=100,
+                placeholder="문의사항이 있으시면 연락 부탁드립니다."
             )
             st.session_state.additional_template = additional
+        
+        # Footer 편집 추가
+        with st.expander("🔧 푸터 편집 (선택)", expanded=False):
+            footer = st.text_area(
+                "푸터 텍스트",
+                st.session_state.footer_template,
+                height=80,
+                placeholder="본 메일은 발신 전용입니다."
+            )
+            st.session_state.footer_template = footer
     
-    with col2:
-        with st.container(border=True):
-            st.markdown("##### 미리보기")
+    with tab_preview:
+        grouped = st.session_state.grouped_data
+        valid_list = [(k, v) for k, v in grouped.items() if v['recipient_email'] and validate_email(v['recipient_email'])]
+        
+        if valid_list:
+            # 미리보기 대상 선택
+            preview_options = [f"{k} ({v['recipient_email']})" for k, v in valid_list[:20]]
+            selected_idx = st.selectbox(
+                "미리보기 대상 선택",
+                range(len(preview_options)),
+                format_func=lambda x: preview_options[x]
+            )
             
-            grouped = st.session_state.grouped_data
-            valid_list = [(k, v) for k, v in grouped.items() if v['recipient_email'] and validate_email(v['recipient_email'])]
+            sample_key, sample_data = valid_list[selected_idx]
+            templates = {
+                'subject': st.session_state.subject_template, 
+                'header_title': st.session_state.header_title, 
+                'greeting': st.session_state.greeting_template,
+                'info': st.session_state.info_template, 
+                'additional': st.session_state.additional_template, 
+                'footer': st.session_state.footer_template
+            }
             
-            if valid_list:
-                sample_key, sample_data = valid_list[0]
-                templates = {
-                    'subject': subject, 'header_title': header, 'greeting': greeting,
-                    'info': info, 'additional': additional, 'footer': st.session_state.footer_template
-                }
-                try:
-                    html = render_email_content(sample_key, sample_data,
-                        st.session_state.display_cols, st.session_state.amount_cols, templates)
-                    st.components.v1.html(html, height=400, scrolling=True)
-                except Exception as e:
-                    st.error(f"미리보기 오류: {e}", icon="❌")
-            else:
-                st.info("미리보기할 데이터가 없습니다", icon="ℹ")
+            # 제목 미리보기
+            try:
+                from jinja2 import Template
+                subject_preview = Template(st.session_state.subject_template).render(
+                    company_name=sample_key,
+                    period=st.session_state.get('settlement_period', '2024년 12월')
+                )
+                st.info(f"**제목:** {subject_preview}", icon="📧")
+            except:
+                pass
+            
+            # HTML 미리보기 (더 큰 높이)
+            try:
+                html = render_email_content(sample_key, sample_data,
+                    st.session_state.display_cols, st.session_state.amount_cols, templates)
+                st.components.v1.html(html, height=600, scrolling=True)
+            except Exception as e:
+                st.error(f"미리보기 오류: {e}", icon="❌")
+        else:
+            st.info("미리보기할 데이터가 없습니다. 이메일이 있는 업체가 필요합니다.", icon="ℹ️")
     
-    # 네비게이션
+    # 네비게이션 (하단 고정)
     st.divider()
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
         if st.button("← 이전", use_container_width=True):
             st.session_state.current_step = 3
             st.rerun()
-    with col2:
-        if st.button("다음 단계 →", type="primary", use_container_width=True):
+    with col3:
+        if st.button("발송 단계로 →", type="primary", use_container_width=True):
             st.session_state.current_step = 5
             st.rerun()
 
