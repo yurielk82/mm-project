@@ -846,11 +846,29 @@ def render_smtp_sidebar():
             """)
         
         # ============================================================
-        # 6. 저작권 (맨 아래, 아주 작게, 연하게)
+        # 6. 저작권 (하단 고정, 글씨 조금 키움, 대비 더 약하게)
         # ============================================================
         st.markdown("""
-        <div style="text-align: center; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #eee;">
-            <p style="font-size: 0.55rem; color: #ccc; line-height: 1.4; margin: 0;">
+        <style>
+        .sidebar-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            max-width: 336px;
+            text-align: center;
+            padding: 12px 10px;
+            background: linear-gradient(to top, white 80%, transparent);
+        }
+        .sidebar-footer p {
+            font-size: 0.65rem;
+            color: #e0e0e0;
+            line-height: 1.5;
+            margin: 0;
+        }
+        </style>
+        <div class="sidebar-footer">
+            <p>
                 © 2026. Kwon Daehwan<br>
                 Planned & Built by Sales Management Team, KUP<br>
                 In collaboration with Genspark & Gemini
