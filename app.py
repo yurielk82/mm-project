@@ -234,6 +234,11 @@ def init_session_state():
         'batch_delay': DEFAULT_BATCH_DELAY,
         # 시트별 컬럼 설정 기억 (캐시)
         'column_settings_cache': {},
+        # 운영 로그 (Operation First)
+        'activity_log': [],
+        'emergency_stop': False,
+        # 발송 상태 추적 (멱등성 보장)
+        'sent_groups': set(),  # 이미 발송 완료된 그룹
     }
     
     for key, value in defaults.items():
@@ -277,6 +282,62 @@ def reset_workflow():
     for key in list(st.session_state.keys()):
         del st.session_state[key]
     init_session_state()
+
+
+def add_log(message: str, level: str = "info"):
+    """운영 로그 추가 (Activity Log)"""
+    if 'activity_log' not in st.session_state:
+        st.session_state.activity_log = []
+    
+    timestamp = datetime.now().strftime('%H:%M:%S')
+    icon = {"info": "ℹ️", "success": "✅", "warning": "⚠️", "error": "❌"}.get(level, "📝")
+    st.session_state.activity_log.append({
+        'time': timestamp,
+        'level': level,
+        'icon': icon,
+        'message': message
+    })
+    # 최대 100개 로그 유지
+    if len(st.session_state.activity_log) > 100:
+        st.session_state.activity_log = st.session_state.activity_log[-100:]
+
+
+def sanity_check(grouped_data: dict) -> List[dict]:
+    """발송 전 데이터 검증 (Sanity Check)"""
+    warnings = []
+    
+    for group_name, data in grouped_data.items():
+        # 금액 0원 체크
+        if data.get('totals'):
+            for col, val in data['totals'].items():
+                try:
+                    amount = float(str(val).replace(',', '').replace('원', ''))
+                    if amount == 0:
+                        warnings.append({
+                            'group': group_name,
+                            'type': 'zero_amount',
+                            'message': f"금액 0원 ({col})"
+                        })
+                except:
+                    pass
+        
+        # 이메일 없음 체크
+        if not data.get('recipient_email'):
+            warnings.append({
+                'group': group_name,
+                'type': 'no_email',
+                'message': "이메일 주소 없음"
+            })
+        
+        # 데이터 행 없음 체크
+        if data.get('row_count', 0) == 0:
+            warnings.append({
+                'group': group_name,
+                'type': 'no_data',
+                'message': "데이터 행 없음"
+            })
+    
+    return warnings
 
 
 # ============================================================================
@@ -1909,14 +1970,31 @@ def render_step5():
             else:
                 st.error(f"SMTP 연결 실패: {error}", icon="❌")
     
+    # Sanity Check (발송 전 검증)
+    if send_btn and st.session_state.smtp_config and valid_groups:
+        warnings = sanity_check(st.session_state.grouped_data)
+        if warnings:
+            with st.expander(f"⚠️ 데이터 검증 경고 ({len(warnings)}건)", expanded=True):
+                for w in warnings[:10]:  # 최대 10개만 표시
+                    st.warning(f"**{w['group']}**: {w['message']}")
+                if len(warnings) > 10:
+                    st.caption(f"... 외 {len(warnings) - 10}건")
+    
     # 전체 발송
     if send_btn and st.session_state.smtp_config and valid_groups:
         config = st.session_state.smtp_config
+        add_log(f"발송 시작 - 총 {len(valid_groups)}건", "info")
         
-        # 진행률 표시 영역
+        # 긴급 정지 버튼 + 진행률 표시 영역
         progress_container = st.container()
         with progress_container:
-            progress_bar = st.progress(0)
+            col_progress, col_stop = st.columns([4, 1])
+            with col_progress:
+                progress_bar = st.progress(0)
+            with col_stop:
+                if st.button("🛑 긴급 정지", type="secondary", use_container_width=True):
+                    st.session_state.emergency_stop = True
+            
             status_col1, status_col2 = st.columns([3, 1])
             with status_col1:
                 status_text = st.empty()
@@ -1924,14 +2002,32 @@ def render_step5():
                 count_text = st.empty()
         
         results = []
-        success_cnt = fail_cnt = 0
+        success_cnt = fail_cnt = skipped_cnt = 0
         total = len(valid_groups)
+        
+        # 이미 발송된 그룹 확인 (멱등성)
+        sent_groups = st.session_state.get('sent_groups', set())
         
         server, error = create_smtp_connection(config)
         if not server:
             st.error(f"SMTP 연결 실패: {error}", icon="❌")
+            add_log(f"SMTP 연결 실패: {error}", "error")
         else:
+            st.session_state.emergency_stop = False
+            
             for i, (gk, gd) in enumerate(valid_groups.items()):
+                # 긴급 정지 확인
+                if st.session_state.get('emergency_stop', False):
+                    status_text.markdown("**🛑 긴급 정지됨!**")
+                    add_log(f"긴급 정지 - {i}건 발송 후 중단", "warning")
+                    break
+                
+                # 멱등성 체크 - 이미 발송된 그룹은 건너뜀
+                if gk in sent_groups:
+                    skipped_cnt += 1
+                    results.append({'그룹': gk, '이메일': gd['recipient_email'], '상태': '건너뜀', '사유': '이미 발송됨'})
+                    continue
+                
                 progress_bar.progress((i+1)/total)
                 status_text.markdown(f"**발송 중:** {gk}")
                 count_text.markdown(f"`{i+1}/{total}`")
@@ -1947,12 +2043,22 @@ def render_step5():
                     if ok:
                         success_cnt += 1
                         results.append({'그룹': gk, '이메일': gd['recipient_email'], '상태': '성공', '사유': ''})
+                        sent_groups.add(gk)  # 발송 완료 표시
+                        add_log(f"✓ {gk} → {gd['recipient_email']}", "success")
                     else:
                         fail_cnt += 1
-                        results.append({'그룹': gk, '이메일': gd['recipient_email'], '상태': '실패', '사유': err})
+                        # 상세 오류 메시지 파싱
+                        error_detail = err
+                        if 'SMTPAuthenticationError' in str(err):
+                            error_detail = "인증 오류 (비밀번호 확인)"
+                        elif 'SMTPRecipientsRefused' in str(err):
+                            error_detail = "수신자 거부 (이메일 주소 확인)"
+                        results.append({'그룹': gk, '이메일': gd['recipient_email'], '상태': '실패', '사유': error_detail})
+                        add_log(f"✗ {gk}: {error_detail}", "error")
                 except Exception as e:
                     fail_cnt += 1
                     results.append({'그룹': gk, '이메일': gd['recipient_email'], '상태': '실패', '사유': str(e)})
+                    add_log(f"✗ {gk}: {str(e)}", "error")
                 
                 # 랜덤 딜레이 적용
                 import random
@@ -1963,8 +2069,19 @@ def render_step5():
             
             server.quit()
             st.session_state.send_results = results
+            st.session_state.sent_groups = sent_groups
             
-            status_text.markdown("**완료!**")
+            if not st.session_state.get('emergency_stop', False):
+                status_text.markdown("**완료!**")
+                add_log(f"발송 완료 - 성공: {success_cnt}, 실패: {fail_cnt}, 건너뜀: {skipped_cnt}", "info")
+                
+                # 발송 이력 DB 저장 (데이터 영속성)
+                try:
+                    init_database()
+                    save_send_history(results, datetime.now().strftime('%Y년 %m월'))
+                    add_log("발송 이력 DB 저장 완료", "info")
+                except Exception as db_err:
+                    add_log(f"DB 저장 실패: {str(db_err)}", "warning")
             
             if fail_cnt == 0:
                 st.success(f"전체 발송 완료! ({success_cnt}건)", icon="🎉")
@@ -2057,6 +2174,225 @@ def render_step5():
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         use_container_width=True
                     )
+    
+    # 운영 로그 (Activity Log) - Expander로 표시
+    if st.session_state.get('activity_log'):
+        with st.expander(f"📋 운영 로그 ({len(st.session_state.activity_log)}건)", expanded=False):
+            log_container = st.container()
+            with log_container:
+                # 최신 로그가 위에 오도록 역순 정렬
+                for log in reversed(st.session_state.activity_log[-50:]):
+                    color = {"success": "#28a745", "error": "#dc3545", "warning": "#ffc107", "info": "#6c757d"}.get(log['level'], "#6c757d")
+                    st.markdown(
+                        f"<div style='font-family: monospace; font-size: 0.85rem; padding: 4px 8px; margin: 2px 0; "
+                        f"border-left: 3px solid {color}; background: rgba(0,0,0,0.02);'>"
+                        f"<span style='color: #888;'>[{log['time']}]</span> {log['icon']} {log['message']}</div>",
+                        unsafe_allow_html=True
+                    )
+
+
+# ============================================================================
+# DATA PERSISTENCE - 이력 저장 및 조회 (레퍼런스 4)
+# ============================================================================
+
+import sqlite3
+import json
+import os
+
+DB_PATH = os.path.join(os.path.dirname(__file__), 'mail_history.db')
+
+
+def init_database():
+    """SQLite 데이터베이스 초기화"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS send_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            period TEXT,
+            company_name TEXT,
+            company_code TEXT,
+            recipient_email TEXT,
+            subject TEXT,
+            status TEXT,
+            reason TEXT,
+            row_count INTEGER,
+            total_amount TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # 인덱스 생성 (빠른 조회용)
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_period ON send_history(period)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_company ON send_history(company_name)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_timestamp ON send_history(timestamp)')
+    
+    conn.commit()
+    conn.close()
+
+
+def save_send_history(results: List[dict], period: str = None):
+    """발송 결과를 DB에 저장"""
+    if not period:
+        period = datetime.now().strftime('%Y년 %m월')
+    
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    for r in results:
+        cursor.execute('''
+            INSERT INTO send_history (period, company_name, recipient_email, subject, status, reason, row_count)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            period,
+            r.get('그룹', ''),
+            r.get('이메일', ''),
+            r.get('subject', ''),
+            r.get('상태', ''),
+            r.get('사유', ''),
+            r.get('row_count', 0)
+        ))
+    
+    conn.commit()
+    conn.close()
+
+
+def get_send_history(period: str = None, company: str = None, limit: int = 100, offset: int = 0) -> pd.DataFrame:
+    """발송 이력 조회 (페이지네이션 지원)"""
+    conn = sqlite3.connect(DB_PATH)
+    
+    query = "SELECT * FROM send_history WHERE 1=1"
+    params = []
+    
+    if period:
+        query += " AND period = ?"
+        params.append(period)
+    
+    if company:
+        query += " AND company_name LIKE ?"
+        params.append(f"%{company}%")
+    
+    query += " ORDER BY timestamp DESC LIMIT ? OFFSET ?"
+    params.extend([limit, offset])
+    
+    df = pd.read_sql_query(query, conn, params=params)
+    conn.close()
+    return df
+
+
+def get_statistics(period: str = None) -> dict:
+    """발송 통계 조회"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    where_clause = f"WHERE period = '{period}'" if period else ""
+    
+    # 총 발송 수
+    cursor.execute(f"SELECT COUNT(*) FROM send_history {where_clause}")
+    total = cursor.fetchone()[0]
+    
+    # 성공/실패 수
+    cursor.execute(f"SELECT status, COUNT(*) FROM send_history {where_clause} GROUP BY status")
+    status_counts = dict(cursor.fetchall())
+    
+    # 업체별 발송 수 (Top 10)
+    cursor.execute(f'''
+        SELECT company_name, COUNT(*) as cnt 
+        FROM send_history {where_clause} 
+        GROUP BY company_name 
+        ORDER BY cnt DESC LIMIT 10
+    ''')
+    top_companies = cursor.fetchall()
+    
+    conn.close()
+    
+    return {
+        'total': total,
+        'success': status_counts.get('성공', 0),
+        'failed': status_counts.get('실패', 0),
+        'skipped': status_counts.get('건너뜀', 0),
+        'top_companies': top_companies
+    }
+
+
+def render_history_tab():
+    """발송 내역 조회 탭 (History Dashboard)"""
+    st.markdown("### 📊 발송 내역 조회")
+    
+    # DB 초기화
+    init_database()
+    
+    # 필터링 옵션
+    col1, col2, col3 = st.columns([2, 2, 1])
+    
+    with col1:
+        period_filter = st.text_input("정산월 검색", placeholder="예: 2025년 01월")
+    
+    with col2:
+        company_filter = st.text_input("업체명 검색", placeholder="업체명 일부 입력")
+    
+    with col3:
+        st.markdown("<br>", unsafe_allow_html=True)
+        search_btn = st.button("🔍 검색", use_container_width=True)
+    
+    # 통계 카드
+    stats = get_statistics(period_filter if period_filter else None)
+    
+    if stats['total'] > 0:
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("총 발송", f"{stats['total']}건")
+        with col2:
+            rate = stats['success'] / stats['total'] * 100 if stats['total'] > 0 else 0
+            st.metric("성공률", f"{rate:.1f}%", delta=f"+{stats['success']}")
+        with col3:
+            st.metric("실패", f"{stats['failed']}건")
+        with col4:
+            st.metric("건너뜀", f"{stats['skipped']}건")
+        
+        # 업체별 발송 빈도 차트
+        if stats['top_companies']:
+            with st.expander("📈 업체별 발송 빈도 (Top 10)", expanded=False):
+                import plotly.express as px
+                chart_data = pd.DataFrame(stats['top_companies'], columns=['업체명', '발송 수'])
+                fig = px.bar(chart_data, x='업체명', y='발송 수', title='업체별 발송 빈도')
+                fig.update_layout(height=300)
+                st.plotly_chart(fig, use_container_width=True)
+    
+    st.divider()
+    
+    # 이력 테이블
+    df_history = get_send_history(
+        period=period_filter if period_filter else None,
+        company=company_filter if company_filter else None,
+        limit=50
+    )
+    
+    if not df_history.empty:
+        st.markdown(f"**검색 결과: {len(df_history)}건**")
+        
+        # 상태별 색상
+        def highlight_history(row):
+            if row['status'] == '성공':
+                return ['background-color: #e8f5e9'] * len(row)
+            elif row['status'] == '실패':
+                return ['background-color: #ffebee'] * len(row)
+            return [''] * len(row)
+        
+        display_cols = ['timestamp', 'period', 'company_name', 'recipient_email', 'status', 'reason']
+        display_names = {'timestamp': '발송시간', 'period': '정산월', 'company_name': '업체명', 
+                        'recipient_email': '수신이메일', 'status': '상태', 'reason': '사유'}
+        
+        df_display = df_history[display_cols].rename(columns=display_names)
+        st.dataframe(
+            df_display.style.apply(highlight_history, axis=1),
+            use_container_width=True,
+            hide_index=True
+        )
+    else:
+        st.info("발송 이력이 없습니다.", icon="ℹ️")
 
 
 # ============================================================================
@@ -2083,20 +2419,34 @@ def main():
         st.session_state.show_local_guide = False
     
     render_smtp_sidebar()
-    render_step_indicator()
     
-    # 현재 단계 렌더링
-    step = st.session_state.current_step
-    if step == 1:
-        render_step1()
-    elif step == 2:
-        render_step2()
-    elif step == 3:
-        render_step3()
-    elif step == 4:
-        render_step4()
-    elif step == 5:
-        render_step5()
+    # DB 초기화 (History 탭용)
+    try:
+        init_database()
+    except:
+        pass
+    
+    # 메인 영역: 탭 구조 (메일 발송 / 발송 이력)
+    tab1, tab2 = st.tabs(["📧 메일 발송", "📊 발송 이력"])
+    
+    with tab1:
+        render_step_indicator()
+        
+        # 현재 단계 렌더링
+        step = st.session_state.current_step
+        if step == 1:
+            render_step1()
+        elif step == 2:
+            render_step2()
+        elif step == 3:
+            render_step3()
+        elif step == 4:
+            render_step4()
+        elif step == 5:
+            render_step5()
+    
+    with tab2:
+        render_history_tab()
 
 
 if __name__ == "__main__":
