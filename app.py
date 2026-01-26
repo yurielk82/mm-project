@@ -876,63 +876,105 @@ streamlit run app.py""", language="bash")
 
 
 def render_smtp_sidebar():
-    """사이드바 - SMTP상태(최상단) → 제목 → 현재상태 → SMTP설정 → 가이드 → 저작권"""
+    """사이드바 - 20년 차 UX 개선: 업무 흐름 최적화"""
     with st.sidebar:
         
         # ============================================================
-        # 0. SMTP 상태 (최상단 - 가장 중요한 정보)
-        # ============================================================
-        if st.session_state.smtp_config:
-            st.success("✅ 발송 준비 완료", icon=None)
-        else:
-            st.info("📧 SMTP 연결이 필요합니다", icon=None)
-        
-        # ============================================================
-        # 1. 앱 제목
+        # TOP: 브랜드 & SMTP 상태 배지 (콤팩트)
         # ============================================================
         st.markdown(f"""
-        <div style="text-align: center; margin: 0.5rem 0;">
-            <span style="font-size: 1.4rem; font-weight: 700;">{APP_TITLE}</span>
-            <span style="font-size: 0.6rem; opacity: 0.4;">v{VERSION}</span>
+        <div style="text-align: center; padding: 0.3rem 0 0.5rem 0;">
+            <div style="font-size: 1.2rem; font-weight: 600; color: #1e3c72;">CSO 메일머지</div>
+            <span style="font-size: 0.65rem; color: #888; background: #f0f0f0; 
+                        padding: 2px 8px; border-radius: 10px;">v{VERSION}</span>
         </div>
         """, unsafe_allow_html=True)
+        
+        # SMTP 상태 배지 (콤팩트한 인디케이터)
+        if st.session_state.smtp_config:
+            st.markdown("""
+            <div style="text-align: center; margin: 0.3rem 0;">
+                <span style="background: #d4edda; color: #155724; padding: 4px 12px; 
+                            border-radius: 12px; font-size: 0.75rem; font-weight: 500;">
+                    ● SMTP 연결됨
+                </span>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div style="text-align: center; margin: 0.3rem 0;">
+                <span style="background: #fff3cd; color: #856404; padding: 4px 12px; 
+                            border-radius: 12px; font-size: 0.75rem; font-weight: 500;">
+                    ○ SMTP 필요
+                </span>
+            </div>
+            """, unsafe_allow_html=True)
         
         st.divider()
         
         # ============================================================
-        # 2. 현재 상태 (데이터/발송대상) + 처음부터
+        # MIDDLE: 실시간 메트릭 (데이터/발송) - 균형 잡힌 카드
         # ============================================================
+        st.markdown("<p style='font-size: 0.8rem; color: #666; margin-bottom: 0.5rem;'>📊 작업 현황</p>", 
+                   unsafe_allow_html=True)
+        
         col1, col2 = st.columns(2)
         with col1:
-            if st.session_state.df is not None:
-                st.metric("데이터", f"{len(st.session_state.df):,}")
-            else:
-                st.metric("데이터", "0")
+            data_count = len(st.session_state.df) if st.session_state.df is not None else 0
+            st.metric("데이터", f"{data_count:,}행", label_visibility="visible")
         
         with col2:
             if st.session_state.grouped_data:
                 valid = sum(1 for g in st.session_state.grouped_data.values() 
                            if g['recipient_email'] and validate_email(g['recipient_email']))
                 total = len(st.session_state.grouped_data)
-                st.metric("발송", f"{valid}/{total}")
+                st.metric("발송", f"{valid}/{total}", label_visibility="visible")
             else:
-                st.metric("발송", "0")
+                st.metric("발송", "0/0", label_visibility="visible")
         
-        if st.button("🔄 처음부터", use_container_width=True):
-            reset_workflow()
-            st.rerun()
+        # 처음부터 버튼 - Outline 스타일로 덜 튀게
+        st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+        
+        # 초기화 확인 상태
+        if 'confirm_reset' not in st.session_state:
+            st.session_state.confirm_reset = False
+        
+        if not st.session_state.confirm_reset:
+            # 첫 클릭: 확인 요청
+            if st.button("↻ 처음부터", use_container_width=True, 
+                        help="모든 데이터를 초기화합니다"):
+                st.session_state.confirm_reset = True
+                st.rerun()
+        else:
+            # 두 번째: 확인/취소
+            st.warning("정말 초기화하시겠습니까?", icon="⚠️")
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("✓ 확인", use_container_width=True, type="primary"):
+                    st.session_state.confirm_reset = False
+                    reset_workflow()
+                    st.rerun()
+            with col2:
+                if st.button("✗ 취소", use_container_width=True):
+                    st.session_state.confirm_reset = False
+                    st.rerun()
         
         st.divider()
         
         # ============================================================
-        # 3. SMTP 설정 (항상 닫힌 상태로 시작)
+        # BOTTOM: 설정 영역 (Expander - 평소 닫힘)
         # ============================================================
-        with st.expander("⚙️ SMTP 설정", expanded=False):
+        
+        # SMTP 미연결 시 자동 열림
+        smtp_connected = st.session_state.smtp_config is not None
+        smtp_expanded = not smtp_connected  # 미연결이면 열림
+        
+        with st.expander("⚙️ SMTP 설정", expanded=smtp_expanded):
             smtp_defaults = get_smtp_config()
             from_secrets = smtp_defaults['from_secrets']
             
             if from_secrets:
-                st.caption("🔐 Secrets에서 자동 로드됨")
+                st.caption("🔐 Secrets에서 로드됨")
             
             provider_list = list(SMTP_PROVIDERS.keys())
             default_provider_idx = 0
@@ -956,20 +998,20 @@ def render_smtp_sidebar():
                 st.caption(f"`{smtp_server}:{smtp_port}`")
             
             smtp_username = st.text_input(
-                "발신자 이메일", 
+                "이메일", 
                 value=smtp_defaults['username'],
                 key="smtp_user",
-                placeholder="example@company.com"
+                placeholder="email@company.com"
             )
             
             smtp_password = st.text_input(
-                "앱 비밀번호", 
+                "비밀번호", 
                 type="password",
                 value=smtp_defaults['password'],
                 key="smtp_pass"
             )
             
-            if st.button("연결 테스트", use_container_width=True, type="primary"):
+            if st.button("🔌 연결 테스트", use_container_width=True, type="primary"):
                 final_username = smtp_username if smtp_username else smtp_defaults['username']
                 final_password = smtp_password if smtp_password else smtp_defaults['password']
                 
@@ -993,46 +1035,36 @@ def render_smtp_sidebar():
                         else:
                             st.error(f"{error}", icon="❌")
                 else:
-                    st.warning("이메일과 비밀번호 입력 필요", icon="⚠")
+                    st.warning("입력값 확인 필요", icon="⚠️")
         
-        # ============================================================
-        # 4. 설정 가이드
-        # ============================================================
-        with st.expander("📖 설정 가이드", expanded=False):
+        # 설정 가이드
+        with st.expander("📖 도움말", expanded=False):
             st.markdown("""
-            **secrets.toml 설정**
+            **secrets.toml**
             ```toml
             SMTP_ID = "email@company.com"
             SMTP_PW = "app_password"
-            SMTP_PROVIDER = "Hiworks (하이웍스)"
-            SENDER_NAME = "회사명"
             ```
-            
-            📁 위치: `.streamlit/secrets.toml`
-            
-            ⚠️ `.gitignore`에 추가 필수!
+            📁 `.streamlit/secrets.toml`
             """)
         
         # ============================================================
-        # 5. 로컬 실행 가이드 버튼 (눈에 띄게)
-        # ============================================================
-        st.markdown("")  # 간격
-        if st.button("💻 로컬에서 실행하기", use_container_width=True, help="회사 네트워크에서 직접 실행하는 방법"):
-            st.session_state.show_local_guide = True
-            st.rerun()
-        
-        # ============================================================
-        # 6. 저작권 (맨 아래)
+        # FOOTER: 저작권 & 로컬 실행 링크
         # ============================================================
         st.markdown("""
-        <div style="text-align: center; margin-top: 2rem; padding-top: 1rem;">
-            <p style="font-size: 0.6rem; opacity: 0.3; line-height: 1.4; margin: 0;">
-                © 2026. Kwon Daehwan<br>
-                Planned & Built by Sales Management Team, KUP<br>
-                In collaboration with Genspark & Gemini
+        <div style="text-align: center; margin-top: 1.5rem; padding-top: 1rem; 
+                    border-top: 1px solid #eee;">
+            <p style="font-size: 0.65rem; color: #999; margin-bottom: 0.5rem;">
+                © 2026 KUP Sales Management Team
             </p>
         </div>
         """, unsafe_allow_html=True)
+        
+        # 로컬 실행 - 작은 텍스트 링크
+        if st.button("💻 로컬 실행 가이드", use_container_width=True, 
+                    help="회사 네트워크에서 직접 실행"):
+            st.session_state.show_local_guide = True
+            st.rerun()
 
 
 def render_step1():
