@@ -224,10 +224,12 @@ def load_excel_file(uploaded_file) -> Tuple[Optional[pd.ExcelFile], List[str], O
 
 
 def load_sheet(xlsx: pd.ExcelFile, sheet_name: str) -> Tuple[Optional[pd.DataFrame], Optional[str]]:
-    """시트 로드"""
+    """시트 로드 - 항상 (DataFrame, error_message) 튜플 반환"""
     try:
         df = pd.read_excel(xlsx, sheet_name=sheet_name)
-        return df if not df.empty else (None, "시트에 데이터가 없습니다.")
+        if df.empty:
+            return None, "시트에 데이터가 없습니다."
+        return df, None  # 성공 시 (df, None) 반환
     except Exception as e:
         return None, f"시트 로드 오류: {str(e)}"
 
