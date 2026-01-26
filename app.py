@@ -707,7 +707,7 @@ def render_smtp_sidebar():
         if st.session_state.df is not None:
             st.metric("데이터", f"{len(st.session_state.df):,}행")
         else:
-            st.metric("데이터", "0행")
+            st.metric("데이터", "0")
         
         if st.session_state.grouped_data:
             valid = sum(1 for g in st.session_state.grouped_data.values() 
