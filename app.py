@@ -174,6 +174,7 @@ def init_session_state():
         'date_cols': [],
         'id_cols': [],
         'display_cols': [],
+        'display_cols_order': [],  # 컬럼 순서 저장
         'use_wildcard_grouping': True,
         'wildcard_suffixes': [' 합계'],
         'calculate_totals_auto': False,
@@ -190,11 +191,48 @@ def init_session_state():
         'failed_count': 0,
         'smtp_config': None,
         'conflict_resolution': 'first',
+        # 발송 설정 기억
+        'batch_size': DEFAULT_BATCH_SIZE,
+        'email_delay_min': 5,
+        'email_delay_max': 10,
+        'batch_delay': DEFAULT_BATCH_DELAY,
+        # 시트별 컬럼 설정 기억 (캐시)
+        'column_settings_cache': {},
     }
     
     for key, value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = value
+
+
+def save_column_settings(sheet_name: str):
+    """현재 컬럼 설정을 캐시에 저장"""
+    if 'column_settings_cache' not in st.session_state:
+        st.session_state.column_settings_cache = {}
+    
+    st.session_state.column_settings_cache[sheet_name] = {
+        'group_key_col': st.session_state.get('group_key_col'),
+        'email_col': st.session_state.get('email_col'),
+        'amount_cols': st.session_state.get('amount_cols', []),
+        'date_cols': st.session_state.get('date_cols', []),
+        'id_cols': st.session_state.get('id_cols', []),
+        'display_cols': st.session_state.get('display_cols', []),
+        'display_cols_order': st.session_state.get('display_cols_order', []),
+        'join_col_data': st.session_state.get('join_col_data'),
+        'join_col_email': st.session_state.get('join_col_email'),
+    }
+
+
+def load_column_settings(sheet_name: str) -> bool:
+    """캐시에서 컬럼 설정 로드 - 성공 시 True 반환"""
+    cache = st.session_state.get('column_settings_cache', {})
+    if sheet_name in cache:
+        settings = cache[sheet_name]
+        for key, value in settings.items():
+            if value is not None:
+                st.session_state[key] = value
+        return True
+    return False
 
 
 def reset_workflow():
@@ -330,9 +368,25 @@ def group_data_with_wildcard(df, group_key_col, email_col, amount_cols, display_
             for col in display_cols:
                 if col in row.index:
                     value = row[col]
-                    row_dict[col] = format_currency(value) if col in amount_cols else (str(value) if pd.notna(value) else '-')
+                    # NaN/0 처리: 숫자면 0 표시, 그 외는 빈칸
+                    if col in amount_cols:
+                        row_dict[col] = format_currency(value)
+                    elif pd.isna(value) or value is None:
+                        # 숫자 컬럼이면 0, 아니면 빈칸
+                        row_dict[col] = ''
+                    elif isinstance(value, (int, float)):
+                        if value == 0 or pd.isna(value):
+                            row_dict[col] = '0'
+                        else:
+                            row_dict[col] = str(value)
+                    else:
+                        str_val = str(value).strip()
+                        if str_val.lower() in ['nan', 'none', 'nat', '']:
+                            row_dict[col] = ''
+                        else:
+                            row_dict[col] = str_val
                 else:
-                    row_dict[col] = '-'
+                    row_dict[col] = ''
             rows.append(row_dict)
         
         totals = {}
@@ -826,7 +880,7 @@ def render_step1():
 
 
 def render_step2():
-    """Step 2: 컬럼 설정"""
+    """Step 2: 컬럼 설정 - 기억 기능 및 중복 방지"""
     df = st.session_state.df
     if df is None:
         st.warning("먼저 파일을 업로드하세요", icon="⚠")
@@ -835,6 +889,13 @@ def render_step2():
     columns = df.columns.tolist()
     df_email = st.session_state.df_email
     use_separate = st.session_state.use_separate_email_sheet
+    
+    # 시트 이름으로 이전 설정 로드 시도
+    sheet_name = st.session_state.get('selected_data_sheet', 'default')
+    if 'column_settings_loaded' not in st.session_state:
+        if load_column_settings(sheet_name):
+            st.toast(f"'{sheet_name}' 시트의 이전 설정을 불러왔습니다", icon="💾")
+        st.session_state.column_settings_loaded = True
     
     # 데이터 병합 설정
     if use_separate and df_email is not None:
@@ -848,30 +909,36 @@ def render_step2():
             
             with col1:
                 join_data = [c for c in columns if any(k in c for k in ['CSO', '관리업체'])]
+                saved_join_data = st.session_state.get('join_col_data')
+                default_idx = columns.index(saved_join_data) if saved_join_data in columns else (columns.index(join_data[0]) if join_data else 0)
                 join_col_data = st.selectbox(
                     "정산서 매칭 컬럼", 
                     columns,
-                    index=columns.index(join_data[0]) if join_data else 0,
+                    index=default_idx,
                     help="정산서에서 업체를 식별하는 컬럼"
                 )
                 st.session_state.join_col_data = join_col_data
             
             with col2:
                 join_email = [c for c in email_columns if '거래처' in c]
+                saved_join_email = st.session_state.get('join_col_email')
+                default_idx = email_columns.index(saved_join_email) if saved_join_email in email_columns else (email_columns.index(join_email[0]) if join_email else 0)
                 join_col_email = st.selectbox(
                     "이메일시트 매칭 컬럼", 
                     email_columns,
-                    index=email_columns.index(join_email[0]) if join_email else 0,
+                    index=default_idx,
                     help="이메일 시트에서 업체를 식별하는 컬럼"
                 )
                 st.session_state.join_col_email = join_col_email
             
             with col3:
                 email_cols = [c for c in email_columns if '이메일' in c or 'mail' in c.lower()]
+                saved_email_col = st.session_state.get('email_col')
+                default_idx = email_columns.index(saved_email_col) if saved_email_col in email_columns else (email_columns.index(email_cols[0]) if email_cols else 0)
                 email_col = st.selectbox(
                     "이메일 주소 컬럼", 
                     email_columns,
-                    index=email_columns.index(email_cols[0]) if email_cols else 0,
+                    index=default_idx,
                     help="이메일 주소가 있는 컬럼"
                 )
                 st.session_state.email_col = email_col
@@ -885,10 +952,12 @@ def render_step2():
         
         with col1:
             group_candidates = [c for c in columns if 'CSO' in c or '관리업체' in c]
+            saved_group = st.session_state.get('group_key_col')
+            default_idx = columns.index(saved_group) if saved_group in columns else (columns.index(group_candidates[0]) if group_candidates else 0)
             group_key_col = st.selectbox(
                 "그룹화 기준 컬럼", 
                 columns,
-                index=columns.index(group_candidates[0]) if group_candidates else 0,
+                index=default_idx,
                 help="이 컬럼 값이 같은 행들이 하나의 그룹이 됩니다"
             )
             st.session_state.group_key_col = group_key_col
@@ -896,7 +965,7 @@ def render_step2():
         with col2:
             use_wildcard = st.checkbox(
                 "와일드카드 그룹핑", 
-                value=True,
+                value=st.session_state.get('use_wildcard_grouping', True),
                 help="'에스투비'와 '에스투비 합계'를 같은 그룹으로 묶습니다"
             )
             st.session_state.use_wildcard_grouping = use_wildcard
@@ -904,16 +973,17 @@ def render_step2():
         if use_wildcard:
             col1, col2 = st.columns(2)
             with col1:
+                current_suffixes = ', '.join(st.session_state.get('wildcard_suffixes', [' 합계']))
                 suffixes = st.text_input(
                     "접미사 패턴", 
-                    " 합계, 합계",
+                    current_suffixes,
                     help="쉼표로 구분하여 여러 패턴 입력 가능"
                 )
                 st.session_state.wildcard_suffixes = [s.strip() for s in suffixes.split(',') if s.strip()]
             with col2:
                 calc_auto = st.checkbox(
                     "합계 자동 계산", 
-                    value=False,
+                    value=st.session_state.get('calculate_totals_auto', False),
                     help="체크 해제 시 기존 합계 행의 값을 사용합니다"
                 )
                 st.session_state.calculate_totals_auto = calc_auto
@@ -931,17 +1001,28 @@ def render_step2():
                 base_keys = [k for k in base_keys if k and k.lower() not in ['nan', '(비어 있음)']]
                 st.success(f"예상 그룹 수: **{len(base_keys)}개**", icon="📊")
     
-    # 데이터 타입 설정
+    # 데이터 타입 설정 (중복 선택 방지)
     with st.container(border=True):
         st.markdown("##### 컬럼 타입 설정")
-        st.caption("금액, 날짜, ID 컬럼을 지정하면 자동 포맷팅됩니다")
+        st.caption("금액, 날짜, ID 컬럼을 지정하면 자동 포맷팅됩니다 (중복 선택 불가)")
+        
+        # 이전 저장된 값 또는 기본값
+        saved_amount = st.session_state.get('amount_cols', [])
+        saved_date = st.session_state.get('date_cols', [])
+        saved_id = st.session_state.get('id_cols', [])
+        
+        # 기본 후보
+        amount_candidates = [c for c in columns if any(k in c for k in ['금액', '처방', '수수료'])]
+        date_candidates = [c for c in columns if '월' in c or 'date' in c.lower()]
+        id_candidates = [c for c in columns if '코드' in c or '번호' in c]
         
         col1, col2 = st.columns(2)
         
         with col1:
-            amount_default = [c for c in columns if any(k in c for k in ['금액', '처방', '수수료'])]
+            # 금액 컬럼 (날짜/ID와 겹치지 않게)
+            amount_default = [c for c in saved_amount if c in columns] or [c for c in amount_candidates if c in columns]
             amount_cols = st.multiselect(
-                "금액 컬럼", 
+                "💰 금액 컬럼", 
                 columns, 
                 default=amount_default,
                 help="천단위 쉼표와 ₩ 기호가 적용됩니다"
@@ -949,37 +1030,78 @@ def render_step2():
             st.session_state.amount_cols = amount_cols
         
         with col2:
-            date_default = [c for c in columns if '월' in c or 'date' in c.lower()]
+            # 날짜 컬럼 (금액과 겹치지 않게)
+            available_for_date = [c for c in columns if c not in amount_cols]
+            date_default = [c for c in saved_date if c in available_for_date] or [c for c in date_candidates if c in available_for_date]
             date_cols = st.multiselect(
-                "날짜 컬럼", 
-                columns, 
+                "📅 날짜 컬럼", 
+                available_for_date, 
                 default=date_default,
                 help="YYYY-MM-DD 형식으로 통일됩니다"
             )
             st.session_state.date_cols = date_cols
         
-        id_default = [c for c in columns if '코드' in c or '번호' in c]
+        # ID 컬럼 (금액/날짜와 겹치지 않게)
+        available_for_id = [c for c in columns if c not in amount_cols and c not in date_cols]
+        id_default = [c for c in saved_id if c in available_for_id] or [c for c in id_candidates if c in available_for_id]
         id_cols = st.multiselect(
-            "ID 컬럼", 
-            columns, 
+            "🔢 ID 컬럼", 
+            available_for_id, 
             default=id_default,
             help="숫자 끝의 .0이 제거됩니다"
         )
         st.session_state.id_cols = id_cols
     
-    # 표시 컬럼 선택
+    # 표시 컬럼 선택 + 순서 조절
     with st.container(border=True):
         st.markdown("##### 이메일 표시 컬럼")
-        st.caption("이메일 본문 테이블에 표시할 컬럼을 순서대로 선택하세요")
+        st.caption("이메일 본문 테이블에 표시할 컬럼을 선택하고 순서를 조절하세요")
         
-        exclude = [group_key_col]
-        default_display = [c for c in columns if c not in exclude][:8]
+        # 최초 로드 시 모든 컬럼 선택 (그룹키 제외)
+        saved_display = st.session_state.get('display_cols', [])
+        if not saved_display:
+            default_display = [c for c in columns if c != group_key_col]
+        else:
+            default_display = [c for c in saved_display if c in columns]
+        
         display_cols = st.multiselect(
-            "컬럼 선택", 
+            "컬럼 선택 (전체)", 
             columns, 
             default=default_display,
             label_visibility="collapsed"
         )
+        
+        # 컬럼 순서 조절
+        if display_cols and len(display_cols) > 1:
+            st.markdown("**컬럼 순서 조절** (드래그 또는 번호로 조절)")
+            
+            # 현재 순서 또는 기본 순서
+            current_order = st.session_state.get('display_cols_order', [])
+            ordered_cols = [c for c in current_order if c in display_cols]
+            ordered_cols += [c for c in display_cols if c not in ordered_cols]
+            
+            # 순서 조절 UI - 간단한 selectbox 방식
+            new_order = []
+            cols_per_row = 4
+            for i in range(0, len(ordered_cols), cols_per_row):
+                row_cols = st.columns(cols_per_row)
+                for j, col in enumerate(row_cols):
+                    idx = i + j
+                    if idx < len(ordered_cols):
+                        with col:
+                            available = [c for c in ordered_cols if c not in new_order]
+                            if available:
+                                selected = st.selectbox(
+                                    f"{idx+1}번째",
+                                    available,
+                                    index=available.index(ordered_cols[idx]) if ordered_cols[idx] in available else 0,
+                                    key=f"col_order_{idx}"
+                                )
+                                new_order.append(selected)
+            
+            display_cols = new_order if new_order else display_cols
+            st.session_state.display_cols_order = display_cols
+        
         st.session_state.display_cols = display_cols
     
     # 충돌 해결
@@ -987,9 +1109,12 @@ def render_step2():
         st.markdown("##### 이메일 충돌 처리")
         st.caption("한 그룹에 여러 이메일이 있을 때 처리 방법")
         
+        saved_resolution = st.session_state.get('conflict_resolution', 'first')
+        options = ['first', 'most_common', 'skip']
         conflict_resolution = st.radio(
             "충돌 해결 방식",
-            ['first', 'most_common', 'skip'],
+            options,
+            index=options.index(saved_resolution) if saved_resolution in options else 0,
             format_func=lambda x: {'first': '첫 번째 이메일 사용', 'most_common': '가장 많이 등장한 이메일', 'skip': '해당 그룹 건너뛰기'}[x],
             horizontal=True,
             label_visibility="collapsed"
@@ -1001,6 +1126,7 @@ def render_step2():
     col1, col2 = st.columns(2)
     with col1:
         if st.button("← 이전", use_container_width=True):
+            # 한 단계만 뒤로 (파일 선택 화면으로)
             st.session_state.current_step = 1
             st.rerun()
     with col2:
@@ -1008,6 +1134,9 @@ def render_step2():
             if not display_cols:
                 st.error("표시할 컬럼을 1개 이상 선택하세요", icon="❌")
             else:
+                # 현재 설정 저장
+                save_column_settings(sheet_name)
+                
                 with st.spinner("데이터 처리 중..."):
                     df_work = df.copy()
                     
@@ -1159,22 +1288,22 @@ def render_step4():
         
         st.markdown("---")
         
-        # 인사말 (넓게)
+        # 인사말 (넓고 높게)
         greeting = st.text_area(
             "👋 인사말", 
             st.session_state.greeting_template, 
-            height=120,
+            height=180,
             placeholder="안녕하세요, {{ company_name }} 담당자님.\n\n{{ period }} 정산 내역을 안내드립니다."
         )
         st.session_state.greeting_template = greeting
         
-        # 정보 박스 & 추가 메시지 (2열)
+        # 정보 박스 & 추가 메시지 (2열, 높이 증가)
         col1, col2 = st.columns(2)
         with col1:
             info = st.text_area(
                 "ℹ️ 정보 박스 (하이라이트)", 
                 st.session_state.info_template, 
-                height=100,
+                height=150,
                 placeholder="정산 기간: {{ period }}\n합계 금액: {{ total_amount }}"
             )
             st.session_state.info_template = info
@@ -1182,17 +1311,17 @@ def render_step4():
             additional = st.text_area(
                 "📝 추가 메시지", 
                 st.session_state.additional_template, 
-                height=100,
+                height=150,
                 placeholder="문의사항이 있으시면 연락 부탁드립니다."
             )
             st.session_state.additional_template = additional
         
-        # Footer 편집 추가
+        # Footer 편집 (높이 증가)
         with st.expander("🔧 푸터 편집 (선택)", expanded=False):
             footer = st.text_area(
                 "푸터 텍스트",
                 st.session_state.footer_template,
-                height=80,
+                height=120,
                 placeholder="본 메일은 발신 전용입니다."
             )
             st.session_state.footer_template = footer
@@ -1277,33 +1406,47 @@ def render_step5():
     if not st.session_state.smtp_config:
         st.warning("사이드바에서 SMTP 연결 테스트를 먼저 완료하세요", icon="⚠")
     
-    # 발송 설정
+    # 발송 설정 (이전 값 기억)
     with st.expander("발송 설정", expanded=False):
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
             batch_size = st.number_input(
                 "배치 크기", 
-                value=10, 
+                value=st.session_state.get('batch_size', DEFAULT_BATCH_SIZE), 
                 min_value=1, 
                 max_value=50,
                 help="한 번에 발송할 이메일 수"
             )
+            st.session_state.batch_size = batch_size
         with col2:
-            email_delay = st.number_input(
-                "이메일 간격(초)", 
-                value=2, 
+            email_delay_min = st.number_input(
+                "딜레이 최소(초)", 
+                value=st.session_state.get('email_delay_min', 5), 
                 min_value=1, 
-                max_value=10,
-                help="각 이메일 사이 대기 시간"
+                max_value=30,
+                help="이메일 간 최소 대기 시간"
             )
+            st.session_state.email_delay_min = email_delay_min
         with col3:
+            email_delay_max = st.number_input(
+                "딜레이 최대(초)", 
+                value=st.session_state.get('email_delay_max', 10), 
+                min_value=email_delay_min, 
+                max_value=60,
+                help="이메일 간 최대 대기 시간"
+            )
+            st.session_state.email_delay_max = email_delay_max
+        with col4:
             batch_delay = st.number_input(
                 "배치 간격(초)", 
-                value=30, 
+                value=st.session_state.get('batch_delay', DEFAULT_BATCH_DELAY), 
                 min_value=5, 
                 max_value=120,
                 help="배치 완료 후 대기 시간"
             )
+            st.session_state.batch_delay = batch_delay
+        
+        st.caption(f"💡 각 이메일 발송 후 **{email_delay_min}~{email_delay_max}초** 랜덤 대기")
     
     st.divider()
     
@@ -1410,7 +1553,10 @@ def render_step5():
                     fail_cnt += 1
                     results.append({'그룹': gk, '이메일': gd['recipient_email'], '상태': '실패', '사유': str(e)})
                 
-                time.sleep(email_delay)
+                # 랜덤 딜레이 적용
+                import random
+                random_delay = random.uniform(email_delay_min, email_delay_max)
+                time.sleep(random_delay)
                 if (i+1) % batch_size == 0 and i < total-1:
                     time.sleep(batch_delay)
             
