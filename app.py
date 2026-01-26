@@ -38,7 +38,7 @@ from style import (
 # CONFIGURATION & CONSTANTS
 # ============================================================================
 
-APP_TITLE = "그룹핑 메일머지"
+APP_TITLE = "CSO 메일머지"
 APP_SUBTITLE = "CSO 정산서 자동 발송 시스템"
 VERSION = "3.0.0"
 
@@ -729,7 +729,6 @@ def render_smtp_sidebar():
         # ============================================================
         st.markdown(f"""
         <div style="text-align: center; margin-bottom: 0.5rem;">
-            <span style="font-size: 1.5rem;">📨</span>
             <span style="font-size: 1.25rem; font-weight: 600; color: #1e3c72;">{APP_TITLE}</span>
             <span style="font-size: 0.65rem; color: #adb5bd;">v{VERSION}</span>
         </div>
@@ -757,7 +756,7 @@ def render_smtp_sidebar():
         # ============================================================
         # 2. 처음부터 다시 (현재상태 바로 아래)
         # ============================================================
-        if st.button("🔄 처음부터 다시", use_container_width=True):
+        if st.button("처음부터 다시", use_container_width=True):
             reset_workflow()
             st.rerun()
         
