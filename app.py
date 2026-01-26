@@ -594,73 +594,67 @@ def render_email_content(group_key, group_data, display_cols, amount_cols, templ
 # UI COMPONENTS - Enterprise Dashboard Style
 # ============================================================================
 
-def render_header():
-    """헤더 - 깔끔한 브랜딩"""
-    col1, col2 = st.columns([6, 1])
-    with col1:
-        st.markdown(f"""
-        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 0.5rem;">
-            <span style="font-size: 2rem;">📨</span>
-            <div>
-                <h1 style="margin: 0; font-size: 1.8rem; color: #1e3c72;">{APP_TITLE}</h1>
-                <p style="margin: 0; color: #6c757d; font-size: 0.9rem;">{APP_SUBTITLE}</p>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    with col2:
-        st.markdown(f"""
-        <div style="text-align: right; padding-top: 0.5rem;">
-            <span style="background: #e9ecef; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; color: #6c757d;">
-                v{VERSION}
-            </span>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    st.divider()
-
-
-def render_step_indicator():
-    """단계 표시기 - 깔끔한 프로그레스"""
+def render_step_tabs():
+    """상단 고정 스텝 탭 네비게이션"""
     current = st.session_state.current_step
     
+    # 탭 스타일 CSS
+    st.markdown("""
+    <style>
+    .step-tabs {
+        display: flex;
+        gap: 0;
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 4px;
+        margin-bottom: 1rem;
+        position: sticky;
+        top: 0;
+        z-index: 999;
+    }
+    .step-tab {
+        flex: 1;
+        text-align: center;
+        padding: 10px 8px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.85rem;
+    }
+    .step-tab.completed {
+        background: #d4edda;
+        color: #155724;
+    }
+    .step-tab.current {
+        background: #1e3c72;
+        color: white;
+        font-weight: 600;
+    }
+    .step-tab.pending {
+        background: transparent;
+        color: #6c757d;
+    }
+    .step-tab:hover:not(.current) {
+        background: #e9ecef;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # 탭 버튼들
     cols = st.columns(len(STEPS))
     for i, (col, step_name) in enumerate(zip(cols, STEPS), 1):
         with col:
             if i < current:
-                # 완료
-                st.markdown(f"""
-                <div style="text-align: center;">
-                    <div style="width: 36px; height: 36px; border-radius: 50%; background: #28a745; color: white;
-                                display: inline-flex; align-items: center; justify-content: center; font-weight: bold;">
-                        ✓
-                    </div>
-                    <p style="margin: 8px 0 0 0; font-size: 0.8rem; color: #28a745; font-weight: 500;">{step_name}</p>
-                </div>
-                """, unsafe_allow_html=True)
+                # 완료된 단계 - 클릭 가능
+                if st.button(f"✓ {step_name}", key=f"step_tab_{i}", use_container_width=True):
+                    st.session_state.current_step = i
+                    st.rerun()
             elif i == current:
-                # 현재
-                st.markdown(f"""
-                <div style="text-align: center;">
-                    <div style="width: 36px; height: 36px; border-radius: 50%; background: #1e3c72; color: white;
-                                display: inline-flex; align-items: center; justify-content: center; font-weight: bold;">
-                        {i}
-                    </div>
-                    <p style="margin: 8px 0 0 0; font-size: 0.8rem; color: #1e3c72; font-weight: 600;">{step_name}</p>
-                </div>
-                """, unsafe_allow_html=True)
+                # 현재 단계
+                st.button(f"● {step_name}", key=f"step_tab_{i}", use_container_width=True, type="primary", disabled=True)
             else:
-                # 대기
-                st.markdown(f"""
-                <div style="text-align: center;">
-                    <div style="width: 36px; height: 36px; border-radius: 50%; background: #e9ecef; color: #adb5bd;
-                                display: inline-flex; align-items: center; justify-content: center; font-weight: bold;">
-                        {i}
-                    </div>
-                    <p style="margin: 8px 0 0 0; font-size: 0.8rem; color: #adb5bd;">{step_name}</p>
-                </div>
-                """, unsafe_allow_html=True)
-    
-    st.divider()
+                # 대기 단계
+                st.button(f"{i}. {step_name}", key=f"step_tab_{i}", use_container_width=True, disabled=True)
 
 
 def get_smtp_config() -> dict:
@@ -706,8 +700,28 @@ def clear_session_credentials():
 
 
 def render_smtp_sidebar():
-    """사이드바 - 순서: 현재상태 → 처음부터 다시 → SMTP설정 → 가이드"""
+    """사이드바 - 제목 → 현재상태 → 처음부터 다시 → SMTP설정 → 가이드"""
     with st.sidebar:
+        
+        # ============================================================
+        # 0. 앱 제목 (사이드바 상단)
+        # ============================================================
+        st.markdown(f"""
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1rem;">
+            <span style="font-size: 1.8rem;">📨</span>
+            <div>
+                <div style="font-size: 1.2rem; font-weight: bold; color: #1e3c72;">{APP_TITLE}</div>
+                <div style="font-size: 0.75rem; color: #6c757d;">{APP_SUBTITLE}</div>
+            </div>
+        </div>
+        <div style="text-align: right; margin-bottom: 0.5rem;">
+            <span style="background: #e9ecef; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; color: #6c757d;">
+                v{VERSION}
+            </span>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.divider()
         
         # ============================================================
         # 1. 현재 상태 (세로 나열)
@@ -743,11 +757,9 @@ def render_smtp_sidebar():
         st.divider()
         
         # ============================================================
-        # 3. SMTP 설정 (접을 수 있게 - 한번 성공하면 안 봄)
+        # 3. SMTP 설정 (항상 닫힌 상태로 시작)
         # ============================================================
-        smtp_connected = st.session_state.smtp_config is not None
-        
-        with st.expander("⚙️ SMTP 설정", expanded=not smtp_connected):
+        with st.expander("⚙️ SMTP 설정", expanded=False):
             smtp_defaults = get_smtp_config()
             from_secrets = smtp_defaults['from_secrets']
             
@@ -1719,9 +1731,8 @@ def main():
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
     
     init_session_state()
-    render_header()
-    render_step_indicator()
     render_smtp_sidebar()
+    render_step_tabs()
     
     # 현재 단계 렌더링
     step = st.session_state.current_step
