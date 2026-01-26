@@ -846,7 +846,7 @@ def render_smtp_sidebar():
             """)
         
         # ============================================================
-        # 6. 저작권 (하단 고정, 글씨 조금 키움, 대비 더 약하게)
+        # 6. 저작권 (하단 고정, 배경 없음)
         # ============================================================
         st.markdown("""
         <style>
@@ -857,8 +857,7 @@ def render_smtp_sidebar():
             width: 100%;
             max-width: 336px;
             text-align: center;
-            padding: 12px 10px;
-            background: linear-gradient(to top, white 80%, transparent);
+            padding: 10px;
         }
         .sidebar-footer p {
             font-size: 0.65rem;
