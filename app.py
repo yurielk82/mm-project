@@ -68,10 +68,15 @@ DEFAULT_BATCH_DELAY = 30
 
 CUSTOM_CSS = """
 <style>
+    /* ============================================
+       Enterprise Dashboard Style - UI 정교화
+       ============================================ */
+    
     /* 전체 레이아웃 */
     .main .block-container {
         padding-top: 1rem;
         padding-bottom: 1rem;
+        max-width: 1200px;
     }
     
     /* 사이드바 전체 가운데 정렬 */
@@ -89,21 +94,55 @@ CUSTOM_CSS = """
         text-align: center;
     }
     
-    /* 버튼 스타일 */
+    /* 메트릭 카드 스타일 - 차분한 블루/그레이 톤 */
+    [data-testid="stMetric"] {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 1rem;
+        border-radius: 10px;
+        border: 1px solid #dee2e6;
+    }
+    [data-testid="stMetric"] [data-testid="stMetricValue"] {
+        font-size: 1.8rem !important;
+        font-weight: 700 !important;
+        color: #1e3a5f !important;
+    }
+    [data-testid="stMetric"] [data-testid="stMetricLabel"] {
+        font-size: 0.85rem !important;
+        color: #6c757d !important;
+    }
+    
+    /* 버튼 스타일 - 일관된 디자인 */
     .stButton > button {
         border-radius: 8px;
         font-weight: 500;
         transition: all 0.2s ease;
+        border: 1px solid #dee2e6;
     }
     .stButton > button:hover {
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .stButton > button[kind="primary"] {
+        background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+        border: none;
     }
     
-    /* 데이터프레임 스타일 */
+    /* 데이터프레임/테이블 스타일 */
     .stDataFrame {
         border-radius: 8px;
         overflow: hidden;
+        border: 1px solid #dee2e6;
+    }
+    
+    /* 수치 데이터 우측 정렬 */
+    .stDataFrame td[data-type="number"] {
+        text-align: right !important;
+    }
+    
+    /* 컨테이너 카드 스타일 */
+    [data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"] {
+        border-radius: 10px;
+        border: 1px solid #e9ecef;
     }
     
     /* 상태 배지 */
@@ -114,9 +153,34 @@ CUSTOM_CSS = """
         font-size: 0.85rem;
         font-weight: 500;
     }
-    .status-success { background: rgba(40, 167, 69, 0.2); color: var(--success-color); }
-    .status-warning { background: rgba(255, 193, 7, 0.2); color: var(--warning-color); }
-    .status-error { background: rgba(220, 53, 69, 0.2); color: #dc3545; }
+    .status-success { background: rgba(40, 167, 69, 0.15); color: #28a745; }
+    .status-warning { background: rgba(255, 193, 7, 0.15); color: #856404; }
+    .status-error { background: rgba(220, 53, 69, 0.15); color: #dc3545; }
+    .status-pending { background: rgba(108, 117, 125, 0.15); color: #6c757d; }
+    
+    /* 프로그레스 바 */
+    .stProgress > div > div {
+        background: linear-gradient(90deg, #1e3a5f 0%, #2d5a87 100%);
+    }
+    
+    /* Expander 스타일 */
+    .streamlit-expanderHeader {
+        font-weight: 600;
+        color: #1e3a5f;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    /* 툴팁 강조 */
+    .stTooltipIcon {
+        color: #6c757d;
+    }
+    
+    /* 성공/경고/에러 메시지 */
+    .stSuccess { border-left: 4px solid #28a745; }
+    .stWarning { border-left: 4px solid #ffc107; }
+    .stError { border-left: 4px solid #dc3545; }
+    .stInfo { border-left: 4px solid #17a2b8; }
 </style>
 """
 
@@ -1678,27 +1742,33 @@ def render_step4():
 
 
 def render_step5():
-    """Step 5: 발송"""
+    """Step 5: 발송 - UX 최적화 (안심 장치, 즉각적 피드백)"""
     grouped = st.session_state.grouped_data
     valid_groups = {k: v for k, v in grouped.items() if v['recipient_email'] and validate_email(v['recipient_email'])}
     
-    # 발송 요약 (상단)
-    with st.container(border=True):
-        st.markdown("##### 발송 요약")
-        
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("발송 대상", f"{len(valid_groups)}건")
-        with col2:
-            smtp_status = "준비 완료" if st.session_state.smtp_config else "설정 필요"
-            st.metric("SMTP 상태", smtp_status)
-        with col3:
-            if st.session_state.send_results:
-                success = sum(1 for r in st.session_state.send_results if r['상태'] == '성공')
-                st.metric("발송 완료", f"{success}건")
+    # 발송 요약 (상단 메트릭 카드)
+    st.markdown("##### 📊 발송 요약")
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("발송 대상", f"{len(valid_groups)}건", help="유효한 이메일이 있는 업체 수")
+    with col2:
+        smtp_status = "✅ 준비됨" if st.session_state.smtp_config else "⚠️ 필요"
+        st.metric("SMTP", smtp_status)
+    with col3:
+        success_cnt = sum(1 for r in st.session_state.get('send_results', []) if r.get('상태') == '성공')
+        st.metric("성공", f"{success_cnt}건", delta=None if success_cnt == 0 else f"+{success_cnt}")
+    with col4:
+        fail_cnt = sum(1 for r in st.session_state.get('send_results', []) if r.get('상태') == '실패')
+        if fail_cnt > 0:
+            st.metric("실패", f"{fail_cnt}건", delta=f"-{fail_cnt}", delta_color="inverse")
+        else:
+            st.metric("실패", "0건")
+    
+    st.divider()
     
     if not st.session_state.smtp_config:
-        st.warning("사이드바에서 SMTP 연결 테스트를 먼저 완료하세요", icon="⚠")
+        st.warning("📧 사이드바에서 SMTP 연결을 먼저 완료해 주세요", icon="⚠️")
     
     # 발송 설정 (이전 값 기억)
     with st.expander("발송 설정", expanded=False):
@@ -1744,8 +1814,10 @@ def render_step5():
     
     st.divider()
     
-    # 발송 버튼
-    col1, col2, col3 = st.columns([1, 1, 1])
+    # 발송 버튼 영역
+    st.markdown("##### 🚀 발송")
+    
+    col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
     
     with col1:
         if st.button("← 이전", use_container_width=True):
@@ -1754,20 +1826,55 @@ def render_step5():
     
     with col2:
         test_btn = st.button(
-            "테스트 발송",
+            "📧 내게 테스트",
             use_container_width=True,
             disabled=not st.session_state.smtp_config,
-            help="내 이메일로 샘플 1건 발송"
+            help="내 이메일로 샘플 1건 발송하여 미리 확인"
         )
     
     with col3:
+        # 실패 건만 재발송 버튼
+        failed_list = [r for r in st.session_state.get('send_results', []) if r.get('상태') == '실패']
+        resend_btn = st.button(
+            f"🔄 실패 재발송 ({len(failed_list)})",
+            use_container_width=True,
+            disabled=not st.session_state.smtp_config or len(failed_list) == 0,
+            help="실패한 건만 다시 발송"
+        )
+    
+    with col4:
         send_btn = st.button(
-            "전체 발송",
+            "🚀 전체 발송",
             type="primary",
             use_container_width=True,
             disabled=not st.session_state.smtp_config or len(valid_groups)==0,
-            help="모든 대상에게 이메일 발송"
+            help=f"총 {len(valid_groups)}개 업체에 이메일 발송"
         )
+    
+    # 발송 확인 다이얼로그 상태
+    if 'confirm_send' not in st.session_state:
+        st.session_state.confirm_send = False
+    
+    # 전체 발송 클릭 시 확인
+    if send_btn:
+        st.session_state.confirm_send = True
+    
+    # 확인 다이얼로그
+    if st.session_state.confirm_send:
+        st.warning(f"⚠️ **총 {len(valid_groups)}개 업체**에 이메일을 발송합니다. 계속하시겠습니까?")
+        col_yes, col_no = st.columns(2)
+        with col_yes:
+            confirmed = st.button("✅ 예, 발송합니다", type="primary", use_container_width=True)
+        with col_no:
+            if st.button("❌ 취소", use_container_width=True):
+                st.session_state.confirm_send = False
+                st.rerun()
+        
+        if not confirmed:
+            send_btn = False  # 아직 확인 안됨
+        else:
+            st.session_state.confirm_send = False
+            send_btn = True  # 확인됨, 발송 진행
     
     templates = {
         'subject': st.session_state.subject_template,
@@ -1864,49 +1971,92 @@ def render_step5():
             else:
                 st.warning(f"완료: 성공 {success_cnt}건, 실패 {fail_cnt}건", icon="⚠")
     
-    # 결과 리포트
+    # 결과 리포트 - "심리적 마감" UX
     if st.session_state.send_results:
         st.divider()
         
+        results_df = pd.DataFrame(st.session_state.send_results)
+        success_cnt = len(results_df[results_df['상태'] == '성공'])
+        fail_cnt = len(results_df[results_df['상태'] == '실패'])
+        
+        # 완료 메시지 - 심리적 마감
+        if fail_cnt == 0:
+            st.success("🎉 **고생하셨습니다!** 모든 발송이 완료되었습니다.", icon="✅")
+        else:
+            st.warning(f"⚠️ 발송 완료: 성공 {success_cnt}건, 실패 {fail_cnt}건 (실패 건은 재발송 버튼으로 다시 시도할 수 있습니다)")
+        
         with st.container(border=True):
-            st.markdown("##### 발송 결과")
+            st.markdown("##### 📋 발송 결과 리포트")
             
-            results_df = pd.DataFrame(st.session_state.send_results)
-            
-            # 결과 요약
-            success_cnt = len(results_df[results_df['상태'] == '성공'])
-            fail_cnt = len(results_df[results_df['상태'] == '실패'])
-            
-            col1, col2 = st.columns(2)
+            # 결과 요약 카드
+            col1, col2, col3 = st.columns(3)
             with col1:
-                st.markdown(f"✓ 성공: **{success_cnt}건**")
+                st.metric("총 발송", f"{len(results_df)}건")
             with col2:
-                st.markdown(f"✗ 실패: **{fail_cnt}건**")
+                st.metric("✅ 성공", f"{success_cnt}건", delta=f"{success_cnt/len(results_df)*100:.0f}%" if results_df.shape[0] > 0 else "0%")
+            with col3:
+                if fail_cnt > 0:
+                    st.metric("❌ 실패", f"{fail_cnt}건", delta=f"-{fail_cnt}", delta_color="inverse")
+                else:
+                    st.metric("❌ 실패", "0건")
             
-            st.dataframe(
-                results_df,
-                use_container_width=True,
-                hide_index=True,
-                column_config={
-                    "상태": st.column_config.TextColumn(
-                        "상태",
-                        width="small"
-                    )
-                }
-            )
+            # 실패 건 강조 표시
+            if fail_cnt > 0:
+                st.markdown("**❌ 실패 목록** (빨간색 강조)")
+                failed_df = results_df[results_df['상태'] == '실패']
+                st.dataframe(
+                    failed_df.style.apply(lambda x: ['background-color: #ffebee' if x['상태'] == '실패' else '' for _ in x], axis=1),
+                    use_container_width=True,
+                    hide_index=True
+                )
+            
+            # 전체 결과 (접이식)
+            with st.expander(f"📊 전체 결과 보기 ({len(results_df)}건)", expanded=False):
+                # 상태별 색상 표시
+                def highlight_status(row):
+                    if row['상태'] == '성공':
+                        return ['background-color: #e8f5e9'] * len(row)
+                    else:
+                        return ['background-color: #ffebee'] * len(row)
+                
+                st.dataframe(
+                    results_df.style.apply(highlight_status, axis=1),
+                    use_container_width=True,
+                    hide_index=True
+                )
             
             # 다운로드 버튼
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                results_df.to_excel(writer, index=False)
+            st.markdown("---")
+            col_dl1, col_dl2 = st.columns(2)
             
-            st.download_button(
-                "결과 다운로드 (Excel)",
-                output.getvalue(),
-                f"발송결과_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True
-            )
+            with col_dl1:
+                output = io.BytesIO()
+                with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                    results_df.to_excel(writer, index=False, sheet_name='전체결과')
+                    if fail_cnt > 0:
+                        failed_df.to_excel(writer, index=False, sheet_name='실패목록')
+                
+                st.download_button(
+                    "📥 전체 결과 다운로드",
+                    output.getvalue(),
+                    f"발송결과_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+            
+            with col_dl2:
+                if fail_cnt > 0:
+                    output_fail = io.BytesIO()
+                    with pd.ExcelWriter(output_fail, engine='openpyxl') as writer:
+                        failed_df.to_excel(writer, index=False)
+                    
+                    st.download_button(
+                        "📥 실패 건만 다운로드",
+                        output_fail.getvalue(),
+                        f"발송실패_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True
+                    )
 
 
 # ============================================================================
