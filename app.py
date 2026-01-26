@@ -1589,97 +1589,82 @@ def render_step4():
     
     st.divider()
     
-    # 미리보기 버튼
+    # 미리보기 섹션
     grouped = st.session_state.grouped_data
     valid_list = [(k, v) for k, v in grouped.items() if v['recipient_email'] and validate_email(v['recipient_email'])]
     
     if valid_list:
-        col_select, col_btn = st.columns([3, 1])
-        with col_select:
-            preview_options = [f"{k}" for k, v in valid_list[:20]]
-            selected_idx = st.selectbox(
-                "미리보기 대상",
-                range(len(preview_options)),
-                format_func=lambda x: preview_options[x],
-                label_visibility="collapsed"
+        st.markdown("##### 👁️ 미리보기")
+        
+        preview_options = [f"{k}" for k, v in valid_list[:20]]
+        selected_idx = st.selectbox(
+            "미리보기 대상 선택",
+            range(len(preview_options)),
+            format_func=lambda x: preview_options[x],
+            label_visibility="collapsed"
+        )
+        
+        # 선택된 데이터로 미리보기 생성
+        sample_key, sample_data = valid_list[selected_idx]
+        
+        try:
+            # 제목 렌더링
+            subject_preview = Template(subject).render(
+                company_name=sample_key,
+                period=datetime.now().strftime('%Y년 %m월')
             )
-        with col_btn:
-            show_preview = st.button("👁️ 미리보기", use_container_width=True, type="primary")
-        
-        # 미리보기 표시 (버튼 클릭 시 또는 세션에 저장된 상태)
-        if 'show_email_preview' not in st.session_state:
-            st.session_state.show_email_preview = False
-        
-        if show_preview:
-            st.session_state.show_email_preview = True
-            st.session_state.preview_selected_idx = selected_idx
-        
-        if st.session_state.show_email_preview and valid_list:
-            preview_idx = st.session_state.get('preview_selected_idx', selected_idx)
-            if preview_idx >= len(valid_list):
-                preview_idx = 0
-            sample_key, sample_data = valid_list[preview_idx]
             
-            try:
-                # 제목 렌더링
-                subject_preview = Template(subject).render(
-                    company_name=sample_key,
-                    period=datetime.now().strftime('%Y년 %m월')
-                )
-                
-                # 인사말 렌더링
-                greeting_rendered = Template(body_text).render(
-                    company_name=sample_key,
-                    company_code=sample_key,
-                    period=datetime.now().strftime('%Y년 %m월')
-                ).replace('\n', '<br>')
-                
-                # 실제 이메일 HTML 생성 (테이블 포함)
-                display_cols = st.session_state.get('display_cols', [])
-                amount_cols = st.session_state.get('amount_cols', [])
-                
-                email_html = render_email(
-                    subject=subject_preview,
-                    header_title=header,
-                    greeting=greeting_rendered,
-                    columns=display_cols,
-                    rows=sample_data.get('rows', []),
-                    amount_columns=amount_cols,
-                    totals=sample_data.get('totals'),
-                    footer_text=footer.replace('\n', '<br>') if footer else None
-                )
-                
-                # 미리보기 표시
-                st.markdown("##### 📬 이메일 미리보기")
-                st.markdown(f"**수신자:** {sample_data.get('recipient_email', 'N/A')}")
-                st.markdown(f"**제목:** {subject_preview}")
-                
+            # 인사말 렌더링
+            greeting_rendered = Template(body_text).render(
+                company_name=sample_key,
+                company_code=sample_key,
+                period=datetime.now().strftime('%Y년 %m월')
+            ).replace('\n', '<br>')
+            
+            # 실제 이메일 HTML 생성 (테이블 포함)
+            display_cols = st.session_state.get('display_cols', [])
+            amount_cols = st.session_state.get('amount_cols', [])
+            
+            email_html = render_email(
+                subject=subject_preview,
+                header_title=header,
+                greeting=greeting_rendered,
+                columns=display_cols,
+                rows=sample_data.get('rows', []),
+                amount_columns=amount_cols,
+                totals=sample_data.get('totals'),
+                footer_text=footer.replace('\n', '<br>') if footer else None
+            )
+            
+            # 미리보기 정보 표시
+            with st.container(border=True):
+                st.markdown(f"**📧 수신자:** `{sample_data.get('recipient_email', 'N/A')}`")
+                st.markdown(f"**📋 제목:** {subject_preview}")
+                st.markdown(f"**📊 데이터:** {sample_data.get('row_count', 0)}행")
+            
+            # 이메일 본문 미리보기 (확장 가능)
+            with st.expander("📬 이메일 본문 미리보기", expanded=True):
                 # 테이블 가로 크기에 맞춰 컨테이너 확장
-                col_count = len(display_cols)
-                container_width = max(800, col_count * 120)  # 컬럼당 120px, 최소 800px
+                col_count = len(display_cols) if display_cols else 1
                 
                 st.markdown(f"""
                 <div style="
-                    max-width: {container_width}px; 
                     overflow-x: auto; 
                     border: 1px solid #dee2e6; 
                     border-radius: 8px;
-                    margin: 10px 0;
+                    background: white;
                 ">
                     {email_html}
                 </div>
                 """, unsafe_allow_html=True)
                 
-                if st.button("❌ 미리보기 닫기", use_container_width=True):
-                    st.session_state.show_email_preview = False
-                    st.rerun()
-                    
-            except Exception as e:
-                st.error(f"미리보기 오류: {e}")
+        except Exception as e:
+            st.error(f"미리보기 오류: {e}")
+            with st.expander("오류 상세"):
                 import traceback
                 st.code(traceback.format_exc())
     else:
-        st.info("미리보기할 데이터가 없습니다", icon="ℹ️")
+        st.info("미리보기할 데이터가 없습니다. 먼저 데이터를 업로드하고 설정을 완료하세요.", icon="ℹ️")
     
     # 네비게이션
     st.divider()
