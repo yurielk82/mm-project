@@ -73,6 +73,21 @@ CUSTOM_CSS = """
         padding-bottom: 1rem;
     }
     
+    /* 사이드바 전체 가운데 정렬 */
+    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+        text-align: center;
+    }
+    [data-testid="stSidebar"] .stButton {
+        display: flex;
+        justify-content: center;
+    }
+    [data-testid="stSidebar"] [data-testid="stMetric"] {
+        text-align: center;
+    }
+    [data-testid="stSidebar"] .stAlert {
+        text-align: center;
+    }
+    
     /* 메트릭 카드 스타일 */
     [data-testid="stMetric"] {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -846,27 +861,11 @@ def render_smtp_sidebar():
             """)
         
         # ============================================================
-        # 6. 저작권 (하단 고정, 사이드바 너비 맞춤)
+        # 6. 저작권 (고정 해제, 맨 아래)
         # ============================================================
         st.markdown("""
-        <style>
-        [data-testid="stSidebar"] .sidebar-footer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 260px;
-            text-align: center;
-            padding: 8px 16px;
-        }
-        [data-testid="stSidebar"] .sidebar-footer p {
-            font-size: 0.6rem;
-            color: #f0f0f0;
-            line-height: 1.4;
-            margin: 0;
-        }
-        </style>
-        <div class="sidebar-footer">
-            <p>
+        <div style="text-align: center; margin-top: 2rem; padding-top: 1rem;">
+            <p style="font-size: 0.6rem; color: #e8e8e8; line-height: 1.4; margin: 0;">
                 © 2026. Kwon Daehwan<br>
                 Planned & Built by Sales Management Team, KUP<br>
                 In collaboration with Genspark & Gemini
