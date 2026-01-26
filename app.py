@@ -595,47 +595,28 @@ def render_email_content(group_key, group_data, display_cols, amount_cols, templ
 # ============================================================================
 
 def render_step_tabs():
-    """상단 고정 스텝 탭 네비게이션"""
+    """상단 고정 스텝 탭 네비게이션 - CSS sticky 적용"""
     current = st.session_state.current_step
     
-    # 탭 스타일 CSS
+    # 상단 고정 CSS
     st.markdown("""
     <style>
-    .step-tabs {
-        display: flex;
-        gap: 0;
-        background: #f8f9fa;
-        border-radius: 8px;
-        padding: 4px;
-        margin-bottom: 1rem;
+    /* 스텝 탭 상단 고정 */
+    [data-testid="stHorizontalBlock"]:has(button[kind="secondary"]), 
+    [data-testid="stHorizontalBlock"]:has(button[kind="primary"]) {
         position: sticky;
         top: 0;
+        background: white;
         z-index: 999;
+        padding: 8px 0;
+        border-bottom: 1px solid #e9ecef;
     }
-    .step-tab {
-        flex: 1;
-        text-align: center;
-        padding: 10px 8px;
-        border-radius: 6px;
-        cursor: pointer;
-        transition: all 0.2s;
-        font-size: 0.85rem;
-    }
-    .step-tab.completed {
-        background: #d4edda;
-        color: #155724;
-    }
-    .step-tab.current {
-        background: #1e3c72;
-        color: white;
-        font-weight: 600;
-    }
-    .step-tab.pending {
-        background: transparent;
-        color: #6c757d;
-    }
-    .step-tab:hover:not(.current) {
-        background: #e9ecef;
+    
+    /* 완료된 스텝 스타일 */
+    button[kind="secondary"]:has-text("✓") {
+        background: #d4edda !important;
+        border-color: #28a745 !important;
+        color: #155724 !important;
     }
     </style>
     """, unsafe_allow_html=True)
