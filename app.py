@@ -67,10 +67,27 @@ DEFAULT_BATCH_DELAY = 30
 
 CUSTOM_CSS = """
 <style>
-    /* 전체 폰트 및 배경 */
+    /* Streamlit 기본 헤더 숨기기 */
+    header[data-testid="stHeader"] {
+        display: none !important;
+    }
+    
+    /* 상단 여백 제거 */
     .main .block-container {
-        padding-top: 1rem;
+        padding-top: 0.5rem;
         padding-bottom: 1rem;
+    }
+    
+    /* 스텝 탭 상단 고정 */
+    .fixed-step-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 9999;
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        padding: 10px 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     }
     
     /* 메트릭 카드 스타일 */
@@ -595,37 +612,101 @@ def render_email_content(group_key, group_data, display_cols, amount_cols, templ
 # ============================================================================
 
 def render_step_tabs():
-    """상단 스텝 탭 - Streamlit 네이티브 버튼 사용"""
+    """상단 고정 스텝 탭 - HTML/CSS로 완전 고정"""
     current = st.session_state.current_step
     
-    # 스텝 탭 컨테이너 스타일
-    st.markdown("""
+    # 스텝 탭 HTML 생성
+    step_buttons = []
+    for i, step_name in enumerate(STEPS, 1):
+        if i < current:
+            # 완료
+            step_buttons.append(f'<div class="step-btn completed" data-step="{i}">✓ {step_name}</div>')
+        elif i == current:
+            # 현재
+            step_buttons.append(f'<div class="step-btn current">{i}. {step_name}</div>')
+        else:
+            # 대기
+            step_buttons.append(f'<div class="step-btn pending">{i}. {step_name}</div>')
+    
+    # 상단 고정 스텝 바 (HTML)
+    st.markdown(f"""
     <style>
-    /* 스텝 버튼 컨테이너 스타일링 */
-    div[data-testid="stHorizontalBlock"]:first-of-type {
+    /* 상단 고정 스텝 바 */
+    .step-bar-fixed {{
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 50px;
         background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-        padding: 12px 16px;
-        border-radius: 10px;
-        margin-bottom: 1rem;
-    }
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        z-index: 99999;
+        padding: 0 16px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }}
+    
+    .step-btn {{
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        cursor: default;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }}
+    
+    .step-btn.completed {{
+        background: rgba(40, 167, 69, 0.9);
+        color: white;
+        cursor: pointer;
+    }}
+    .step-btn.completed:hover {{
+        background: #28a745;
+        transform: translateY(-1px);
+    }}
+    
+    .step-btn.current {{
+        background: white;
+        color: #1e3c72;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }}
+    
+    .step-btn.pending {{
+        background: rgba(255,255,255,0.15);
+        color: rgba(255,255,255,0.5);
+    }}
+    
+    /* 본문 상단 여백 */
+    section.main > div.block-container {{
+        padding-top: 60px !important;
+    }}
+    
+    @media (max-width: 768px) {{
+        .step-btn {{
+            padding: 6px 10px;
+            font-size: 0.75rem;
+        }}
+    }}
     </style>
+    
+    <div class="step-bar-fixed">
+        {''.join(step_buttons)}
+    </div>
     """, unsafe_allow_html=True)
     
-    # Streamlit 네이티브 버튼 사용
-    cols = st.columns(len(STEPS))
-    for i, (col, step_name) in enumerate(zip(cols, STEPS), 1):
-        with col:
-            if i < current:
-                # 완료된 단계 - 클릭 가능
-                if st.button(f"✓ {step_name}", key=f"step_tab_{i}", use_container_width=True):
-                    st.session_state.current_step = i
-                    st.rerun()
-            elif i == current:
-                # 현재 단계
-                st.button(f"● {step_name}", key=f"step_tab_{i}", use_container_width=True, type="primary")
-            else:
-                # 대기 단계
-                st.button(f"{i}. {step_name}", key=f"step_tab_{i}", use_container_width=True, disabled=True)
+    # 완료된 단계로 이동 버튼 (숨김 처리)
+    if current > 1:
+        with st.expander("📍 이전 단계로 이동", expanded=False):
+            cols = st.columns(current - 1)
+            for i, col in enumerate(cols, 1):
+                with col:
+                    if st.button(f"← {STEPS[i-1]}", key=f"goto_step_{i}", use_container_width=True):
+                        st.session_state.current_step = i
+                        st.rerun()
 
 
 def get_smtp_config() -> dict:
