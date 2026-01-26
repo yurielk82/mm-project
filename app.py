@@ -707,7 +707,7 @@ def render_smtp_sidebar():
         if st.session_state.df is not None:
             st.metric("데이터", f"{len(st.session_state.df):,}행")
         else:
-            st.metric("데이터", "없음")
+            st.metric("데이터", "0행")
         
         if st.session_state.grouped_data:
             valid = sum(1 for g in st.session_state.grouped_data.values() 
@@ -715,7 +715,7 @@ def render_smtp_sidebar():
             total = len(st.session_state.grouped_data)
             st.metric("발송 대상", f"{valid}/{total}")
         else:
-            st.metric("발송 대상", "-")
+            st.metric("발송 대상", "0")
         
         # SMTP 상태 표시
         if st.session_state.smtp_config:
