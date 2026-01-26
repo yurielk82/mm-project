@@ -745,7 +745,7 @@ def render_smtp_sidebar():
                 with st.spinner("연결 중..."):
                     server, error = create_smtp_connection(config)
                     if server:
-                        st.success("연결 성공!", icon="✓")
+                        st.success("연결 성공!", icon="✅")
                         server.quit()
                         st.session_state.smtp_config = config
                         if not from_secrets:
@@ -756,7 +756,7 @@ def render_smtp_sidebar():
                 st.warning("이메일과 비밀번호를 입력하세요", icon="⚠")
         
         if st.session_state.smtp_config:
-            st.success("SMTP 준비 완료", icon="✓")
+            st.success("SMTP 준비 완료", icon="✅")
         
         st.divider()
         
@@ -1502,7 +1502,7 @@ def render_step5():
                 server.quit()
                 
                 if success:
-                    st.success(f"테스트 메일 발송 완료 → {config['username']}", icon="✓")
+                    st.success(f"테스트 메일 발송 완료 → {config['username']}", icon="✅")
                 else:
                     st.error(f"발송 실패: {err}", icon="❌")
             else:
