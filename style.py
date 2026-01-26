@@ -423,30 +423,59 @@ def render_preview(
     )
 
 
-def format_currency(value, symbol: str = "₩", decimal_places: int = 0) -> str:
+def format_currency(value, symbol: str = "", decimal_places: int = 0) -> str:
     """
-    숫자를 통화 형식으로 포맷팅합니다.
+    숫자를 통화 형식으로 포맷팅합니다 (천단위 쉼표, 기호 없음).
     
     Args:
         value: 숫자 값
-        symbol: 통화 기호 (기본: ₩)
+        symbol: 통화 기호 (기본: 없음)
         decimal_places: 소수점 자릿수
     
     Returns:
-        포맷팅된 문자열 (예: ₩1,250,000)
+        포맷팅된 문자열 (예: 1,250,000)
     """
     try:
         if value is None or value == '' or str(value).strip() == '':
             return '-'
         
-        num = float(str(value).replace(',', '').replace(symbol, '').strip())
+        num = float(str(value).replace(',', '').replace('₩', '').strip())
         
         if decimal_places > 0:
             formatted = f"{num:,.{decimal_places}f}"
         else:
             formatted = f"{int(num):,}"
         
-        return f"{symbol}{formatted}"
+        if symbol:
+            return f"{symbol}{formatted}"
+        return formatted
+    except (ValueError, TypeError):
+        return str(value)
+
+
+def format_percent(value, decimal_places: int = 1) -> str:
+    """
+    숫자를 퍼센트 형식으로 포맷팅합니다.
+    
+    Args:
+        value: 숫자 값 (0.15 -> 15%, 15 -> 15%)
+        decimal_places: 소수점 자릿수
+    
+    Returns:
+        포맷팅된 문자열 (예: 15.0%)
+    """
+    try:
+        if value is None or value == '' or str(value).strip() == '':
+            return '-'
+        
+        num = float(str(value).replace(',', '').replace('%', '').strip())
+        
+        # 이미 퍼센트 값인지 확인 (1 이상이면 그대로, 미만이면 *100)
+        # 예: 0.15 -> 15%, 15 -> 15%
+        if -1 < num < 1 and num != 0:
+            num = num * 100
+        
+        return f"{num:.{decimal_places}f}%"
     except (ValueError, TypeError):
         return str(value)
 

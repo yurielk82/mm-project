@@ -26,7 +26,7 @@ import re
 
 # 로컬 모듈
 from style import (
-    render_email, render_preview, format_currency, clean_id_column, format_date,
+    render_email, render_preview, format_currency, format_percent, clean_id_column, format_date,
     get_styles, STREAMLIT_CUSTOM_CSS,
     DEFAULT_HEADER_TITLE, DEFAULT_HEADER_SUBTITLE, DEFAULT_GREETING,
     DEFAULT_INFO_MESSAGE, DEFAULT_ADDITIONAL_MESSAGE, DEFAULT_FOOTER_TEXT,
@@ -171,6 +171,7 @@ def init_session_state():
         'join_col_data': None,
         'join_col_email': None,
         'amount_cols': [],
+        'percent_cols': [],
         'date_cols': [],
         'id_cols': [],
         'display_cols': [],
@@ -214,6 +215,7 @@ def save_column_settings(sheet_name: str):
         'group_key_col': st.session_state.get('group_key_col'),
         'email_col': st.session_state.get('email_col'),
         'amount_cols': st.session_state.get('amount_cols', []),
+        'percent_cols': st.session_state.get('percent_cols', []),
         'date_cols': st.session_state.get('date_cols', []),
         'id_cols': st.session_state.get('id_cols', []),
         'display_cols': st.session_state.get('display_cols', []),
@@ -286,7 +288,7 @@ def merge_email_data(df_data, df_email, join_col_data, join_col_email, email_col
     return df_merged
 
 
-def clean_dataframe(df, amount_cols, date_cols, id_cols):
+def clean_dataframe(df, amount_cols, percent_cols, date_cols, id_cols):
     """데이터 정리"""
     df_cleaned = df.copy()
     for col in id_cols:
@@ -301,10 +303,16 @@ def clean_dataframe(df, amount_cols, date_cols, id_cols):
                 df_cleaned[col].astype(str).str.replace(',', '').str.replace('₩', '').str.strip(),
                 errors='coerce'
             ).fillna(0)
+    for col in percent_cols:
+        if col in df_cleaned.columns:
+            df_cleaned[col] = pd.to_numeric(
+                df_cleaned[col].astype(str).str.replace(',', '').str.replace('%', '').str.strip(),
+                errors='coerce'
+            ).fillna(0)
     return df_cleaned
 
 
-def group_data_with_wildcard(df, group_key_col, email_col, amount_cols, display_cols,
+def group_data_with_wildcard(df, group_key_col, email_col, amount_cols, percent_cols, display_cols,
                              conflict_resolution='first', use_wildcard=True,
                              wildcard_suffixes=None, calculate_totals=True):
     """와일드카드 그룹화"""
@@ -371,6 +379,8 @@ def group_data_with_wildcard(df, group_key_col, email_col, amount_cols, display_
                     # NaN/0 처리: 숫자면 0 표시, 그 외는 빈칸
                     if col in amount_cols:
                         row_dict[col] = format_currency(value)
+                    elif col in percent_cols:
+                        row_dict[col] = format_percent(value)
                     elif pd.isna(value) or value is None:
                         # 숫자 컬럼이면 0, 아니면 빈칸
                         row_dict[col] = ''
@@ -1047,15 +1057,17 @@ def render_step2():
     # 데이터 타입 설정 (세로 나열, 중복 선택 방지)
     with st.container(border=True):
         st.markdown("##### 컬럼 타입 설정")
-        st.caption("금액, 날짜, ID 컬럼을 지정하면 자동 포맷팅됩니다 (중복 선택 불가)")
+        st.caption("금액, 퍼센트, 날짜, ID 컬럼을 지정하면 자동 포맷팅됩니다 (중복 선택 불가)")
         
         # 이전 저장된 값 또는 기본값
         saved_amount = st.session_state.get('amount_cols', [])
+        saved_percent = st.session_state.get('percent_cols', [])
         saved_date = st.session_state.get('date_cols', [])
         saved_id = st.session_state.get('id_cols', [])
         
         # 기본 후보
         amount_candidates = [c for c in columns if any(k in c for k in ['금액', '처방', '수수료'])]
+        percent_candidates = [c for c in columns if any(k in c for k in ['%', '율', '퍼센트', 'percent', 'rate'])]
         date_candidates = [c for c in columns if '월' in c or 'date' in c.lower()]
         id_candidates = [c for c in columns if '코드' in c or '번호' in c]
         
@@ -1065,12 +1077,23 @@ def render_step2():
             "💰 금액 컬럼", 
             columns, 
             default=amount_default,
-            help="천단위 쉼표와 ₩ 기호가 적용됩니다"
+            help="천단위 쉼표가 적용됩니다 (예: 1,250,000)"
         )
         st.session_state.amount_cols = amount_cols
         
-        # 날짜 컬럼 (금액과 겹치지 않게)
-        available_for_date = [c for c in columns if c not in amount_cols]
+        # 퍼센트 컬럼 (금액과 겹치지 않게)
+        available_for_percent = [c for c in columns if c not in amount_cols]
+        percent_default = [c for c in saved_percent if c in available_for_percent] or [c for c in percent_candidates if c in available_for_percent]
+        percent_cols = st.multiselect(
+            "📊 퍼센트 컬럼", 
+            available_for_percent, 
+            default=percent_default,
+            help="% 기호가 적용됩니다 (예: 15.0%)"
+        )
+        st.session_state.percent_cols = percent_cols
+        
+        # 날짜 컬럼 (금액/퍼센트와 겹치지 않게)
+        available_for_date = [c for c in columns if c not in amount_cols and c not in percent_cols]
         date_default = [c for c in saved_date if c in available_for_date] or [c for c in date_candidates if c in available_for_date]
         date_cols = st.multiselect(
             "📅 날짜 컬럼", 
@@ -1080,8 +1103,8 @@ def render_step2():
         )
         st.session_state.date_cols = date_cols
         
-        # ID 컬럼 (금액/날짜와 겹치지 않게)
-        available_for_id = [c for c in columns if c not in amount_cols and c not in date_cols]
+        # ID 컬럼 (금액/퍼센트/날짜와 겹치지 않게)
+        available_for_id = [c for c in columns if c not in amount_cols and c not in percent_cols and c not in date_cols]
         id_default = [c for c in saved_id if c in available_for_id] or [c for c in id_candidates if c in available_for_id]
         id_cols = st.multiselect(
             "🔢 ID 컬럼", 
@@ -1185,12 +1208,12 @@ def render_step2():
                             st.session_state.join_col_email,
                             st.session_state.email_col)
                     
-                    df_cleaned = clean_dataframe(df_work, amount_cols, date_cols, id_cols)
+                    df_cleaned = clean_dataframe(df_work, amount_cols, percent_cols, date_cols, id_cols)
                     st.session_state.df = df_cleaned
                     
                     grouped, conflicts = group_data_with_wildcard(
                         df_cleaned, group_key_col, st.session_state.email_col,
-                        amount_cols, display_cols, conflict_resolution,
+                        amount_cols, percent_cols, display_cols, conflict_resolution,
                         use_wildcard, st.session_state.wildcard_suffixes,
                         st.session_state.calculate_totals_auto)
                     
