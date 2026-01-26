@@ -491,7 +491,6 @@ def render_smtp_sidebar():
             "이메일 (발신자)", 
             value=smtp_defaults['username'],
             key="smtp_user",
-            disabled=from_secrets,  # secrets에서 로드되면 수정 불가
             help="secrets.toml에 SMTP_ID로 설정 가능"
         )
         
@@ -501,7 +500,6 @@ def render_smtp_sidebar():
             type="password",  # 글자 노출 방지
             value=smtp_defaults['password'],
             key="smtp_pass",
-            disabled=from_secrets,  # secrets에서 로드되면 수정 불가
             help="2차 인증용 앱 비밀번호. secrets.toml에 SMTP_PW로 설정 가능"
         )
         
@@ -510,9 +508,9 @@ def render_smtp_sidebar():
         
         with col1:
             if st.button("연결 테스트", use_container_width=True):
-                # 실제 사용할 값 결정 (secrets 우선, 아니면 입력값)
-                final_username = smtp_defaults['username'] if from_secrets else smtp_username
-                final_password = smtp_defaults['password'] if from_secrets else smtp_password
+                # 사용자 입력값 우선 사용
+                final_username = smtp_username if smtp_username else smtp_defaults['username']
+                final_password = smtp_password if smtp_password else smtp_defaults['password']
                 
                 if final_username and final_password:
                     config = {
