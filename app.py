@@ -371,43 +371,88 @@ def validate_email(email: str) -> bool:
 
 
 def create_smtp_connection(config, max_retries=3):
-    """SMTP 연결 생성 (SSL Handshake 최적화 + 재시도 로직)"""
+    """
+    SMTP 연결 생성 - 하이웍스(Hiworks) SSL 최적화
+    
+    필수 조건:
+    - Server: smtps.hiworks.com
+    - Port: 465 (SSL)
+    - smtplib.SMTP_SSL 사용 (일반 SMTP 아님)
+    - From 헤더와 로그인 이메일 일치 필수 (553 에러 방지)
+    """
     import ssl
+    import socket
     last_error = None
+    timeout = config.get('timeout', 30)
     
     for attempt in range(max_retries):
         try:
             if config['port'] == 465:
+                # SSL 컨텍스트 설정 (하이웍스 호환)
                 context = ssl.create_default_context()
                 context.check_hostname = False
                 context.verify_mode = ssl.CERT_NONE
                 context.set_ciphers('DEFAULT@SECLEVEL=1')
                 
+                # SMTP_SSL로 465 포트 직접 연결 (STARTTLS 아님)
                 server = smtplib.SMTP_SSL(
                     config['server'], 
                     config['port'], 
                     context=context,
-                    timeout=30
+                    timeout=timeout
                 )
             else:
-                server = smtplib.SMTP(config['server'], config['port'], timeout=30)
+                # 587 포트 등 STARTTLS 방식
+                server = smtplib.SMTP(config['server'], config['port'], timeout=timeout)
                 server.ehlo()
                 if config.get('use_tls', True):
                     server.starttls()
                     server.ehlo()
             
+            # 로그인 (이메일과 앱 비밀번호)
             server.login(config['username'], config['password'])
             return server, None
             
         except smtplib.SMTPAuthenticationError as e:
+            error_code = e.smtp_code if hasattr(e, 'smtp_code') else 0
             error_str = str(e)
-            if '454' in error_str or 'Temporary' in error_str:
-                last_error = f"서버 임시 오류 (시도 {attempt+1}/{max_retries})"
+            
+            # 454: 임시 인증 서버 오류 → 재시도
+            if error_code == 454 or '454' in error_str or 'Temporary' in error_str:
+                last_error = f"인증 서버 임시 오류 (시도 {attempt+1}/{max_retries})"
                 time.sleep(2)
                 continue
-            if '535' in error_str:
-                return None, "인증 거부: 이메일/비밀번호 또는 SMTP 설정을 확인하세요."
-            return None, f"인증 실패: {error_str[:100]}"
+            
+            # 535: 인증 거부 (비밀번호 오류)
+            if error_code == 535 or '535' in error_str:
+                return None, "❌ 인증 거부: 비밀번호가 틀렸거나 2차 앱 비밀번호가 필요합니다."
+            
+            # 553: 발신자 불일치 또는 IP 차단
+            if error_code == 553 or '553' in error_str:
+                if 'IP' in error_str:
+                    return None, "❌ IP 차단: 하이웍스 관리자 설정에서 이 IP를 허용해야 합니다."
+                return None, "❌ 발신자 불일치: From 주소와 로그인 이메일이 다릅니다."
+            
+            return None, f"❌ 인증 실패: {error_str[:150]}"
+            
+        except socket.timeout:
+            last_error = f"연결 시간 초과 ({timeout}초) - 네트워크 확인 필요"
+            time.sleep(2)
+            continue
+            
+        except socket.gaierror:
+            return None, "❌ 서버를 찾을 수 없음: 서버 주소 또는 인터넷 연결을 확인하세요."
+            
+        except ssl.SSLError as e:
+            error_str = str(e)
+            if 'handshake' in error_str.lower():
+                last_error = f"SSL 핸드셰이크 실패 (시도 {attempt+1}/{max_retries})"
+                time.sleep(2)
+                continue
+            return None, f"❌ SSL 오류: {error_str[:100]}"
+            
+        except ConnectionRefusedError:
+            return None, "❌ 연결 거부: 서버 주소/포트가 올바른지 확인하세요."
             
         except Exception as e:
             error_str = str(e)
@@ -415,9 +460,9 @@ def create_smtp_connection(config, max_retries=3):
                 last_error = f"SSL 연결 오류 (시도 {attempt+1}/{max_retries})"
                 time.sleep(2)
                 continue
-            return None, f"연결 오류: {error_str[:100]}"
+            return None, f"❌ 연결 오류: {error_str[:100]}"
     
-    return None, f"연결 실패: {last_error} - 잠시 후 다시 시도하세요."
+    return None, f"❌ 연결 실패: {last_error} - 네트워크 상태를 확인하고 잠시 후 다시 시도하세요."
 
 
 def send_email(server, sender_email, recipient, subject, html_content, sender_name=None):
