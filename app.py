@@ -186,7 +186,7 @@ CUSTOM_CSS = """
     }
     
     /* ============================================
-       🔧 사이드바 - 8px Grid SaaS UI
+       🔧 사이드바 - 영역별 분리 CSS
        상단(프로그레스) 컴팩트 / 하단(설정) 여유
        ============================================ */
     [data-testid="stSidebar"] {
@@ -197,9 +197,20 @@ CUSTOM_CSS = """
         padding: 12px 16px !important;
     }
     
-    /* 사이드바 요소 간 기본 간격 */
+    /* 상단 영역 - 프로그레스 + 네비게이션 (컴팩트) */
+    .sidebar-top-section {
+        padding-bottom: 8px;
+        margin-bottom: 12px;
+        border-bottom: 1px solid rgba(128,128,128,0.15);
+    }
+    .sidebar-top-section + div [data-testid="stVerticalBlock"] {
+        gap: 2px !important;
+    }
+    
+    /* 하단 영역 - SMTP 설정 등 (여유있게) */
+    .sidebar-bottom-section [data-testid="stVerticalBlock"],
     [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
-        gap: 8px !important;
+        gap: 10px !important;
     }
     
     /* 이전/다음 버튼 영역 - 컴팩트 */
@@ -216,7 +227,7 @@ CUSTOM_CSS = """
     
     /* Expander - 적절한 여백 */
     [data-testid="stSidebar"] [data-testid="stExpander"] {
-        margin: 4px 0 !important;
+        margin: 6px 0 !important;
     }
     [data-testid="stSidebar"] [data-testid="stExpander"] summary {
         padding: 10px 12px !important;
@@ -1903,20 +1914,24 @@ def render_smtp_sidebar():
         current_page = st.session_state.get('current_page', '📧 메일 발송')
         
         if current_page == "📧 메일 발송":
+            # 상단 영역 (프로그레스 + 네비) - 컴팩트 컨테이너
+            st.markdown('<div class="sidebar-top-section">', unsafe_allow_html=True)
+            
             current_step = st.session_state.current_step
             total_steps = len(STEPS)
             
-            # 원형 프로그레스 바 (원래 크기)
+            # 원형 프로그레스 바
             st.markdown(render_circular_progress(current_step, total_steps), unsafe_allow_html=True)
             
-            # 이전단계/다음단계 텍스트 버튼
+            # 이전/다음 텍스트 버튼
             render_step_nav_buttons(current_step, total_steps)
+            
+            st.markdown('</div>', unsafe_allow_html=True)
         
         # ============================================================
-        # SMTP 상태 LED 인디케이터 (HTML 기반)
+        # 하단 영역 (SMTP 설정 등) - 여유있는 간격
         # ============================================================
-        # 프로그레스 영역과 SMTP 영역 구분을 위한 여백
-        st.markdown('<div style="margin-top: 12px;"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="sidebar-bottom-section">', unsafe_allow_html=True)
         
         if st.session_state.smtp_config:
             # 연결됨 - 녹색 LED
@@ -2076,6 +2091,8 @@ SMTP_PW = "app_password"
             st.link_button("📦 ZIP 다운로드", 
                           "https://github.com/yurielk82/mm-project/archive/refs/heads/main.zip",
                           use_container_width=True)
+        
+        st.markdown('</div>', unsafe_allow_html=True)  # sidebar-bottom-section 닫기
         
         st.markdown("""
         <div class="sidebar-footer">
