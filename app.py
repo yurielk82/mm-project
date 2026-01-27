@@ -2635,15 +2635,6 @@ def render_smtp_sidebar():
             render_step_nav_buttons(current_step, total_steps)
         
         # ============================================================
-        # 🔲 대형 여백 + 구분선 (프로그레스와 SMTP 섹션 분리)
-        # ============================================================
-        st.markdown("""
-        <div class="sidebar-large-spacer">
-            <div class="sidebar-section-divider" style="width: 80%;"></div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # ============================================================
         # SMTP 상태 LED 인디케이터
         # ============================================================
         if st.session_state.smtp_config:
