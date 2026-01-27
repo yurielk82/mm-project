@@ -342,33 +342,6 @@ CUSTOM_CSS = """
     }
     
     /* ============================================
-       🔀 사이드바 네비게이션 버튼 (테두리 없음, 텍스트만)
-       ============================================ */
-    [data-testid="stSidebar"] .stButton > button {
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        color: var(--st-text) !important;
-        font-weight: 600 !important;
-        padding: 8px 12px !important;
-        transition: all 0.2s ease !important;
-    }
-    
-    [data-testid="stSidebar"] .stButton > button:hover {
-        background: var(--glass-overlay) !important;
-        color: var(--st-primary) !important;
-    }
-    
-    [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"] {
-        color: var(--st-primary) !important;
-        font-weight: 700 !important;
-    }
-    
-    [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"]:hover {
-        background: var(--color-info-soft) !important;
-    }
-    
-    /* ============================================
        🔌 SMTP 연결 버튼 (LED 스타일)
        클릭 가능한 상태 인디케이터
        ============================================ */
