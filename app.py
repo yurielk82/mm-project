@@ -81,9 +81,6 @@ CUSTOM_CSS = """
        Light/Dark 모드 완벽 대응
        ============================================ */
     
-    /* 폰트 시스템 - Pretendard/Inter 우선 */
-    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-    
     :root {
         /* Streamlit 테마 변수 참조 */
         --st-primary: var(--primary-color);
@@ -91,8 +88,8 @@ CUSTOM_CSS = """
         --st-secondary-bg: var(--secondary-background-color);
         --st-text: var(--text-color);
         
-        /* 글로벌 폰트 */
-        --font-family: 'Pretendard', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        /* 시스템 폰트 (이모지 호환) */
+        --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
         
         /* Glass 효과 (테마 적응형) */
         --glass-overlay: rgba(128, 128, 128, 0.05);
@@ -128,9 +125,14 @@ CUSTOM_CSS = """
         --transition-normal: 250ms ease;
     }
     
-    /* 전역 폰트 적용 */
+    /* 전역 폰트 적용 - 이모지는 시스템 폰트 사용 */
     html, body, [class*="st-"] {
         font-family: var(--font-family) !important;
+    }
+    
+    /* 이모지 전용 폰트 fallback */
+    .stButton, [data-testid="stExpander"] summary {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI Emoji', 'Noto Color Emoji', var(--font-family) !important;
     }
     
     /* ============================================
