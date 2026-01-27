@@ -342,13 +342,36 @@ CUSTOM_CSS = """
     }
     
     /* ============================================
+       🔀 사이드바 네비게이션 버튼 (테두리 없음, 텍스트만)
+       ============================================ */
+    [data-testid="stSidebar"] .stButton > button {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        color: var(--st-text) !important;
+        font-weight: 600 !important;
+        padding: 8px 12px !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    [data-testid="stSidebar"] .stButton > button:hover {
+        background: var(--glass-overlay) !important;
+        color: var(--st-primary) !important;
+    }
+    
+    [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"] {
+        color: var(--st-primary) !important;
+        font-weight: 700 !important;
+    }
+    
+    [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"]:hover {
+        background: var(--color-info-soft) !important;
+    }
+    
+    /* ============================================
        🔌 SMTP 연결 버튼 (LED 스타일)
        클릭 가능한 상태 인디케이터
        ============================================ */
-    [data-testid="stSidebar"] button[kind="secondary"]:has(~ *),
-    [data-testid="stSidebar"] .stButton > button:first-child {
-        /* 기본 스타일은 nav 버튼 스타일 적용 */
-    }
     
     /* SMTP 연결 필요 버튼 - 경고 LED 스타일 */
     [data-testid="stSidebar"] button[data-testid="baseButton-secondary"]:first-of-type,
@@ -1756,27 +1779,25 @@ def render_smtp_sidebar():
             total_steps = len(STEPS)
             st.markdown(render_circular_progress(current_step, total_steps), unsafe_allow_html=True)
             
-            # ============================================================
-            # 이전 / 다음 단계 버튼 (Streamlit 기본 스타일)
-            # ============================================================
+            # 이전 / 다음 버튼 (텍스트만, 테두리 없음)
             col_prev, col_next = st.columns(2)
-            
             with col_prev:
-                if st.button("← 이전", 
-                            use_container_width=True, 
-                            disabled=(current_step <= 1),
-                            key="sidebar_prev"):
-                    st.session_state.current_step = current_step - 1
-                    st.rerun()
+                prev_disabled = current_step <= 1
+                if not prev_disabled:
+                    if st.button("< 이전", key="sidebar_prev", use_container_width=True):
+                        st.session_state.current_step = current_step - 1
+                        st.rerun()
+                else:
+                    st.markdown("<div style='text-align:center;color:rgba(128,128,128,0.4);padding:8px;'>< 이전</div>", unsafe_allow_html=True)
             
             with col_next:
-                if st.button("다음 →", 
-                            type="primary", 
-                            use_container_width=True, 
-                            disabled=(current_step >= total_steps),
-                            key="sidebar_next"):
-                    st.session_state.current_step = current_step + 1
-                    st.rerun()
+                next_disabled = current_step >= total_steps
+                if not next_disabled:
+                    if st.button("다음 >", key="sidebar_next", type="primary", use_container_width=True):
+                        st.session_state.current_step = current_step + 1
+                        st.rerun()
+                else:
+                    st.markdown("<div style='text-align:center;color:rgba(128,128,128,0.4);padding:8px;'>다음 ></div>", unsafe_allow_html=True)
         
         # ============================================================
         # SMTP 상태 LED 인디케이터 (HTML 기반)
