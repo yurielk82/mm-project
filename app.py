@@ -859,6 +859,58 @@ CUSTOM_CSS = """
         padding-top: var(--space-md);
     }
     
+    /* ============================================
+       🔧 사이드바 버튼 공백 제거 (Compact Navigation)
+       ============================================ */
+    /* 사이드바 내 컬럼 간격 최소화 */
+    [data-testid="stSidebar"] [data-testid="column"] {
+        padding: 0 2px !important;
+    }
+    
+    /* 사이드바 내 버튼 컨테이너 마진 제거 */
+    [data-testid="stSidebar"] .stButton {
+        margin-bottom: 0 !important;
+    }
+    
+    /* 사이드바 버튼 자체 스타일 - 컴팩트 */
+    [data-testid="stSidebar"] .stButton > button {
+        padding: 4px 8px !important;
+        min-height: 28px !important;
+        font-size: 0.75rem !important;
+        background: transparent !important;
+        border: none !important;
+        color: var(--st-text) !important;
+    }
+    
+    [data-testid="stSidebar"] .stButton > button:hover {
+        background: var(--glass-overlay) !important;
+        transform: none !important;
+        box-shadow: none !important;
+    }
+    
+    /* 사이드바 내 가로 블록(columns) 여백 제거 */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
+        gap: 4px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    /* 사이드바 세로 블록 여백 축소 */
+    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] > div {
+        margin-bottom: 0 !important;
+    }
+    
+    /* 사이드바 element-container 여백 제거 */
+    [data-testid="stSidebar"] [data-testid="element-container"] {
+        margin: 0 !important;
+    }
+    
+    /* LED 인디케이터 위 마진 조정 */
+    [data-testid="stSidebar"] .led-indicator {
+        margin-top: 4px !important;
+        margin-bottom: 8px !important;
+    }
+    
 </style>
 """
 
@@ -1721,7 +1773,8 @@ def render_circular_progress(current_step: int, total_steps: int):
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 1rem 0;
+    padding: 0;
+    margin-bottom: 4px;
 }}
 .progress-circle {{
     position: relative;
@@ -1760,7 +1813,8 @@ def render_circular_progress(current_step: int, total_steps: int):
 }}
 .progress-label {{
     text-align: center;
-    margin-top: 0.75rem;
+    margin-top: 4px;
+    margin-bottom: 0;
 }}
 .progress-step-name {{
     font-size: 0.95rem;
@@ -1804,86 +1858,22 @@ def render_circular_progress(current_step: int, total_steps: int):
 
 
 def render_step_nav_buttons(current_step: int, total_steps: int):
-    """이전단계/다음단계 텍스트 버튼 (테두리 없음)"""
+    """이전단계/다음단계 텍스트 버튼 (테두리 없음, 컴팩트)"""
     prev_disabled = current_step <= 1
     next_disabled = current_step >= total_steps
     
-    # 텍스트 버튼 스타일 CSS - 여백 대폭 축소, 글씨 작게
-    st.markdown("""
-    <style>
-    /* 사이드바 내 스텝 네비게이션 영역 전체 - 상단 여백 제거 */
-    [data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"]:has(.step-nav-container) {
-        margin-top: -1.5rem !important;
-        padding-top: 0 !important;
-    }
-    /* 네비게이션 버튼 컨테이너 - 여백 최소화 */
-    .step-nav-container {
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-    .step-nav-container + div {
-        margin-top: 0.5rem !important;
-    }
-    /* 사이드바 네비게이션 텍스트 버튼 - 테두리 없음, 여백 최소 */
-    .step-nav-container .stButton > button {
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        padding: 0 2px !important;
-        margin: 0 !important;
-        min-height: 0 !important;
-        height: auto !important;
-        line-height: 1 !important;
-        font-size: 0.65rem !important;
-        font-weight: 500 !important;
-    }
-    .step-nav-container .stButton {
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-    .step-nav-container [data-testid="column"] {
-        padding: 0 !important;
-    }
-    /* 이전 버튼 */
-    .step-nav-container .nav-prev .stButton > button {
-        color: rgba(128,128,128,0.7) !important;
-    }
-    .step-nav-container .nav-prev .stButton > button:hover:not(:disabled) {
-        color: #fff !important;
-    }
-    /* 다음 버튼 */
-    .step-nav-container .nav-next .stButton > button {
-        color: #1E88E5 !important;
-        font-weight: 600 !important;
-    }
-    .step-nav-container .nav-next .stButton > button:hover:not(:disabled) {
-        color: #42A5F5 !important;
-    }
-    /* 비활성화 */
-    .step-nav-container .stButton > button:disabled {
-        opacity: 0.3 !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    # 레이아웃: [이전] [다음] - 여백 최소화
-    st.markdown('<div class="step-nav-container">', unsafe_allow_html=True)
+    # 버튼 2개를 바로 columns로 배치 (HTML div 래퍼 제거)
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown('<div class="nav-prev">', unsafe_allow_html=True)
         if st.button("‹ 이전", key="nav_prev", disabled=prev_disabled, use_container_width=True):
             st.session_state.current_step = current_step - 1
             st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
     
     with col2:
-        st.markdown('<div class="nav-next">', unsafe_allow_html=True)
         if st.button("다음 ›", key="nav_next", disabled=next_disabled, use_container_width=True):
             st.session_state.current_step = current_step + 1
             st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
 
 
 def render_smtp_sidebar():
@@ -1906,31 +1896,19 @@ def render_smtp_sidebar():
             render_step_nav_buttons(current_step, total_steps)
         
         # ============================================================
-        # SMTP 상태 LED 인디케이터 (HTML 기반)
+        # SMTP 상태 LED 인디케이터
         # ============================================================
         if st.session_state.smtp_config:
-            # 연결됨 - 녹색 LED
-            st.markdown("""
-            <div class="led-indicator connected" style="width: 100%; justify-content: center; margin: 0.5rem 0;">
-                <span class="led-dot"></span>
-                <span>SMTP 연결됨</span>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown("""<div class="led-indicator connected" style="width:100%; justify-content:center; margin:8px 0;">
+                <span class="led-dot"></span><span>SMTP 연결됨</span>
+            </div>""", unsafe_allow_html=True)
         else:
-            # 연결 필요 - 노란색 LED (클릭 유도)
-            st.markdown("""
-            <div class="led-indicator disconnected" style="width: 100%; justify-content: center; margin: 0.5rem 0; cursor: pointer;" title="아래 SMTP 설정을 열어 연결하세요">
-                <span class="led-dot"></span>
-                <span>SMTP 연결 필요</span>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        st.divider()
-        
-
+            st.markdown("""<div class="led-indicator disconnected" style="width:100%; justify-content:center; margin:8px 0;">
+                <span class="led-dot"></span><span>SMTP 연결 필요</span>
+            </div>""", unsafe_allow_html=True)
         
         # ============================================================
-        # SMTP 계정 설정 (연결 성공 시 자동으로 닫힘)
+        # SMTP 계정 설정
         # ============================================================
         # SMTP 연결 상태에 따라 expander 열림/닫힘 결정
         smtp_connected = st.session_state.get('smtp_config') is not None
@@ -2081,35 +2059,19 @@ SMTP_PW = "app_password"
         """, unsafe_allow_html=True)
 
 
-def scroll_to_top():
-    """페이지 최상단으로 스크롤"""
-    st.markdown("""
-    <style>
-        /* 스크롤 최상단 이동 트릭 */
-        .scroll-to-top {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 0;
-            height: 0;
-        }
-    </style>
-    <div class="scroll-to-top" id="top"></div>
-    <script>
-        // Streamlit iframe 내에서 스크롤
-        var mainContent = window.parent.document.querySelector('section.main');
-        if (mainContent) {
-            mainContent.scrollTop = 0;
-        }
-        window.scrollTo(0, 0);
-    </script>
-    """, unsafe_allow_html=True)
+
 
 
 def render_page_header(step: int, title: str, description: str):
     """SaaS급 페이지 헤더 - 깔끔한 디자인"""
-    # 페이지 최상단으로 스크롤
-    scroll_to_top()
+    
+    # 페이지 전환 시 자동 스크롤 최상단
+    st.markdown("""
+    <script>
+        // 페이지 최상단으로 스크롤
+        window.parent.document.querySelector('section.main').scrollTo(0, 0);
+    </script>
+    """, unsafe_allow_html=True)
     
     st.markdown(f"""
     <div style="
