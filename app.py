@@ -1911,73 +1911,84 @@ def render_circular_progress_with_nav(current_step: int, total_steps: int):
 '''
 
 
-def render_nav_buttons(current_step: int, total_steps: int):
-    """좌/우 투명 버튼 - 프로그레스 바 클릭 영역"""
+def render_progress_with_clickable_nav(current_step: int, total_steps: int):
+    """원형 프로그레스 + 좌우 클릭 버튼 통합 렌더링"""
     prev_disabled = current_step <= 1
     next_disabled = current_step >= total_steps
     
-    # CSS: 좌우 버튼을 투명하게, 프로그레스 바 위에 오버레이
+    # 프로그레스 바 HTML 렌더링
+    st.markdown(render_circular_progress_with_nav(current_step, total_steps), unsafe_allow_html=True)
+    
+    # 좌우 버튼을 프로그레스 위에 오버레이하는 CSS
     st.markdown("""
     <style>
-    /* 네비게이션 버튼 컨테이너 - 프로그레스 바와 겹치게 */
-    [data-testid="stSidebar"] .nav-overlay-buttons {
-        margin-top: -120px;
+    /* 사이드바 프로그레스 네비게이션 - 전체 컨테이너 */
+    [data-testid="stSidebar"] .progress-nav-wrapper {
         position: relative;
-        z-index: 100;
-        height: 100px;
+        margin-top: -180px;
+        height: 160px;
+        z-index: 50;
     }
-    /* 좌우 버튼 투명화 */
-    [data-testid="stSidebar"] .nav-overlay-buttons .stButton > button {
+    /* 좌우 버튼 공통 - 완전 투명, 반원 모양 */
+    [data-testid="stSidebar"] .progress-nav-wrapper .stButton > button {
         background: transparent !important;
         border: none !important;
         box-shadow: none !important;
-        height: 100px !important;
-        font-size: 0 !important;
+        height: 160px !important;
+        min-height: 160px !important;
+        font-size: 1.5rem !important;
         color: transparent !important;
         transition: all 0.3s ease !important;
+        padding: 0 !important;
     }
-    /* 호버 시 반투명 배경으로 클릭 영역 표시 */
-    [data-testid="stSidebar"] .nav-overlay-buttons .stButton > button:hover:not(:disabled) {
-        background: rgba(128,128,128,0.08) !important;
+    /* 호버 시 클릭 영역 표시 + 화살표 */
+    [data-testid="stSidebar"] .progress-nav-wrapper .stButton > button:hover:not(:disabled) {
+        color: rgba(100,100,100,0.6) !important;
     }
-    /* 이전 버튼 (좌측) - 왼쪽 반원 */
-    [data-testid="stSidebar"] .nav-overlay-buttons [data-testid="column"]:first-child .stButton > button {
-        border-radius: 100px 0 0 100px !important;
+    /* 이전 버튼 (좌측) */
+    [data-testid="stSidebar"] .progress-nav-wrapper [data-testid="column"]:first-child .stButton > button {
+        border-radius: 160px 0 0 160px !important;
     }
-    [data-testid="stSidebar"] .nav-overlay-buttons [data-testid="column"]:first-child .stButton > button:hover:not(:disabled) {
-        background: linear-gradient(90deg, rgba(128,128,128,0.12) 0%, transparent 100%) !important;
+    [data-testid="stSidebar"] .progress-nav-wrapper [data-testid="column"]:first-child .stButton > button:hover:not(:disabled) {
+        background: linear-gradient(90deg, rgba(128,128,128,0.15) 0%, transparent 70%) !important;
     }
-    /* 다음 버튼 (우측) - 오른쪽 반원 */
-    [data-testid="stSidebar"] .nav-overlay-buttons [data-testid="column"]:last-child .stButton > button {
-        border-radius: 0 100px 100px 0 !important;
+    /* 다음 버튼 (우측) */
+    [data-testid="stSidebar"] .progress-nav-wrapper [data-testid="column"]:last-child .stButton > button {
+        border-radius: 0 160px 160px 0 !important;
     }
-    [data-testid="stSidebar"] .nav-overlay-buttons [data-testid="column"]:last-child .stButton > button:hover:not(:disabled) {
-        background: linear-gradient(-90deg, rgba(30,136,229,0.15) 0%, transparent 100%) !important;
+    [data-testid="stSidebar"] .progress-nav-wrapper [data-testid="column"]:last-child .stButton > button:hover:not(:disabled) {
+        background: linear-gradient(-90deg, rgba(30,136,229,0.2) 0%, transparent 70%) !important;
+        color: rgba(30,136,229,0.8) !important;
     }
-    /* 비활성화 */
-    [data-testid="stSidebar"] .nav-overlay-buttons .stButton > button:disabled {
+    /* 비활성화 상태 */
+    [data-testid="stSidebar"] .progress-nav-wrapper .stButton > button:disabled {
         cursor: not-allowed !important;
-        opacity: 0.3 !important;
+    }
+    /* 다크모드 */
+    @media (prefers-color-scheme: dark) {
+        [data-testid="stSidebar"] .progress-nav-wrapper [data-testid="column"]:first-child .stButton > button:hover:not(:disabled) {
+            background: linear-gradient(90deg, rgba(255,255,255,0.08) 0%, transparent 70%) !important;
+            color: rgba(200,200,200,0.6) !important;
+        }
     }
     </style>
     """, unsafe_allow_html=True)
     
-    # 투명 버튼 오버레이
-    with st.container():
-        st.markdown('<div class="nav-overlay-buttons">', unsafe_allow_html=True)
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            if st.button("‹", key="nav_prev", disabled=prev_disabled, use_container_width=True):
-                st.session_state.current_step = current_step - 1
-                st.rerun()
-        
-        with col2:
-            if st.button("›", key="nav_next", disabled=next_disabled, use_container_width=True):
-                st.session_state.current_step = current_step + 1
-                st.rerun()
-        
-        st.markdown('</div>', unsafe_allow_html=True)
+    # 투명 좌/우 버튼 (프로그레스 위에 오버레이)
+    st.markdown('<div class="progress-nav-wrapper">', unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("‹", key="nav_prev", disabled=prev_disabled, use_container_width=True):
+            st.session_state.current_step = current_step - 1
+            st.rerun()
+    
+    with col2:
+        if st.button("›", key="nav_next", disabled=next_disabled, use_container_width=True):
+            st.session_state.current_step = current_step + 1
+            st.rerun()
+    
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 def render_smtp_sidebar():
@@ -1993,11 +2004,8 @@ def render_smtp_sidebar():
             current_step = st.session_state.current_step
             total_steps = len(STEPS)
             
-            # 원형 프로그레스 바 표시
-            st.markdown(render_circular_progress_with_nav(current_step, total_steps), unsafe_allow_html=True)
-            
-            # 원형 네비게이션 버튼 (← →)
-            render_nav_buttons(current_step, total_steps)
+            # 원형 프로그레스 + 좌우 클릭 네비게이션 (통합)
+            render_progress_with_clickable_nav(current_step, total_steps)
         
         # ============================================================
         # SMTP 상태 LED 인디케이터 (HTML 기반)
