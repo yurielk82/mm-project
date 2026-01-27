@@ -1036,6 +1036,236 @@ CUSTOM_CSS = """
         color: var(--st-text);
     }
     
+    /* ============================================
+       🎯 드래그 앤 드롭 컬럼 칩 - 레이아웃 안정화
+       클릭/드래그 시 크기 변화 완전 방지
+       ============================================ */
+    
+    /* sortable 컨테이너 고정 높이 */
+    .sortable-container {
+        min-height: 120px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 12px;
+        border-radius: var(--radius-md);
+        background: var(--glass-overlay);
+        border: 2px dashed var(--glass-border);
+        transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    
+    .sortable-container:hover {
+        border-color: var(--st-primary);
+        background: rgba(59, 130, 246, 0.05);
+    }
+    
+    /* 컬럼 칩 - box-sizing으로 크기 고정 */
+    .column-chip {
+        box-sizing: border-box !important;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 12px;
+        height: 36px;  /* 고정 높이 */
+        min-width: 80px;
+        font-size: 0.85rem;
+        font-weight: var(--font-weight-medium);
+        background: var(--st-secondary-bg);
+        border: 2px solid transparent;  /* 초기부터 테두리 공간 확보 */
+        border-radius: var(--radius-full);
+        cursor: grab;
+        transition: box-shadow 0.15s ease, background 0.15s ease;
+        user-select: none;
+    }
+    
+    /* 호버 - 테두리 대신 그림자 사용 */
+    .column-chip:hover {
+        box-shadow: 0 0 0 3px var(--color-info-soft), var(--glass-shadow);
+        background: var(--glass-overlay);
+    }
+    
+    /* 활성/드래그 중 - 테두리 대신 내부 그림자 */
+    .column-chip:active,
+    .column-chip.dragging {
+        cursor: grabbing;
+        box-shadow: 0 0 0 3px var(--color-info), 0 4px 12px rgba(0,0,0,0.15);
+        background: var(--color-info-soft);
+    }
+    
+    /* 삭제 버튼 - 고정 크기 */
+    .column-chip .remove-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        font-size: 12px;
+        border-radius: 50%;
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--color-error);
+        border: none;
+        cursor: pointer;
+        transition: background 0.15s ease;
+        flex-shrink: 0;  /* 축소 방지 */
+    }
+    
+    .column-chip .remove-btn:hover {
+        background: var(--color-error);
+        color: white;
+    }
+    
+    /* 형식 타입별 칩 색상 */
+    .chip-amount {
+        border-left: 3px solid #f59e0b !important;
+    }
+    
+    .chip-percent {
+        border-left: 3px solid #8b5cf6 !important;
+    }
+    
+    .chip-date {
+        border-left: 3px solid #22c55e !important;
+    }
+    
+    .chip-id {
+        border-left: 3px solid #3b82f6 !important;
+    }
+    
+    /* 영역 헤더 스타일 */
+    .area-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 16px;
+        border-radius: var(--radius-md);
+        margin-bottom: 8px;
+        font-weight: var(--font-weight-semibold);
+    }
+    
+    .area-header.display-area {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        border-left: 4px solid #1976d2;
+        color: #1565c0;
+    }
+    
+    .area-header.format-area {
+        background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+        border-left: 4px solid #f57c00;
+        color: #e65100;
+    }
+    
+    /* ============================================
+       🎯 Drag & Drop 칩 레이아웃 안정화
+       - box-sizing: border-box 전역 적용
+       - 고정 높이/패딩으로 출렁임 방지
+       - box-shadow로 활성 상태 표시 (테두리 두께 변화 없음)
+       ============================================ */
+    
+    /* streamlit-sortables 전역 컨테이너 안정화 */
+    .element-container:has(.sortable-container) {
+        min-height: 60px !important;
+    }
+    
+    /* sortable 컨테이너 자체 */
+    .sortable-container {
+        min-height: 50px !important;
+        padding: 8px !important;
+        box-sizing: border-box !important;
+    }
+    
+    /* 모든 sortable 아이템(칩) 안정화 */
+    [data-testid="stVerticalBlock"] .sortable-item,
+    .sortable-item {
+        box-sizing: border-box !important;
+        margin: 4px !important;
+        padding: 8px 14px !important;
+        min-height: 36px !important;
+        max-height: 36px !important;
+        height: 36px !important;
+        line-height: 18px !important;
+        border-radius: 20px !important;
+        font-size: 0.85rem !important;
+        font-weight: 500 !important;
+        /* 테두리는 항상 동일한 두께 유지 */
+        border: 2px solid transparent !important;
+        /* 활성 상태는 box-shadow로만 표시 */
+        transition: box-shadow 0.15s ease, background-color 0.15s ease !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        white-space: nowrap !important;
+        cursor: grab !important;
+        user-select: none !important;
+    }
+    
+    /* 호버 상태 - 테두리 두께 변화 없음, 그림자로만 표시 */
+    [data-testid="stVerticalBlock"] .sortable-item:hover,
+    .sortable-item:hover {
+        border: 2px solid transparent !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25), 0 2px 8px rgba(0,0,0,0.1) !important;
+        background-color: rgba(59, 130, 246, 0.08) !important;
+    }
+    
+    /* 드래그 중 상태 - 테두리 두께 변화 없음, 강한 그림자 */
+    [data-testid="stVerticalBlock"] .sortable-item:active,
+    [data-testid="stVerticalBlock"] .sortable-item.dragging,
+    .sortable-item:active,
+    .sortable-item.dragging {
+        border: 2px solid transparent !important;
+        box-shadow: 0 0 0 3px #3b82f6, 0 8px 20px rgba(0,0,0,0.2) !important;
+        cursor: grabbing !important;
+        transform: scale(1.02) !important;
+    }
+    
+    /* 포커스 상태 (키보드 접근성) */
+    [data-testid="stVerticalBlock"] .sortable-item:focus,
+    .sortable-item:focus {
+        border: 2px solid transparent !important;
+        box-shadow: 0 0 0 3px #3b82f6, 0 0 0 5px rgba(59, 130, 246, 0.2) !important;
+        outline: none !important;
+    }
+    
+    /* 드래그 앤 드롭 컨테이너 영역 */
+    .dnd-container {
+        background: var(--st-secondary-bg, #f8f9fa);
+        border: 2px dashed var(--glass-border, rgba(128, 128, 128, 0.2));
+        border-radius: var(--radius-md, 12px);
+        padding: 12px;
+        min-height: 60px;
+        box-sizing: border-box;
+        transition: border-color 0.2s ease, background-color 0.2s ease;
+    }
+    
+    .dnd-container:hover {
+        border-color: rgba(59, 130, 246, 0.4);
+        background: rgba(59, 130, 246, 0.02);
+    }
+    
+    .dnd-container.drop-active {
+        border-color: #3b82f6;
+        background: rgba(59, 130, 246, 0.05);
+    }
+    
+    /* 컬럼 타입별 칩 배경색 (sortable 내부) */
+    .sortable-item[data-type="amount"] {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+        border-left: 3px solid #f59e0b !important;
+    }
+    
+    .sortable-item[data-type="percent"] {
+        background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%) !important;
+        border-left: 3px solid #8b5cf6 !important;
+    }
+    
+    .sortable-item[data-type="date"] {
+        background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%) !important;
+        border-left: 3px solid #22c55e !important;
+    }
+    
+    .sortable-item[data-type="id"] {
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+        border-left: 3px solid #3b82f6 !important;
+    }
+    
 </style>
 """
 
@@ -1198,6 +1428,52 @@ def apply_saved_config_to_columns(saved_config: dict, available_columns: list) -
     result['available'] = [c for c in available_columns if c not in placed_cols]
     
     return result, missing_cols
+
+
+def move_step(target_step: int, save_config: bool = True):
+    """
+    공통 스텝 이동 함수 - 본문/사이드바 버튼 모두 이 함수 사용
+    이동 전에 현재 설정을 JSON 파일과 세션에 자동 저장
+    
+    Args:
+        target_step: 이동할 스텝 번호 (1-5)
+        save_config: True이면 이동 전 현재 설정 저장
+    """
+    current_step = st.session_state.get('current_step', 1)
+    
+    # Step 2에서 이동할 때 설정 저장
+    if save_config and current_step == 2:
+        # 현재 설정 수집
+        display_cols = st.session_state.get('display_cols', [])
+        excluded_cols = st.session_state.get('excluded_cols', [])
+        amount_cols = st.session_state.get('amount_cols', [])
+        percent_cols = st.session_state.get('percent_cols', [])
+        date_cols = st.session_state.get('date_cols', [])
+        id_cols = st.session_state.get('id_cols', [])
+        
+        config_to_save = {
+            'display_cols': display_cols,
+            'excluded_cols': excluded_cols,
+            'amount_cols': amount_cols,
+            'percent_cols': percent_cols,
+            'date_cols': date_cols,
+            'id_cols': id_cols,
+            'saved_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        # JSON 파일에 저장
+        save_column_config_to_json(config_to_save)
+        
+        # 세션 캐시에도 저장
+        sheet_name = st.session_state.get('selected_data_sheet', 'default')
+        save_column_settings(sheet_name)
+        
+        add_log(f"Step 2 설정 저장 완료 (표시: {len(display_cols)}개, 형식: {len(amount_cols)+len(percent_cols)+len(date_cols)+len(id_cols)}개)")
+    
+    # 스텝 이동
+    st.session_state.current_step = target_step
+    add_log(f"Step {current_step} → Step {target_step} 이동")
+    st.rerun()
 
 
 def reset_workflow():
@@ -1669,8 +1945,7 @@ def render_step_indicator():
             with col:
                 if i < current:
                     if st.button(f"← {i}", key=f"step_nav_{i}", help=f"{step_name}로 이동"):
-                        st.session_state.current_step = i
-                        st.rerun()
+                        move_step(i)
     
     st.divider()
 
@@ -2661,6 +2936,83 @@ def render_step2():
     # 페이지 헤더
     render_page_header(2, "컬럼 설정", "이메일 본문에 표시할 컬럼과 데이터 형식을 설정하세요")
     
+    # ============================================================
+    # 🎯 드래그 앤 드롭 칩 레이아웃 안정화 CSS (Step 2 전용)
+    # - box-sizing: border-box로 크기 고정
+    # - 테두리 두께 변화 없이 box-shadow로 활성 상태 표시
+    # - 모든 칩 높이/패딩 고정으로 출렁임 방지
+    # ============================================================
+    st.markdown("""
+    <style>
+        /* Step 2 드래그 앤 드롭 영역 안정화 */
+        .stContainer > div {
+            min-height: auto !important;
+        }
+        
+        /* sortable 컨테이너 고정 높이 */
+        .element-container:has([data-testid="stCustomComponentV1"]) {
+            min-height: 70px !important;
+        }
+        
+        /* 칩 아이템 크기 고정 - 클릭/드래그 시 레이아웃 변화 없음 */
+        div[data-testid="stCustomComponentV1"] > div > div > div {
+            box-sizing: border-box !important;
+        }
+        
+        /* sortable 아이템 전역 안정화 */
+        .sortable-item {
+            box-sizing: border-box !important;
+            min-height: 36px !important;
+            max-height: 36px !important;
+            height: 36px !important;
+            padding: 8px 14px !important;
+            margin: 4px !important;
+            border: 2px solid transparent !important;
+            border-radius: 20px !important;
+            font-size: 0.85rem !important;
+            font-weight: 500 !important;
+            line-height: 18px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            white-space: nowrap !important;
+            cursor: grab !important;
+            user-select: none !important;
+            transition: box-shadow 0.15s ease, background-color 0.15s ease, transform 0.1s ease !important;
+        }
+        
+        /* 호버 - 테두리 두께 유지, 그림자로 피드백 */
+        .sortable-item:hover {
+            border: 2px solid transparent !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25), 0 2px 8px rgba(0,0,0,0.1) !important;
+            background-color: rgba(59, 130, 246, 0.08) !important;
+        }
+        
+        /* 드래그 중 - 테두리 두께 유지, 강한 그림자 + 약간 확대 */
+        .sortable-item:active,
+        .sortable-item.dragging {
+            border: 2px solid transparent !important;
+            box-shadow: 0 0 0 3px #3b82f6, 0 8px 20px rgba(0,0,0,0.2) !important;
+            cursor: grabbing !important;
+            transform: scale(1.02) !important;
+        }
+        
+        /* 컨테이너 드롭 영역 */
+        .sortable-container {
+            min-height: 50px !important;
+            padding: 8px !important;
+            border: 2px dashed rgba(128, 128, 128, 0.2) !important;
+            border-radius: 12px !important;
+            box-sizing: border-box !important;
+            transition: border-color 0.2s ease, background-color 0.2s ease !important;
+        }
+        
+        .sortable-container:hover {
+            border-color: rgba(59, 130, 246, 0.4) !important;
+            background: rgba(59, 130, 246, 0.02) !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
     df = st.session_state.df
     if df is None:
         st.warning("먼저 파일을 업로드하세요", icon="⚠")
@@ -2993,8 +3345,8 @@ def render_step2():
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
         if st.button("← 이전", use_container_width=True, key="step2_prev"):
-            st.session_state.current_step = 1
-            st.rerun()
+            # 이전으로 가기 전에도 설정 저장
+            move_step(1, save_config=True)
     with col3:
         if st.button("다음 단계 →", type="primary", use_container_width=True, key="step2_next"):
             if not display_cols:
@@ -3014,6 +3366,7 @@ def render_step2():
                 
                 # 세션 캐시에도 저장
                 save_column_settings(sheet_name)
+                add_log(f"Step 2 설정 저장: 표시 {len(display_cols)}개, 형식 {len(amount_cols)+len(percent_cols)+len(date_cols)+len(id_cols)}개")
                 
                 with st.spinner("데이터 처리 중..."):
                     df_work = df.copy()
@@ -3035,6 +3388,7 @@ def render_step2():
                     
                     st.session_state.grouped_data = grouped
                     st.session_state.email_conflicts = conflicts
+                    add_log(f"데이터 그룹화 완료: {len(grouped)}개 그룹")
                 
                 st.session_state.current_step = 3
                 st.rerun()
