@@ -1054,8 +1054,9 @@ def render_smtp_sidebar():
         st.markdown("""
         <div style="text-align: center; margin-top: 1.5rem; padding-top: 1rem; 
                     border-top: 1px solid #eee;">
-            <p style="font-size: 0.65rem; color: #999; margin-bottom: 0.5rem;">
-                © 2026 KUP Sales Management Team
+            <p style="font-size: 0.65rem; color: #999; margin-bottom: 0.5rem; line-height: 1.5;">
+                Designed & Developed by Kwon dae-hwan<br>
+                © 2026 KUP Sales Management
             </p>
         </div>
         """, unsafe_allow_html=True)
