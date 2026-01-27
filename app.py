@@ -1931,19 +1931,23 @@ streamlit run app.py
             """)
         
         # ============================================================
-        # 📌 페이지 네비게이션 (메일 발송 / 발송 이력)
+        # 📌 페이지 네비게이션 (메일 발송 / 발송 이력) - 바로 클릭 이동
         # ============================================================
-        with st.expander("📧 메일 발송", expanded=st.session_state.get('current_page', '📧 메일 발송') == '📧 메일 발송'):
-            if st.button("📧 메일 발송으로 이동", use_container_width=True, key="goto_mail"):
-                st.session_state.current_page = '📧 메일 발송'
-                st.rerun()
-            st.caption("엑셀 데이터 기반 메일머지 발송")
+        st.markdown("##### 📌 페이지")
         
-        with st.expander("📜 발송 이력", expanded=st.session_state.get('current_page', '📧 메일 발송') == '📜 발송 이력'):
-            if st.button("📜 발송 이력으로 이동", use_container_width=True, key="goto_history"):
-                st.session_state.current_page = '📜 발송 이력'
-                st.rerun()
-            st.caption("과거 발송 기록 조회 및 검색")
+        current_page = st.session_state.get('current_page', '📧 메일 발송')
+        
+        # 메일 발송 버튼
+        mail_type = "primary" if current_page == "📧 메일 발송" else "secondary"
+        if st.button("📧 메일 발송", use_container_width=True, key="goto_mail", type=mail_type):
+            st.session_state.current_page = '📧 메일 발송'
+            st.rerun()
+        
+        # 발송 이력 버튼
+        history_type = "primary" if current_page == "📜 발송 이력" else "secondary"
+        if st.button("📜 발송 이력", use_container_width=True, key="goto_history", type=history_type):
+            st.session_state.current_page = '📜 발송 이력'
+            st.rerun()
         
         st.markdown("""
         <div class="sidebar-footer">
