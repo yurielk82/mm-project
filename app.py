@@ -2081,8 +2081,67 @@ SMTP_PW = "app_password"
         """, unsafe_allow_html=True)
 
 
+def render_page_header(step: int, title: str, description: str):
+    """SaaS급 페이지 헤더 - 스텝 인디케이터 포함"""
+    st.markdown(f"""
+    <div style="
+        background: linear-gradient(135deg, var(--primary-color) 0%, #7c3aed 100%);
+        border-radius: 16px;
+        padding: 24px 32px;
+        margin-bottom: 24px;
+        color: white;
+        position: relative;
+        overflow: hidden;
+    ">
+        <div style="
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            width: 120px;
+            height: 120px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        "></div>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 4px;">
+                    STEP {step} / {len(STEPS)}
+                </div>
+                <h2 style="margin: 0; font-size: 1.5rem; font-weight: 700; color: white;">
+                    {title}
+                </h2>
+                <p style="margin: 8px 0 0 0; opacity: 0.85; font-size: 0.9rem; color: white;">
+                    {description}
+                </p>
+            </div>
+            <div style="
+                background: rgba(255,255,255,0.2);
+                border-radius: 12px;
+                padding: 12px 20px;
+                text-align: center;
+            ">
+                <div style="font-size: 2rem; font-weight: 700; line-height: 1;">{step}</div>
+                <div style="font-size: 0.7rem; opacity: 0.8;">of {len(STEPS)}</div>
+            </div>
+        </div>
+        
+        <!-- 스텝 프로그레스 바 -->
+        <div style="
+            margin-top: 20px;
+            display: flex;
+            gap: 8px;
+        ">
+            {"".join([f'<div style="flex:1; height:4px; border-radius:2px; background:{"rgba(255,255,255,0.9)" if i < step else "rgba(255,255,255,0.3)"};"></div>' for i in range(1, len(STEPS)+1)])}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
 def render_step1():
     """Step 1: 파일 업로드"""
+    
+    # 페이지 헤더
+    render_page_header(1, "파일 업로드", "정산 데이터가 포함된 엑셀 파일을 업로드하세요")
     
     # 파일 업로드
     with st.container(border=True):
@@ -2245,12 +2304,12 @@ def render_step1():
             with st.expander(f"📋 데이터 미리보기 ({len(st.session_state.df):,}행)", expanded=False):
                 st.dataframe(st.session_state.df.head(10), use_container_width=True, hide_index=True)
         
-        # 네비게이션
-        st.divider()
+        # 네비게이션 (하단 고정 스타일)
+        st.markdown("<div style='height: 24px'></div>", unsafe_allow_html=True)
         
-        col1, col2 = st.columns([1, 1])
-        with col2:
-            if st.button("다음 단계 →", type="primary", use_container_width=True):
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col3:
+            if st.button("다음 단계 →", type="primary", use_container_width=True, key="step1_next"):
                 if st.session_state.df is not None:
                     st.session_state.current_step = 2
                     st.rerun()
@@ -2258,6 +2317,10 @@ def render_step1():
 
 def render_step2():
     """Step 2: 컬럼 설정 - 기억 기능 및 중복 방지"""
+    
+    # 페이지 헤더
+    render_page_header(2, "컬럼 설정", "그룹화 기준과 데이터 타입을 설정하세요")
+    
     df = st.session_state.df
     if df is None:
         st.warning("먼저 파일을 업로드하세요", icon="⚠")
@@ -2508,15 +2571,14 @@ def render_step2():
         st.session_state.conflict_resolution = conflict_resolution
     
     # 네비게이션 버튼
-    st.divider()
-    col1, col2 = st.columns(2)
+    st.markdown("<div style='height: 24px'></div>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
-        if st.button("← 이전", use_container_width=True):
-            # 한 단계만 뒤로 (파일 선택 화면으로)
+        if st.button("← 이전", use_container_width=True, key="step2_prev"):
             st.session_state.current_step = 1
             st.rerun()
-    with col2:
-        if st.button("다음 단계 →", type="primary", use_container_width=True):
+    with col3:
+        if st.button("다음 단계 →", type="primary", use_container_width=True, key="step2_next"):
             if not display_cols:
                 st.error("표시할 컬럼을 1개 이상 선택하세요", icon="❌")
             else:
@@ -2550,6 +2612,10 @@ def render_step2():
 
 def render_step3():
     """Step 3: 데이터 검토"""
+    
+    # 페이지 헤더
+    render_page_header(3, "데이터 검토", "발송될 그룹 데이터를 확인하세요")
+    
     grouped = st.session_state.grouped_data
     if not grouped:
         st.warning("그룹 데이터가 없습니다", icon="⚠")
@@ -2622,20 +2688,23 @@ def render_step3():
             st.info("발송 가능한 대상이 없습니다", icon="ℹ")
     
     # 네비게이션
-    st.divider()
-    col1, col2 = st.columns(2)
+    st.markdown("<div style='height: 24px'></div>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
-        if st.button("← 이전", use_container_width=True):
+        if st.button("← 이전", use_container_width=True, key="step3_prev"):
             st.session_state.current_step = 2
             st.rerun()
-    with col2:
-        if st.button("다음 단계 →", type="primary", use_container_width=True, disabled=valid==0):
+    with col3:
+        if st.button("다음 단계 →", type="primary", use_container_width=True, disabled=valid==0, key="step3_next"):
             st.session_state.current_step = 4
             st.rerun()
 
 
 def render_step4():
     """Step 4: 템플릿 편집 - 세로 레이아웃, 미리보기 버튼"""
+    
+    # 페이지 헤더
+    render_page_header(4, "템플릿 편집", "이메일 제목과 본문을 커스터마이징하세요")
     
     # 템플릿 프리셋 정의
     TEMPLATE_PRESETS = {
@@ -2836,20 +2905,24 @@ def render_step4():
         st.info("미리보기할 데이터가 없습니다. 먼저 데이터를 업로드하고 설정을 완료하세요.", icon="ℹ️")
     
     # 네비게이션
-    st.divider()
-    col1, col2 = st.columns(2)
+    st.markdown("<div style='height: 24px'></div>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
-        if st.button("← 이전", use_container_width=True):
+        if st.button("← 이전", use_container_width=True, key="step4_prev"):
             st.session_state.current_step = 3
             st.rerun()
-    with col2:
-        if st.button("발송 단계로 →", type="primary", use_container_width=True):
+    with col3:
+        if st.button("발송 단계로 →", type="primary", use_container_width=True, key="step4_next"):
             st.session_state.current_step = 5
             st.rerun()
 
 
 def render_step5():
     """Step 5: 발송 - UX 최적화 (안심 장치, 즉각적 피드백)"""
+    
+    # 페이지 헤더
+    render_page_header(5, "메일 발송", "최종 확인 후 이메일을 발송하세요")
+    
     grouped = st.session_state.grouped_data
     valid_groups = {k: v for k, v in grouped.items() if v['recipient_email'] and validate_email(v['recipient_email'])}
     
@@ -2937,7 +3010,7 @@ def render_step5():
     col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
     
     with col1:
-        if st.button("← 이전", use_container_width=True):
+        if st.button("← 이전", use_container_width=True, key="step5_prev"):
             st.session_state.current_step = 4
             st.rerun()
     
@@ -3506,7 +3579,22 @@ def main():
     
     elif current_page == "📜 발송 이력":
         # ========== 발송 이력 페이지 ==========
-        st.markdown("## 📜 발송 이력")
+        st.markdown("""
+        <div style="
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border-radius: 16px;
+            padding: 24px 32px;
+            margin-bottom: 24px;
+            color: white;
+        ">
+            <h2 style="margin: 0; font-size: 1.5rem; font-weight: 700; color: white;">
+                📜 발송 이력
+            </h2>
+            <p style="margin: 8px 0 0 0; opacity: 0.85; font-size: 0.9rem; color: white;">
+                이전에 발송한 이메일 기록을 확인하세요
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
         render_history_tab()
 
 
