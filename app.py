@@ -1930,9 +1930,13 @@ def render_smtp_sidebar():
 
         
         # ============================================================
-        # SMTP 계정 설정 (항상 닫힌 상태로 시작)
+        # SMTP 계정 설정 (연결 성공 시 자동으로 닫힘)
         # ============================================================
-        with st.expander("⚙️ SMTP 설정", expanded=False):
+        # SMTP 연결 상태에 따라 expander 열림/닫힘 결정
+        smtp_connected = st.session_state.get('smtp_config') is not None
+        smtp_expanded = not smtp_connected  # 연결 안됨 = 열림, 연결됨 = 닫힘
+        
+        with st.expander("⚙️ SMTP 설정", expanded=smtp_expanded):
             # 자동 로드: Cookie 우선 > Secrets
             smtp_defaults = get_smtp_config()
             from_cookie = smtp_defaults.get('from_cookie', False)
