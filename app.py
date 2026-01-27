@@ -860,55 +860,156 @@ CUSTOM_CSS = """
     }
     
     /* ============================================
-       🔧 사이드바 버튼 공백 제거 (Compact Navigation)
+       🔧 사이드바 버튼 - 모던 Full Width 디자인
        ============================================ */
-    /* 사이드바 내 컬럼 간격 최소화 */
-    [data-testid="stSidebar"] [data-testid="column"] {
-        padding: 0 2px !important;
+    
+    /* 사이드바 전체 레이아웃 - Flexbox Column */
+    [data-testid="stSidebar"] > div:first-child {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+        padding: 16px 12px !important;
     }
     
-    /* 사이드바 내 버튼 컨테이너 마진 제거 */
+    /* 사이드바 내 모든 버튼 컨테이너 - Full Width 보장 */
     [data-testid="stSidebar"] .stButton {
-        margin-bottom: 0 !important;
+        width: 100% !important;
+        margin: 0 !important;
     }
     
-    /* 사이드바 버튼 자체 스타일 - 컴팩트 */
+    /* 사이드바 버튼 공통 스타일 - 100% Width, 테두리 없음, 여백으로 구분 */
     [data-testid="stSidebar"] .stButton > button {
-        padding: 4px 8px !important;
-        min-height: 28px !important;
-        font-size: 0.75rem !important;
-        background: transparent !important;
+        width: 100% !important;
+        min-height: 40px !important;
+        padding: 10px 16px !important;
+        margin-bottom: 4px !important;
+        
+        /* 테두리 없음 - 면(Space)으로 구분 */
         border: none !important;
+        border-radius: var(--radius-md) !important;
+        
+        /* 배경 연하게 */
+        background: rgba(128, 128, 128, 0.06) !important;
+        
+        /* 텍스트 정렬 - 좌측 시작 */
+        text-align: left !important;
+        justify-content: flex-start !important;
+        
+        /* 폰트 */
+        font-size: 0.85rem !important;
+        font-weight: 500 !important;
         color: var(--st-text) !important;
+        
+        /* 부드러운 전환 */
+        transition: all 0.2s ease !important;
     }
     
+    /* 사이드바 버튼 호버 효과 */
     [data-testid="stSidebar"] .stButton > button:hover {
-        background: var(--glass-overlay) !important;
-        transform: none !important;
+        background: rgba(128, 128, 128, 0.12) !important;
+        transform: translateX(4px) !important;
         box-shadow: none !important;
     }
     
-    /* 사이드바 내 가로 블록(columns) 여백 제거 */
+    /* 사이드바 Primary 버튼 (활성 상태) */
+    [data-testid="stSidebar"] .stButton > button[kind="primary"],
+    [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"] {
+        background: var(--color-info-soft) !important;
+        color: var(--st-primary) !important;
+        font-weight: 600 !important;
+        border-left: 3px solid var(--st-primary) !important;
+    }
+    
+    [data-testid="stSidebar"] .stButton > button[kind="primary"]:hover,
+    [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"]:hover {
+        background: rgba(59, 130, 246, 0.2) !important;
+    }
+    
+    /* 사이드바 네비게이션 버튼 (이전/다음) - 컴팩트 */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] .stButton > button {
+        min-height: 32px !important;
+        padding: 6px 12px !important;
+        font-size: 0.75rem !important;
+        text-align: center !important;
+        justify-content: center !important;
+        background: transparent !important;
+    }
+    
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] .stButton > button:hover {
+        background: rgba(128, 128, 128, 0.08) !important;
+        transform: none !important;
+    }
+    
+    /* 사이드바 내 가로 블록(columns) 정렬 */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
-        gap: 4px !important;
+        gap: 8px !important;
         margin: 0 !important;
         padding: 0 !important;
     }
     
-    /* 사이드바 세로 블록 여백 축소 */
+    [data-testid="stSidebar"] [data-testid="column"] {
+        padding: 0 !important;
+    }
+    
+    /* 사이드바 세로 블록 여백 통일 */
+    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+        gap: 4px !important;
+    }
+    
     [data-testid="stSidebar"] [data-testid="stVerticalBlock"] > div {
         margin-bottom: 0 !important;
     }
     
-    /* 사이드바 element-container 여백 제거 */
-    [data-testid="stSidebar"] [data-testid="element-container"] {
-        margin: 0 !important;
+    /* Expander 내부 버튼 - 약간 작게 */
+    [data-testid="stSidebar"] [data-testid="stExpander"] .stButton > button {
+        min-height: 36px !important;
+        padding: 8px 14px !important;
+        font-size: 0.8rem !important;
+        margin-bottom: 6px !important;
     }
     
-    /* LED 인디케이터 위 마진 조정 */
+    /* 사이드바 Divider 숨기기 (선 대신 여백) */
+    [data-testid="stSidebar"] hr {
+        display: none !important;
+    }
+    
+    /* LED 인디케이터 마진 조정 */
     [data-testid="stSidebar"] .led-indicator {
-        margin-top: 4px !important;
-        margin-bottom: 8px !important;
+        margin: 8px 0 !important;
+    }
+    
+    /* Expander 헤더 스타일 */
+    [data-testid="stSidebar"] .streamlit-expanderHeader {
+        padding: 8px 12px !important;
+        font-size: 0.85rem !important;
+        font-weight: 600 !important;
+        border-radius: var(--radius-sm) !important;
+        background: transparent !important;
+    }
+    
+    [data-testid="stSidebar"] .streamlit-expanderHeader:hover {
+        background: rgba(128, 128, 128, 0.06) !important;
+    }
+    
+    /* Link Button 스타일 통일 */
+    [data-testid="stSidebar"] .stLinkButton > a {
+        width: 100% !important;
+        min-height: 36px !important;
+        padding: 8px 14px !important;
+        border: none !important;
+        border-radius: var(--radius-md) !important;
+        background: rgba(128, 128, 128, 0.06) !important;
+        text-align: left !important;
+        justify-content: flex-start !important;
+        font-size: 0.8rem !important;
+        color: var(--st-text) !important;
+        text-decoration: none !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    [data-testid="stSidebar"] .stLinkButton > a:hover {
+        background: rgba(128, 128, 128, 0.12) !important;
+        transform: translateX(4px) !important;
     }
     
 </style>
@@ -2019,7 +2120,8 @@ SMTP_PW = "app_password"
 3. ✏️ 수동 입력
             """)
         
-        st.divider()
+        # 여백으로 섹션 구분 (divider 대신)
+        st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
         
         # ============================================================
         # 메뉴 (페이지 네비게이션) - expander
