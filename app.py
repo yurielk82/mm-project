@@ -342,6 +342,52 @@ CUSTOM_CSS = """
     }
     
     /* ============================================
+       🔌 SMTP 연결 버튼 (LED 스타일)
+       클릭 가능한 상태 인디케이터
+       ============================================ */
+    [data-testid="stSidebar"] button[kind="secondary"]:has(~ *),
+    [data-testid="stSidebar"] .stButton > button:first-child {
+        /* 기본 스타일은 nav 버튼 스타일 적용 */
+    }
+    
+    /* SMTP 연결 필요 버튼 - 경고 LED 스타일 */
+    [data-testid="stSidebar"] button[data-testid="baseButton-secondary"]:first-of-type,
+    .smtp-connect-btn {
+        background: var(--color-warning-soft) !important;
+        border: 1px solid var(--color-warning) !important;
+        color: var(--st-text) !important;
+        border-radius: 50px !important;
+        padding: 10px 18px !important;
+        font-weight: 600 !important;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .smtp-connect-btn::before {
+        content: '';
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--color-warning);
+        animation: led-pulse-warning 1.5s ease-in-out infinite;
+        box-shadow: 
+            0 0 6px var(--color-warning),
+            0 0 12px var(--color-warning);
+    }
+    
+    .smtp-connect-btn:hover {
+        background: rgba(245, 158, 11, 0.2) !important;
+        transform: translateY(-2px);
+        box-shadow: 
+            0 4px 15px rgba(245, 158, 11, 0.3),
+            0 0 20px rgba(245, 158, 11, 0.15) !important;
+    }
+    
+    /* ============================================
        📊 메트릭 카드 - Glassmorphism (강화)
        테마 배경색 기반 반투명
        ============================================ */
@@ -1092,6 +1138,8 @@ def init_session_state():
         'emergency_stop': False,
         # 발송 상태 추적 (멱등성 보장)
         'sent_groups': set(),  # 이미 발송 완료된 그룹
+        # UI 상태
+        'show_smtp_settings': False,  # SMTP 설정 패널 열기
     }
     
     for key, value in defaults.items():
@@ -1921,9 +1969,10 @@ def render_smtp_sidebar():
         st.markdown(render_circular_progress(current_step, len(STEPS)), unsafe_allow_html=True)
         
         # ============================================================
-        # SMTP 상태 LED 인디케이터 (글로우 효과)
+        # SMTP 상태 LED 인디케이터 (클릭 가능한 버튼)
         # ============================================================
         if st.session_state.smtp_config:
+            # 연결됨 - 정보 표시만
             st.markdown("""
             <div class="led-indicator connected" style="width: 100%; justify-content: center; margin-bottom: 0.5rem;">
                 <span class="led-dot"></span>
@@ -1931,12 +1980,13 @@ def render_smtp_sidebar():
             </div>
             """, unsafe_allow_html=True)
         else:
-            st.markdown("""
-            <div class="led-indicator disconnected" style="width: 100%; justify-content: center; margin-bottom: 0.5rem;">
-                <span class="led-dot"></span>
-                <span>SMTP 연결 필요</span>
-            </div>
-            """, unsafe_allow_html=True)
+            # 연결 필요 - 클릭 가능한 버튼으로 변경
+            if st.button("🟡 SMTP 연결 필요", 
+                        key="smtp_connect_btn",
+                        use_container_width=True,
+                        help="클릭하여 SMTP 설정을 열고 연결하세요"):
+                st.session_state.show_smtp_settings = True
+                st.rerun()
         
         # ============================================================
         # 🔀 이전/다음 네비게이션 버튼 (Capsule 스타일)
@@ -1989,38 +2039,20 @@ def render_smtp_sidebar():
         else:
             st.metric("📬 발송 현황", "—")
         
-        # ============================================================
-        # 초기화 버튼 (확인 절차 포함)
-        # ============================================================
-        if 'confirm_reset' not in st.session_state:
-            st.session_state.confirm_reset = False
-        
-        if not st.session_state.confirm_reset:
-            if st.button("↻ 처음부터", use_container_width=True, 
-                        help="모든 데이터와 설정을 초기화합니다"):
-                st.session_state.confirm_reset = True
-                st.rerun()
-        else:
-            st.error("⚠️ 정말 초기화하시겠습니까?", icon="🔄")
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("✓ 확인", use_container_width=True, type="primary"):
-                    st.session_state.confirm_reset = False
-                    reset_workflow()
-                    st.rerun()
-            with col2:
-                if st.button("✗ 취소", use_container_width=True):
-                    st.session_state.confirm_reset = False
-                    st.rerun()
+
         
         st.divider()
         
         # ============================================================
-        # SMTP 계정 설정 (자동 열림 if 미연결)
+        # SMTP 계정 설정 (자동 열림 if 미연결 또는 버튼 클릭)
         # ============================================================
         smtp_connected = st.session_state.smtp_config is not None
+        show_smtp = st.session_state.get('show_smtp_settings', False) or not smtp_connected
         
-        with st.expander("⚙️ SMTP 설정", expanded=not smtp_connected):
+        with st.expander("⚙️ SMTP 설정", expanded=show_smtp):
+            # 버튼 클릭 상태 초기화
+            if st.session_state.get('show_smtp_settings', False):
+                st.session_state.show_smtp_settings = False
             # 자동 로드: Cookie 우선 > Secrets
             smtp_defaults = get_smtp_config()
             from_cookie = smtp_defaults.get('from_cookie', False)
