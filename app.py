@@ -212,23 +212,35 @@ CUSTOM_CSS = """
         opacity: 0.5;
     }
     
-    /* 사이드바 메트릭 카드 - 테마 적응형 배경 */
+    /* 사이드바 메트릭 카드 - 세로 배치, 가로로 길게 */
     [data-testid="stSidebar"] [data-testid="stMetric"] {
         background: var(--glass-overlay) !important;
         border: 1px solid var(--glass-border) !important;
-        border-radius: var(--radius-sm) !important;
-        padding: var(--space-sm) !important;
+        border-radius: var(--radius-md) !important;
+        padding: var(--space-md) var(--space-md) !important;
+        margin-bottom: var(--space-sm) !important;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
     }
     
     [data-testid="stSidebar"] [data-testid="stMetricValue"] {
-        font-size: 1.25rem !important;
+        font-size: 1.4rem !important;
         font-weight: var(--font-weight-bold) !important;
+        text-align: right;
     }
     
     [data-testid="stSidebar"] [data-testid="stMetricLabel"] {
-        font-size: 0.7rem !important;
+        font-size: 0.8rem !important;
         font-weight: var(--font-weight-medium) !important;
-        opacity: 0.8;
+        opacity: 0.9;
+        text-align: left;
+    }
+    
+    [data-testid="stSidebar"] [data-testid="stMetricDelta"] {
+        font-size: 0.7rem !important;
+        text-align: right;
     }
     
     /* ============================================
@@ -1683,24 +1695,23 @@ def render_smtp_sidebar():
         st.divider()
         
         # ============================================================
-        # 작업 현황 메트릭 카드 (Streamlit 네이티브)
+        # 작업 현황 메트릭 카드 (세로 배치 - 가로로 길게)
         # ============================================================
         st.markdown("##### 📊 작업 현황")
         
         data_count = len(st.session_state.df) if st.session_state.df is not None else 0
         
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("데이터", f"{data_count:,}행" if data_count > 0 else "—")
+        # 데이터 행 수 (세로 배치 - 전체 너비)
+        st.metric("📄 데이터 행 수", f"{data_count:,}행" if data_count > 0 else "—")
         
-        with col2:
-            if st.session_state.grouped_data:
-                valid = sum(1 for g in st.session_state.grouped_data.values() 
-                           if g['recipient_email'] and validate_email(g['recipient_email']))
-                total = len(st.session_state.grouped_data)
-                st.metric("발송", f"{valid}/{total}")
-            else:
-                st.metric("발송", "—")
+        # 발송 현황 (세로 배치 - 전체 너비)
+        if st.session_state.grouped_data:
+            valid = sum(1 for g in st.session_state.grouped_data.values() 
+                       if g['recipient_email'] and validate_email(g['recipient_email']))
+            total = len(st.session_state.grouped_data)
+            st.metric("📬 발송 현황", f"{valid} / {total}건", delta=f"발송 가능 {valid}건" if valid > 0 else None)
+        else:
+            st.metric("📬 발송 현황", "—")
         
         # ============================================================
         # 초기화 버튼 (확인 절차 포함)
