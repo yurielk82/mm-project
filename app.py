@@ -1921,7 +1921,7 @@ streamlit run app.py
                     st.session_state.current_page = '📧 메일 발송'
                     st.rerun()
             else:
-                st.success("현재 페이지", icon="✓")
+                st.success("현재 페이지", icon="✅")
         
         with st.expander("📜 발송 이력", expanded=current_page == "📜 발송 이력"):
             st.caption("과거 발송 기록 조회 및 검색")
@@ -1930,7 +1930,7 @@ streamlit run app.py
                     st.session_state.current_page = '📜 발송 이력'
                     st.rerun()
             else:
-                st.success("현재 페이지", icon="✓")
+                st.success("현재 페이지", icon="✅")
         
         st.markdown("""
         <div class="sidebar-footer">
@@ -3348,7 +3348,7 @@ def main():
     
     if current_page == "📧 메일 발송":
         # ========== 메일 발송 페이지 ==========
-        render_step_indicator()
+        # 단계 표시는 사이드바의 원형 프로그레스로 대체 (중복 제거)
         
         # 현재 단계 렌더링
         step = st.session_state.current_step
