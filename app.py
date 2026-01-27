@@ -2008,10 +2008,10 @@ def render_smtp_sidebar():
                     st.rerun()
         
         # ============================================================
-        # SMTP 상태 LED 인디케이터 (클릭 가능한 버튼)
+        # SMTP 상태 LED 인디케이터 (HTML 기반)
         # ============================================================
         if st.session_state.smtp_config:
-            # 연결됨 - 정보 표시만
+            # 연결됨 - 녹색 LED
             st.markdown("""
             <div class="led-indicator connected" style="width: 100%; justify-content: center; margin: 0.5rem 0;">
                 <span class="led-dot"></span>
@@ -2019,13 +2019,13 @@ def render_smtp_sidebar():
             </div>
             """, unsafe_allow_html=True)
         else:
-            # 연결 필요 - 클릭 가능한 버튼으로 변경
-            if st.button("🟡 SMTP 연결 필요", 
-                        key="smtp_connect_btn",
-                        use_container_width=True,
-                        help="클릭하여 SMTP 설정을 열고 연결하세요"):
-                st.session_state.show_smtp_settings = True
-                st.rerun()
+            # 연결 필요 - 노란색 LED (클릭 유도)
+            st.markdown("""
+            <div class="led-indicator disconnected" style="width: 100%; justify-content: center; margin: 0.5rem 0; cursor: pointer;" title="아래 SMTP 설정을 열어 연결하세요">
+                <span class="led-dot"></span>
+                <span>SMTP 연결 필요</span>
+            </div>
+            """, unsafe_allow_html=True)
         
         st.divider()
         
