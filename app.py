@@ -104,6 +104,14 @@ CUSTOM_CSS = """
         --color-info: #3b82f6;
         --color-info-soft: rgba(59, 130, 246, 0.12);
         
+        /* 🔘 버튼 색상 (브랜드 컬러) */
+        --btn-prev-bg: #E0E0E0;
+        --btn-prev-text: #333333;
+        --btn-prev-hover: #BDBDBD;
+        --btn-next-bg: #1E88E5;
+        --btn-next-text: #FFFFFF;
+        --btn-next-hover: #1565C0;
+        
         /* 반응형 간격 */
         --space-xs: 0.25rem;
         --space-sm: 0.5rem;
@@ -608,99 +616,96 @@ CUSTOM_CSS = """
     
     /* ============================================
        🔀 사이드바 네비게이션 버튼 (< > 스타일)
-       작은 Capsule, 테마 적응형 Glow/Shadow
+       CSS Injection - 최고 우선순위 강제 적용
+       이전: 연한 회색 #E0E0E0 / 다음: 파란색 #1E88E5
        ============================================ */
-    [data-testid="stSidebar"] .stButton > button {
+    
+    /* 모든 사이드바 버튼 기본 스타일 */
+    [data-testid="stSidebar"] .stButton > button,
+    [data-testid="stSidebar"] .stButton button,
+    [data-testid="stSidebar"] button.st-emotion-cache-1vbkxwb,
+    [data-testid="stSidebar"] button[kind="secondary"],
+    [data-testid="stSidebar"] button[kind="primary"] {
         border-radius: 50px !important;
-        padding: 6px 12px !important;
+        padding: 8px 16px !important;
         font-size: 1rem !important;
         font-weight: 700 !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        min-height: 32px !important;
-        min-width: 40px !important;
+        transition: all 0.25s ease !important;
+        min-height: 36px !important;
+        cursor: pointer !important;
     }
     
-    /* 사이드바 - 이전 버튼 < 스타일 (Secondary/은은한 회색) */
-    [data-testid="stSidebar"] .stButton > button:not([data-testid="baseButton-primary"]) {
-        background: rgba(128, 128, 128, 0.08) !important;
-        border: 1px solid rgba(128, 128, 128, 0.2) !important;
-        color: var(--st-text) !important;
+    /* ========== 이전 버튼 (〈) - 연한 회색 ========== */
+    [data-testid="stSidebar"] .stButton > button:not([data-testid="baseButton-primary"]),
+    [data-testid="stSidebar"] button[kind="secondary"],
+    [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-secondary"] {
+        background: #E0E0E0 !important;
+        background-color: #E0E0E0 !important;
+        border: 1px solid #BDBDBD !important;
+        border-color: #BDBDBD !important;
+        color: #333333 !important;
     }
     
-    [data-testid="stSidebar"] .stButton > button:not([data-testid="baseButton-primary"]):hover:not(:disabled) {
-        background: rgba(128, 128, 128, 0.15) !important;
-        border-color: rgba(128, 128, 128, 0.35) !important;
-        transform: translateY(-1px);
+    [data-testid="stSidebar"] .stButton > button:not([data-testid="baseButton-primary"]):hover:not(:disabled),
+    [data-testid="stSidebar"] button[kind="secondary"]:hover:not(:disabled) {
+        background: #BDBDBD !important;
+        background-color: #BDBDBD !important;
+        border-color: #9E9E9E !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
     }
     
-    /* 사이드바 - 다음 버튼 > 스타일 (Primary/강조색 - 네온 블루) */
+    /* ========== 다음 버튼 (〉) - 파란색 #1E88E5 ========== */
     [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"],
-    [data-testid="stSidebar"] .stButton > button[kind="primary"],
-    [data-testid="stSidebar"] button[data-testid="baseButton-primary"] {
-        background: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%) !important;
-        background-color: #00d4ff !important;
-        border: 1.5px solid rgba(0, 212, 255, 0.6) !important;
-        border-color: rgba(0, 212, 255, 0.6) !important;
-        color: #ffffff !important;
+    [data-testid="stSidebar"] button[kind="primary"],
+    [data-testid="stSidebar"] .stButton button[data-testid="baseButton-primary"] {
+        background: #1E88E5 !important;
+        background-color: #1E88E5 !important;
+        border: 1px solid #1565C0 !important;
+        border-color: #1565C0 !important;
+        color: #FFFFFF !important;
     }
     
     [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"]:hover:not(:disabled),
-    [data-testid="stSidebar"] .stButton > button[kind="primary"]:hover:not(:disabled),
-    [data-testid="stSidebar"] button[data-testid="baseButton-primary"]:hover:not(:disabled) {
-        filter: brightness(1.1);
-        transform: translateY(-1px);
-        background: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%) !important;
+    [data-testid="stSidebar"] button[kind="primary"]:hover:not(:disabled) {
+        background: #1565C0 !important;
+        background-color: #1565C0 !important;
+        border-color: #0D47A1 !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 16px rgba(30, 136, 229, 0.4) !important;
     }
     
-    /* 다크 모드 - 네온 글로우 */
-    @media (prefers-color-scheme: dark) {
-        [data-testid="stSidebar"] .stButton > button:not([data-testid="baseButton-primary"]):hover:not(:disabled) {
-            box-shadow: 
-                0 4px 15px rgba(128, 128, 128, 0.2),
-                0 0 20px rgba(128, 128, 128, 0.1) !important;
-        }
-        
-        [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"] {
-            box-shadow: 
-                0 0 10px rgba(0, 212, 255, 0.3),
-                0 0 20px rgba(0, 212, 255, 0.1) !important;
-        }
-        
-        [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"]:hover:not(:disabled) {
-            box-shadow: 
-                0 0 15px rgba(0, 212, 255, 0.5),
-                0 0 30px rgba(0, 212, 255, 0.2),
-                0 4px 20px rgba(124, 58, 237, 0.3) !important;
-        }
-    }
-    
-    /* 라이트 모드 - 소프트 섀도우 */
-    @media (prefers-color-scheme: light) {
-        [data-testid="stSidebar"] .stButton > button:not([data-testid="baseButton-primary"]):hover:not(:disabled) {
-            box-shadow: 
-                0 4px 12px rgba(0, 0, 0, 0.1),
-                0 2px 6px rgba(0, 0, 0, 0.05) !important;
-        }
-        
-        [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"] {
-            box-shadow: 
-                0 2px 8px rgba(0, 212, 255, 0.25),
-                0 4px 12px rgba(124, 58, 237, 0.15) !important;
-        }
-        
-        [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"]:hover:not(:disabled) {
-            box-shadow: 
-                0 4px 16px rgba(0, 212, 255, 0.35),
-                0 6px 20px rgba(124, 58, 237, 0.2) !important;
-        }
-    }
-    
-    /* 비활성화 상태 */
-    [data-testid="stSidebar"] .stButton > button:disabled {
-        opacity: 0.4 !important;
+    /* ========== 비활성화 상태 ========== */
+    [data-testid="stSidebar"] .stButton > button:disabled,
+    [data-testid="stSidebar"] button:disabled {
+        opacity: 0.5 !important;
         cursor: not-allowed !important;
         transform: none !important;
         box-shadow: none !important;
+    }
+    
+    /* ========== 다크 모드 보정 ========== */
+    @media (prefers-color-scheme: dark) {
+        /* 이전 버튼 - 다크모드에서 약간 더 어둡게 */
+        [data-testid="stSidebar"] .stButton > button:not([data-testid="baseButton-primary"]) {
+            background: #424242 !important;
+            background-color: #424242 !important;
+            border-color: #616161 !important;
+            color: #E0E0E0 !important;
+        }
+        
+        [data-testid="stSidebar"] .stButton > button:not([data-testid="baseButton-primary"]):hover:not(:disabled) {
+            background: #616161 !important;
+            background-color: #616161 !important;
+            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1) !important;
+        }
+        
+        /* 다음 버튼 - 다크모드에서 글로우 효과 */
+        [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"]:hover:not(:disabled) {
+            box-shadow: 
+                0 0 10px rgba(30, 136, 229, 0.5),
+                0 4px 20px rgba(30, 136, 229, 0.3) !important;
+        }
     }
     
     /* ============================================
