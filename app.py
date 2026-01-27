@@ -911,10 +911,10 @@ def decode_credential(value: str) -> str:
 
 
 def save_to_cookie(provider: str, username: str, password: str):
-    """SMTP 자격증명을 쿠키에 저장 (30일 유효)"""
+    """SMTP 자격증명을 쿠키에 저장 (90일 유효)"""
     try:
         cookie_manager = get_cookie_manager()
-        expires = datetime.now() + timedelta(days=30)
+        expires = datetime.now() + timedelta(days=90)
         
         cookie_manager.set("smtp_provider", provider, expires_at=expires, key="set_provider")
         cookie_manager.set("smtp_username", encode_credential(username), expires_at=expires, key="set_username")
@@ -1030,7 +1030,7 @@ def get_smtp_config() -> dict:
 
 
 def save_to_session(provider: str, username: str, password: str, save_cookie: bool = True):
-    """SMTP 자격증명 세션 저장 (+ 옵션으로 쿠키 저장, 30일 유효)"""
+    """SMTP 자격증명 세션 저장 (+ 쿠키 저장, 90일 유효)"""
     st.session_state.saved_smtp_provider = provider
     st.session_state.saved_smtp_user = username
     st.session_state.saved_smtp_pass = password
@@ -1269,13 +1269,6 @@ def render_smtp_sidebar():
                 key="smtp_pass"
             )
             
-            # 저장 옵션
-            save_credentials = st.checkbox(
-                "이 브라우저에 저장 (30일)",
-                value=True,
-                help="쿠키에 Base64 인코딩하여 저장합니다"
-            )
-            
             # 연결 테스트 버튼
             if st.button("🔌 연결 테스트", use_container_width=True, type="primary"):
                 final_username = smtp_username if smtp_username else smtp_defaults['username']
@@ -1295,11 +1288,8 @@ def render_smtp_sidebar():
                             st.success("✓ 연결 성공!")
                             server.quit()
                             st.session_state.smtp_config = config
-                            # 저장 옵션 체크 시 쿠키에 저장
-                            if save_credentials:
-                                save_to_session(provider, final_username, final_password, save_cookie=True)
-                            else:
-                                save_to_session(provider, final_username, final_password, save_cookie=False)
+                            # 쿠키에 자동 저장 (90일)
+                            save_to_session(provider, final_username, final_password, save_cookie=True)
                             st.rerun()
                         else:
                             st.error(f"{error}")
