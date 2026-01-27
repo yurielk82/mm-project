@@ -2025,24 +2025,22 @@ SMTP_PW = "app_password"
         st.divider()
         
         # ============================================================
-        # 페이지 네비게이션 (메일 발송 / 발송 이력) - 버튼
+        # 메뉴 (페이지 네비게이션) - expander
         # ============================================================
         current_page = st.session_state.get('current_page', '📧 메일 발송')
         
-        col1, col2 = st.columns(2)
-        with col1:
-            btn_type = "primary" if current_page == "📧 메일 발송" else "secondary"
-            if st.button("📧 메일 발송", use_container_width=True, type=btn_type, key="goto_mail"):
+        with st.expander("📋 메뉴", expanded=False):
+            if st.button("📧 메일 발송", use_container_width=True, 
+                        type="primary" if current_page == "📧 메일 발송" else "secondary",
+                        key="goto_mail"):
                 st.session_state.current_page = '📧 메일 발송'
                 st.rerun()
-        
-        with col2:
-            btn_type = "primary" if current_page == "📜 발송 이력" else "secondary"
-            if st.button("📜 발송 이력", use_container_width=True, type=btn_type, key="goto_history"):
+            
+            if st.button("📜 발송 이력", use_container_width=True,
+                        type="primary" if current_page == "📜 발송 이력" else "secondary",
+                        key="goto_history"):
                 st.session_state.current_page = '📜 발송 이력'
                 st.rerun()
-        
-        st.divider()
         
         # ============================================================
         # 로컬 실행 가이드 버튼 (팝업으로 열기)
