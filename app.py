@@ -2594,25 +2594,7 @@ def render_smtp_sidebar():
                     st.warning("이메일과 비밀번호를 입력하세요")
         
         # ============================================================
-        # 도움말 (접이식)
-        # ============================================================
-        with st.expander("📖 도움말", expanded=False):
-            st.markdown("""
-**secrets.toml 설정** (자동 로드용)
-```toml
-SMTP_ID = "email@company.com"
-SMTP_PW = "app_password"
-```
-📁 위치: `.streamlit/secrets.toml`
-
-**로드 우선순위:**
-1. 🍪 브라우저 쿠키 (90일)
-2. 🔐 secrets.toml 파일
-3. ✏️ 수동 입력
-            """)
-        
-        # ============================================================
-        # 메뉴 (페이지 네비게이션) - 도움말 바로 아래
+        # 메뉴 (페이지 네비게이션)
         # ============================================================
         current_page = st.session_state.get('current_page', '📧 메일 발송')
         
@@ -2630,16 +2612,40 @@ SMTP_PW = "app_password"
                 st.rerun()
         
         # ============================================================
-        # 로컬 실행 가이드 - 메뉴 바로 아래
+        # 가이드 (로컬 실행 가이드 팝업 + ZIP 다운로드)
         # ============================================================
-        with st.expander("💻 로컬 실행 가이드", expanded=False):
-            if st.button("📖 가이드 보기", use_container_width=True, key="local_guide_btn"):
+        with st.expander("📖 가이드", expanded=False):
+            if st.button("💻 로컬 실행 가이드", use_container_width=True, key="local_guide_btn"):
                 st.session_state.show_local_guide = True
                 st.rerun()
             
-            st.link_button("📦 ZIP 다운로드", 
+            st.link_button("📦 로컬 실행 ZIP 다운", 
                           "https://github.com/yurielk82/mm-project/archive/refs/heads/main.zip",
                           use_container_width=True)
+        
+        # ============================================================
+        # SMTP 설정 가이드 (secrets.toml 설정)
+        # ============================================================
+        with st.expander("🔐 SMTP 설정 가이드", expanded=False):
+            st.markdown("""
+**secrets.toml 파일 설정**
+
+자동 로그인을 위해 아래 내용을 설정하세요:
+
+```toml
+SMTP_ID = "email@company.com"
+SMTP_PW = "app_password"
+```
+
+📁 **파일 위치:** `.streamlit/secrets.toml`
+
+---
+
+**🔄 로드 우선순위:**
+1. 🍪 브라우저 쿠키 (90일 유지)
+2. 🔐 secrets.toml 파일
+3. ✏️ 수동 입력
+            """)
         
         # 푸터 전 여백
         st.markdown("<div style='flex-grow: 1; min-height: 20px;'></div>", unsafe_allow_html=True)
