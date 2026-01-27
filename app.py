@@ -1704,11 +1704,11 @@ streamlit run app.py""", language="bash")
     return show_guide
 
 
-def render_circular_progress_with_nav(current_step: int, total_steps: int):
-    """원형 프로그레스 인디케이터 (컴팩트 버전)"""
+def render_circular_progress(current_step: int, total_steps: int):
+    """원형 프로그레스 인디케이터 (원래 크기 140px)"""
     progress = (current_step / total_steps) * 100
-    size = 100
-    stroke_width = 8
+    size = 140
+    stroke_width = 10
     radius = (size - stroke_width) / 2
     circumference = 2 * 3.14159 * radius
     stroke_dashoffset = circumference - (progress / 100) * circumference
@@ -1717,11 +1717,11 @@ def render_circular_progress_with_nav(current_step: int, total_steps: int):
     
     return f'''
 <style>
-.progress-compact {{
+.progress-container {{
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 0.25rem 0;
+    padding: 1rem 0;
 }}
 .progress-circle {{
     position: relative;
@@ -1730,10 +1730,10 @@ def render_circular_progress_with_nav(current_step: int, total_steps: int):
 }}
 .progress-glow {{
     position: absolute;
-    inset: 8px;
+    inset: 10px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(0,212,255,0.1) 0%, transparent 70%);
-    filter: blur(6px);
+    background: radial-gradient(circle, rgba(0,212,255,0.15) 0%, transparent 70%);
+    filter: blur(10px);
 }}
 .progress-center {{
     position: absolute;
@@ -1744,37 +1744,42 @@ def render_circular_progress_with_nav(current_step: int, total_steps: int):
     justify-content: center;
 }}
 .progress-step {{
-    font-size: 1.5rem;
+    font-size: 2rem;
     font-weight: 700;
     color: var(--text-color);
     line-height: 1;
 }}
 .progress-total {{
-    font-size: 0.75rem;
-    color: rgba(128,128,128,0.5);
+    font-size: 1rem;
+    color: rgba(128,128,128,0.6);
 }}
 .progress-percent {{
-    font-size: 0.7rem;
+    font-size: 0.85rem;
     color: #00d4ff;
     font-weight: 600;
 }}
 .progress-label {{
     text-align: center;
-    margin-top: 0.25rem;
+    margin-top: 0.75rem;
 }}
 .progress-step-name {{
-    font-size: 0.8rem;
+    font-size: 0.95rem;
     font-weight: 600;
     color: #00d4ff;
 }}
+.progress-status {{
+    font-size: 0.7rem;
+    color: rgba(128,128,128,0.7);
+    margin-top: 2px;
+}}
 </style>
 
-<div class="progress-compact">
+<div class="progress-container">
     <div class="progress-circle">
         <div class="progress-glow"></div>
         <svg width="{size}" height="{size}" style="transform:rotate(-90deg);">
-            <circle cx="{size/2}" cy="{size/2}" r="{radius}" fill="none" stroke="rgba(128,128,128,0.1)" stroke-width="{stroke_width}"/>
-            <circle cx="{size/2}" cy="{size/2}" r="{radius}" fill="none" stroke="url(#progressGrad)" stroke-width="{stroke_width}" stroke-linecap="round" stroke-dasharray="{circumference}" stroke-dashoffset="{stroke_dashoffset}" style="transition:stroke-dashoffset 0.5s ease-out;filter:drop-shadow(0 0 6px rgba(0,212,255,0.4));"/>
+            <circle cx="{size/2}" cy="{size/2}" r="{radius}" fill="none" stroke="rgba(128,128,128,0.15)" stroke-width="{stroke_width}"/>
+            <circle cx="{size/2}" cy="{size/2}" r="{radius}" fill="none" stroke="url(#progressGrad)" stroke-width="{stroke_width}" stroke-linecap="round" stroke-dasharray="{circumference}" stroke-dashoffset="{stroke_dashoffset}" style="transition:stroke-dashoffset 0.5s ease-out;filter:drop-shadow(0 0 6px rgba(0,212,255,0.6));"/>
             <defs>
                 <linearGradient id="progressGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stop-color="#00d4ff"/>
@@ -1785,110 +1790,82 @@ def render_circular_progress_with_nav(current_step: int, total_steps: int):
         <div class="progress-center">
             <div style="display:flex;align-items:baseline;gap:2px;">
                 <span class="progress-step">{current_step}</span>
-                <span class="progress-total">/{total_steps}</span>
+                <span class="progress-total">/ {total_steps}</span>
             </div>
             <span class="progress-percent">{int(progress)}%</span>
         </div>
     </div>
     <div class="progress-label">
         <div class="progress-step-name">{current_step_name}</div>
+        <div class="progress-status">진행 중...</div>
     </div>
 </div>
 '''
 
 
-def render_progress_with_clickable_nav(current_step: int, total_steps: int):
-    """원형 프로그레스 + 원형 좌우 버튼 (프로그레스 바 양옆 하단 배치)"""
+def render_step_nav_buttons(current_step: int, total_steps: int):
+    """이전단계/다음단계 텍스트 버튼 (테두리 없음)"""
     prev_disabled = current_step <= 1
     next_disabled = current_step >= total_steps
     
-    # 원형 버튼 스타일 CSS
+    # 텍스트 버튼 스타일 CSS
     st.markdown("""
     <style>
-    /* 프로그레스 + 네비게이션 컨테이너 */
-    .progress-with-nav {
-        display: flex;
-        align-items: flex-end;
-        justify-content: center;
-        gap: 8px;
-        padding: 0.5rem 0 1rem 0;
-    }
-    /* 원형 네비게이션 버튼 - 사이드바 전용 */
-    [data-testid="stSidebar"] .nav-circle-btn .stButton > button {
-        width: 40px !important;
-        height: 40px !important;
-        min-width: 40px !important;
-        min-height: 40px !important;
-        padding: 0 !important;
-        border-radius: 50% !important;
-        font-size: 1.2rem !important;
-        font-weight: 700 !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        transition: all 0.25s ease !important;
-        line-height: 1 !important;
-    }
-    /* 이전 버튼 (회색) */
-    [data-testid="stSidebar"] .nav-circle-btn.nav-prev .stButton > button {
-        background: var(--secondary-background-color, #f0f2f6) !important;
-        border: 1px solid rgba(128,128,128,0.2) !important;
-        color: var(--text-color, #333) !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
-    }
-    [data-testid="stSidebar"] .nav-circle-btn.nav-prev .stButton > button:hover:not(:disabled) {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
-        background: var(--secondary-background-color, #e8e8e8) !important;
-    }
-    /* 다음 버튼 (파란색) */
-    [data-testid="stSidebar"] .nav-circle-btn.nav-next .stButton > button {
-        background: linear-gradient(135deg, #1E88E5 0%, #1565C0 100%) !important;
+    /* 사이드바 네비게이션 텍스트 버튼 - 테두리 없음 */
+    [data-testid="stSidebar"] .step-nav-btn .stButton > button {
+        background: transparent !important;
         border: none !important;
-        color: white !important;
-        box-shadow: 0 2px 10px rgba(30,136,229,0.3) !important;
+        box-shadow: none !important;
+        padding: 8px 4px !important;
+        font-size: 0.85rem !important;
+        font-weight: 500 !important;
+        transition: all 0.2s ease !important;
     }
-    [data-testid="stSidebar"] .nav-circle-btn.nav-next .stButton > button:hover:not(:disabled) {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 4px 15px rgba(30,136,229,0.4) !important;
+    /* 이전단계 버튼 */
+    [data-testid="stSidebar"] .step-nav-btn.nav-prev .stButton > button {
+        color: rgba(128,128,128,0.7) !important;
+    }
+    [data-testid="stSidebar"] .step-nav-btn.nav-prev .stButton > button:hover:not(:disabled) {
+        color: var(--text-color, #333) !important;
+        background: rgba(128,128,128,0.08) !important;
+    }
+    /* 다음단계 버튼 */
+    [data-testid="stSidebar"] .step-nav-btn.nav-next .stButton > button {
+        color: #1E88E5 !important;
+        font-weight: 600 !important;
+    }
+    [data-testid="stSidebar"] .step-nav-btn.nav-next .stButton > button:hover:not(:disabled) {
+        color: #1565C0 !important;
+        background: rgba(30,136,229,0.08) !important;
     }
     /* 비활성화 */
-    [data-testid="stSidebar"] .nav-circle-btn .stButton > button:disabled {
+    [data-testid="stSidebar"] .step-nav-btn .stButton > button:disabled {
         opacity: 0.3 !important;
         cursor: not-allowed !important;
-        transform: none !important;
-        box-shadow: none !important;
     }
     /* 다크모드 */
     @media (prefers-color-scheme: dark) {
-        [data-testid="stSidebar"] .nav-circle-btn.nav-prev .stButton > button {
-            background: rgba(255,255,255,0.1) !important;
-            border-color: rgba(255,255,255,0.15) !important;
+        [data-testid="stSidebar"] .step-nav-btn.nav-prev .stButton > button:hover:not(:disabled) {
             color: rgba(255,255,255,0.9) !important;
-        }
-        [data-testid="stSidebar"] .nav-circle-btn.nav-prev .stButton > button:hover:not(:disabled) {
-            background: rgba(255,255,255,0.15) !important;
+            background: rgba(255,255,255,0.08) !important;
         }
     }
     </style>
     """, unsafe_allow_html=True)
     
-    # 레이아웃: [이전 버튼] [프로그레스] [다음 버튼]
-    col1, col2, col3 = st.columns([1, 3, 1])
+    # 레이아웃: [이전단계] [다음단계]
+    col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown('<div class="nav-circle-btn nav-prev">', unsafe_allow_html=True)
-        if st.button("‹", key="nav_prev", disabled=prev_disabled, use_container_width=True):
+        st.markdown('<div class="step-nav-btn nav-prev">', unsafe_allow_html=True)
+        if st.button("‹ 이전단계", key="nav_prev", disabled=prev_disabled, use_container_width=True):
             st.session_state.current_step = current_step - 1
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
     
     with col2:
-        st.markdown(render_circular_progress_with_nav(current_step, total_steps), unsafe_allow_html=True)
-    
-    with col3:
-        st.markdown('<div class="nav-circle-btn nav-next">', unsafe_allow_html=True)
-        if st.button("›", key="nav_next", disabled=next_disabled, use_container_width=True):
+        st.markdown('<div class="step-nav-btn nav-next">', unsafe_allow_html=True)
+        if st.button("다음단계 ›", key="nav_next", disabled=next_disabled, use_container_width=True):
             st.session_state.current_step = current_step + 1
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
@@ -1907,8 +1884,11 @@ def render_smtp_sidebar():
             current_step = st.session_state.current_step
             total_steps = len(STEPS)
             
-            # 원형 프로그레스 + 좌우 클릭 네비게이션 (통합)
-            render_progress_with_clickable_nav(current_step, total_steps)
+            # 원형 프로그레스 바 (원래 크기)
+            st.markdown(render_circular_progress(current_step, total_steps), unsafe_allow_html=True)
+            
+            # 이전단계/다음단계 텍스트 버튼
+            render_step_nav_buttons(current_step, total_steps)
         
         # ============================================================
         # SMTP 상태 LED 인디케이터 (HTML 기반)
@@ -2045,47 +2025,31 @@ SMTP_PW = "app_password"
         st.divider()
         
         # ============================================================
-        # FOOTER: 로컬 실행 가이드
-        # ============================================================
-        with st.expander("💻 로컬 실행 가이드", expanded=False):
-            st.markdown("""
-**하이웍스 IP 제한 시 회사 PC에서 직접 실행하세요.**
-
-```bash
-# 1. 프로젝트 다운로드
-git clone https://github.com/yurielk82/mm-project.git
-cd mm-project
-
-# 2. 패키지 설치
-pip install -r requirements.txt
-
-# 3. 앱 실행
-streamlit run app.py
-```
-            """)
-        
-        # ============================================================
-        # 페이지 네비게이션 (메일 발송 / 발송 이력) - expander 스타일
+        # 페이지 네비게이션 (메일 발송 / 발송 이력) - 버튼
         # ============================================================
         current_page = st.session_state.get('current_page', '📧 메일 발송')
         
-        with st.expander("📧 메일 발송", expanded=current_page == "📧 메일 발송"):
-            st.caption("엑셀 데이터 기반 메일머지 발송")
-            if current_page != "📧 메일 발송":
-                if st.button("이동", use_container_width=True, key="goto_mail"):
-                    st.session_state.current_page = '📧 메일 발송'
-                    st.rerun()
-            else:
-                st.success("현재 페이지", icon="✅")
+        col1, col2 = st.columns(2)
+        with col1:
+            btn_type = "primary" if current_page == "📧 메일 발송" else "secondary"
+            if st.button("📧 메일 발송", use_container_width=True, type=btn_type, key="goto_mail"):
+                st.session_state.current_page = '📧 메일 발송'
+                st.rerun()
         
-        with st.expander("📜 발송 이력", expanded=current_page == "📜 발송 이력"):
-            st.caption("과거 발송 기록 조회 및 검색")
-            if current_page != "📜 발송 이력":
-                if st.button("이동", use_container_width=True, key="goto_history"):
-                    st.session_state.current_page = '📜 발송 이력'
-                    st.rerun()
-            else:
-                st.success("현재 페이지", icon="✅")
+        with col2:
+            btn_type = "primary" if current_page == "📜 발송 이력" else "secondary"
+            if st.button("📜 발송 이력", use_container_width=True, type=btn_type, key="goto_history"):
+                st.session_state.current_page = '📜 발송 이력'
+                st.rerun()
+        
+        st.divider()
+        
+        # ============================================================
+        # 로컬 실행 가이드 버튼 (팝업으로 열기)
+        # ============================================================
+        if st.button("💻 로컬 실행 가이드", use_container_width=True, key="local_guide_btn"):
+            st.session_state.show_local_guide = True
+            st.rerun()
         
         st.markdown("""
         <div class="sidebar-footer">
