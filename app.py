@@ -1094,6 +1094,8 @@ def init_session_state():
         # UI 상태
         'show_smtp_settings': False,  # SMTP 설정 패널 열기
         'current_page': '📧 메일 발송',  # 현재 페이지 (메일 발송 / 발송 이력)
+        # NaN/0 처리 옵션
+        'zero_as_blank': True,  # True: NaN/0을 빈칸, False: 0으로 표시
     }
     
     for key, value in defaults.items():
@@ -1321,29 +1323,31 @@ def group_data_with_wildcard(df, group_key_col, email_col, amount_cols, percent_
             sorted_indices = group_df[group_key_col].apply(sort_key).sort_values().index
             group_df = group_df.loc[sorted_indices]
         
+        # NaN/0 처리 옵션 가져오기
+        zero_as_blank = st.session_state.get('zero_as_blank', True)
+        
         rows = []
         for _, row in group_df.iterrows():
             row_dict = {}
             for col in display_cols:
                 if col in row.index:
                     value = row[col]
-                    # NaN/0 처리: 숫자면 0 표시, 그 외는 빈칸
+                    # NaN/0 처리 옵션 적용
                     if col in amount_cols:
-                        row_dict[col] = format_currency(value)
+                        row_dict[col] = format_currency(value, zero_as_blank=zero_as_blank)
                     elif col in percent_cols:
                         row_dict[col] = format_percent(value)
                     elif pd.isna(value) or value is None:
-                        # 숫자 컬럼이면 0, 아니면 빈칸
-                        row_dict[col] = ''
+                        row_dict[col] = '' if zero_as_blank else '0'
                     elif isinstance(value, (int, float)):
                         if value == 0 or pd.isna(value):
-                            row_dict[col] = '0'
+                            row_dict[col] = '' if zero_as_blank else '0'
                         else:
                             row_dict[col] = str(value)
                     else:
                         str_val = str(value).strip()
                         if str_val.lower() in ['nan', 'none', 'nat', '']:
-                            row_dict[col] = ''
+                            row_dict[col] = '' if zero_as_blank else '0'
                         else:
                             row_dict[col] = str_val
                 else:
@@ -1357,11 +1361,11 @@ def group_data_with_wildcard(df, group_key_col, email_col, amount_cols, percent_
             non_total_df = group_df[non_total_mask]
             for col in amount_cols:
                 if col in non_total_df.columns:
-                    totals[col] = format_currency(non_total_df[col].sum())
+                    totals[col] = format_currency(non_total_df[col].sum(), zero_as_blank=zero_as_blank)
         else:
             for col in amount_cols:
                 if col in group_df.columns:
-                    totals[col] = format_currency(group_df[col].sum())
+                    totals[col] = format_currency(group_df[col].sum(), zero_as_blank=zero_as_blank)
         
         grouped_data[base_key_str] = {
             'recipient_email': recipient_email,
@@ -2798,6 +2802,16 @@ def render_step2():
         )
         st.session_state.amount_cols = amount_cols
         all_typed_cols.extend(amount_cols)
+        
+        # NaN/0 처리 옵션
+        zero_option = st.radio(
+            "NaN/0 값 처리",
+            options=["빈칸으로 표시", "0으로 표시"],
+            index=0 if st.session_state.get('zero_as_blank', True) else 1,
+            horizontal=True,
+            help="금액 컬럼에서 NaN이나 0 값을 어떻게 표시할지 선택"
+        )
+        st.session_state.zero_as_blank = (zero_option == "빈칸으로 표시")
         
         # 📊 퍼센트 컬럼
         percent_default = [c for c in saved_percent if c in columns and c not in all_typed_cols] or [c for c in percent_candidates if c in columns and c not in all_typed_cols]

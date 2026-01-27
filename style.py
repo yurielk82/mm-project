@@ -423,7 +423,7 @@ def render_preview(
     )
 
 
-def format_currency(value, symbol: str = "", decimal_places: int = 0) -> str:
+def format_currency(value, symbol: str = "", decimal_places: int = 0, zero_as_blank: bool = False) -> str:
     """
     숫자를 통화 형식으로 포맷팅합니다 (천단위 쉼표, 기호 없음).
     
@@ -431,15 +431,32 @@ def format_currency(value, symbol: str = "", decimal_places: int = 0) -> str:
         value: 숫자 값
         symbol: 통화 기호 (기본: 없음)
         decimal_places: 소수점 자릿수
+        zero_as_blank: True면 NaN/0을 빈칸으로, False면 0으로 표시
     
     Returns:
         포맷팅된 문자열 (예: 1,250,000)
     """
+    import math
+    
     try:
+        # None, 빈 문자열, NaN 체크
         if value is None or value == '' or str(value).strip() == '':
-            return '-'
+            return '' if zero_as_blank else '0'
+        
+        # 문자열 'nan', 'NaN' 등 체크
+        str_val = str(value).strip().lower()
+        if str_val in ['nan', 'none', 'nat', '']:
+            return '' if zero_as_blank else '0'
         
         num = float(str(value).replace(',', '').replace('₩', '').strip())
+        
+        # NaN 체크 (float형 NaN)
+        if math.isnan(num):
+            return '' if zero_as_blank else '0'
+        
+        # 0 체크
+        if num == 0:
+            return '' if zero_as_blank else '0'
         
         if decimal_places > 0:
             formatted = f"{num:,.{decimal_places}f}"
@@ -450,7 +467,7 @@ def format_currency(value, symbol: str = "", decimal_places: int = 0) -> str:
             return f"{symbol}{formatted}"
         return formatted
     except (ValueError, TypeError):
-        return str(value)
+        return str(value) if str(value).strip() else ('' if zero_as_blank else '0')
 
 
 def format_percent(value, decimal_places: int = 1) -> str:
