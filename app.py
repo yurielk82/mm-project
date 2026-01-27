@@ -1808,67 +1808,85 @@ def render_step_nav_buttons(current_step: int, total_steps: int):
     prev_disabled = current_step <= 1
     next_disabled = current_step >= total_steps
     
-    # 텍스트 버튼 스타일 CSS
+    # 텍스트 버튼 스타일 CSS - 여백 최소화, 글씨 작게
     st.markdown("""
     <style>
-    /* 사이드바 네비게이션 텍스트 버튼 - 테두리 없음 */
-    [data-testid="stSidebar"] .step-nav-btn .stButton > button {
+    /* 네비게이션 버튼 컨테이너 - 여백 최소화 */
+    .step-nav-container {
+        margin: -0.5rem 0 0 0 !important;
+        padding: 0 !important;
+    }
+    .step-nav-container > div {
+        gap: 0 !important;
+    }
+    .step-nav-container [data-testid="column"] {
+        padding: 0 !important;
+    }
+    /* 사이드바 네비게이션 텍스트 버튼 - 테두리 없음, 여백 최소 */
+    .step-nav-container .stButton > button {
         background: transparent !important;
         border: none !important;
         box-shadow: none !important;
-        padding: 8px 4px !important;
-        font-size: 0.85rem !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        min-height: 0 !important;
+        height: auto !important;
+        line-height: 1.2 !important;
+        font-size: 0.7rem !important;
         font-weight: 500 !important;
         transition: all 0.2s ease !important;
     }
+    .step-nav-container .stButton {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
     /* 이전단계 버튼 */
-    [data-testid="stSidebar"] .step-nav-btn.nav-prev .stButton > button {
+    .step-nav-container .nav-prev .stButton > button {
         color: rgba(128,128,128,0.7) !important;
     }
-    [data-testid="stSidebar"] .step-nav-btn.nav-prev .stButton > button:hover:not(:disabled) {
+    .step-nav-container .nav-prev .stButton > button:hover:not(:disabled) {
         color: var(--text-color, #333) !important;
-        background: rgba(128,128,128,0.08) !important;
     }
     /* 다음단계 버튼 */
-    [data-testid="stSidebar"] .step-nav-btn.nav-next .stButton > button {
+    .step-nav-container .nav-next .stButton > button {
         color: #1E88E5 !important;
         font-weight: 600 !important;
     }
-    [data-testid="stSidebar"] .step-nav-btn.nav-next .stButton > button:hover:not(:disabled) {
+    .step-nav-container .nav-next .stButton > button:hover:not(:disabled) {
         color: #1565C0 !important;
-        background: rgba(30,136,229,0.08) !important;
     }
     /* 비활성화 */
-    [data-testid="stSidebar"] .step-nav-btn .stButton > button:disabled {
+    .step-nav-container .stButton > button:disabled {
         opacity: 0.3 !important;
         cursor: not-allowed !important;
     }
     /* 다크모드 */
     @media (prefers-color-scheme: dark) {
-        [data-testid="stSidebar"] .step-nav-btn.nav-prev .stButton > button:hover:not(:disabled) {
+        .step-nav-container .nav-prev .stButton > button:hover:not(:disabled) {
             color: rgba(255,255,255,0.9) !important;
-            background: rgba(255,255,255,0.08) !important;
         }
     }
     </style>
     """, unsafe_allow_html=True)
     
-    # 레이아웃: [이전단계] [다음단계]
+    # 레이아웃: [이전단계] [다음단계] - 여백 최소화
+    st.markdown('<div class="step-nav-container">', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown('<div class="step-nav-btn nav-prev">', unsafe_allow_html=True)
-        if st.button("‹ 이전단계", key="nav_prev", disabled=prev_disabled, use_container_width=True):
+        st.markdown('<div class="nav-prev">', unsafe_allow_html=True)
+        if st.button("‹ 이전", key="nav_prev", disabled=prev_disabled, use_container_width=True):
             st.session_state.current_step = current_step - 1
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
     
     with col2:
-        st.markdown('<div class="step-nav-btn nav-next">', unsafe_allow_html=True)
-        if st.button("다음단계 ›", key="nav_next", disabled=next_disabled, use_container_width=True):
+        st.markdown('<div class="nav-next">', unsafe_allow_html=True)
+        if st.button("다음 ›", key="nav_next", disabled=next_disabled, use_container_width=True):
             st.session_state.current_step = current_step + 1
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 def render_smtp_sidebar():
