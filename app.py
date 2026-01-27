@@ -1731,8 +1731,8 @@ streamlit run app.py""", language="bash")
     return show_guide
 
 
-def render_circular_progress(current_step: int, total_steps: int):
-    """원형 프로그레스 인디케이터 (SVG 기반)"""
+def render_circular_progress_with_nav(current_step: int, total_steps: int):
+    """원형 프로그레스 인디케이터 + 좌우 원형 네비게이션 버튼 (통합 SVG)"""
     progress = (current_step / total_steps) * 100
     size = 140
     stroke_width = 10
@@ -1742,27 +1742,247 @@ def render_circular_progress(current_step: int, total_steps: int):
     
     current_step_name = STEPS[current_step - 1] if current_step <= len(STEPS) else ""
     
-    return f'''<div style="display:flex;flex-direction:column;align-items:center;padding:1rem 0;">
-<div style="position:relative;width:{size}px;height:{size}px;">
-<div style="position:absolute;inset:10px;border-radius:50%;background:radial-gradient(circle,rgba(0,212,255,0.15) 0%,transparent 70%);filter:blur(10px);"></div>
-<svg width="{size}" height="{size}" style="transform:rotate(-90deg);">
-<circle cx="{size/2}" cy="{size/2}" r="{radius}" fill="none" stroke="rgba(128,128,128,0.15)" stroke-width="{stroke_width}"/>
-<circle cx="{size/2}" cy="{size/2}" r="{radius}" fill="none" stroke="url(#progressGradient)" stroke-width="{stroke_width}" stroke-linecap="round" stroke-dasharray="{circumference}" stroke-dashoffset="{stroke_dashoffset}" style="transition:stroke-dashoffset 0.5s ease-out;filter:drop-shadow(0 0 6px rgba(0,212,255,0.6));"/>
-<defs><linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00d4ff"/><stop offset="100%" stop-color="#7c3aed"/></linearGradient></defs>
-</svg>
-<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-<div style="display:flex;align-items:baseline;gap:2px;">
-<span style="font-size:2rem;font-weight:700;color:var(--text-color);">{current_step}</span>
-<span style="font-size:1rem;color:rgba(128,128,128,0.6);">/ {total_steps}</span>
+    # 버튼 상태
+    prev_disabled = current_step <= 1
+    next_disabled = current_step >= total_steps
+    
+    # 이전 버튼 스타일
+    prev_opacity = "0.3" if prev_disabled else "1"
+    prev_cursor = "not-allowed" if prev_disabled else "pointer"
+    prev_bg = "rgba(128,128,128,0.1)" if prev_disabled else "var(--secondary-background-color, #f0f2f6)"
+    prev_hover = "" if prev_disabled else "nav-btn-prev:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }"
+    
+    # 다음 버튼 스타일  
+    next_opacity = "0.3" if next_disabled else "1"
+    next_cursor = "not-allowed" if next_disabled else "pointer"
+    next_bg = "rgba(128,128,128,0.1)" if next_disabled else "linear-gradient(135deg, #1E88E5 0%, #1565C0 100%)"
+    next_hover = "" if next_disabled else "nav-btn-next:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(30,136,229,0.4); }"
+    
+    return f'''
+<style>
+.nav-progress-container {{
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem 0 0.5rem 0;
+}}
+.progress-circle-wrapper {{
+    position: relative;
+    width: {size}px;
+    height: {size}px;
+}}
+.progress-glow {{
+    position: absolute;
+    inset: 10px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,212,255,0.15) 0%, transparent 70%);
+    filter: blur(10px);
+}}
+.progress-center {{
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}}
+.progress-step {{
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-color);
+}}
+.progress-total {{
+    font-size: 1rem;
+    color: rgba(128,128,128,0.6);
+}}
+.progress-percent {{
+    font-size: 0.85rem;
+    color: #00d4ff;
+    font-weight: 600;
+}}
+.progress-label {{
+    text-align: center;
+    margin-top: 0.5rem;
+}}
+.progress-step-name {{
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #00d4ff;
+}}
+.progress-status {{
+    font-size: 0.7rem;
+    color: rgba(128,128,128,0.7);
+    margin-top: 2px;
+}}
+/* 네비게이션 버튼 컨테이너 */
+.nav-buttons-wrapper {{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-top: -30px;
+    padding: 0 10px;
+    position: relative;
+    z-index: 10;
+}}
+/* 원형 버튼 공통 스타일 */
+.nav-btn {{
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: 700;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    border: none;
+    text-decoration: none;
+}}
+/* 이전 버튼 */
+.nav-btn-prev {{
+    background: {prev_bg};
+    color: var(--text-color, #333);
+    opacity: {prev_opacity};
+    cursor: {prev_cursor};
+    border: 1px solid var(--glass-border, rgba(128,128,128,0.2));
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}}
+.{prev_hover}
+/* 다음 버튼 */
+.nav-btn-next {{
+    background: {next_bg};
+    color: white;
+    opacity: {next_opacity};
+    cursor: {next_cursor};
+    box-shadow: 0 4px 15px rgba(30,136,229,0.3);
+}}
+.{next_hover}
+/* 다크모드 대응 */
+@media (prefers-color-scheme: dark) {{
+    .nav-btn-prev {{
+        background: {prev_bg if prev_disabled else "rgba(255,255,255,0.08)"};
+        border-color: rgba(255,255,255,0.15);
+    }}
+    .nav-btn-prev:hover {{
+        background: rgba(255,255,255,0.12);
+    }}
+}}
+</style>
+
+<div class="nav-progress-container">
+    <div class="progress-circle-wrapper">
+        <div class="progress-glow"></div>
+        <svg width="{size}" height="{size}" style="transform:rotate(-90deg);">
+            <circle cx="{size/2}" cy="{size/2}" r="{radius}" fill="none" stroke="rgba(128,128,128,0.15)" stroke-width="{stroke_width}"/>
+            <circle cx="{size/2}" cy="{size/2}" r="{radius}" fill="none" stroke="url(#progressGradient)" stroke-width="{stroke_width}" stroke-linecap="round" stroke-dasharray="{circumference}" stroke-dashoffset="{stroke_dashoffset}" style="transition:stroke-dashoffset 0.5s ease-out;filter:drop-shadow(0 0 6px rgba(0,212,255,0.6));"/>
+            <defs>
+                <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#00d4ff"/>
+                    <stop offset="100%" stop-color="#7c3aed"/>
+                </linearGradient>
+            </defs>
+        </svg>
+        <div class="progress-center">
+            <div style="display:flex;align-items:baseline;gap:2px;">
+                <span class="progress-step">{current_step}</span>
+                <span class="progress-total">/ {total_steps}</span>
+            </div>
+            <span class="progress-percent">{int(progress)}%</span>
+        </div>
+    </div>
+    <div class="progress-label">
+        <div class="progress-step-name">{current_step_name}</div>
+        <div class="progress-status">진행 중...</div>
+    </div>
 </div>
-<span style="font-size:0.85rem;color:#00d4ff;font-weight:600;">{int(progress)}%</span>
-</div>
-</div>
-<div style="text-align:center;margin-top:0.75rem;">
-<div style="font-size:0.95rem;font-weight:600;color:#00d4ff;">{current_step_name}</div>
-<div style="font-size:0.7rem;color:rgba(128,128,128,0.7);margin-top:2px;">진행 중...</div>
-</div>
-</div>'''
+'''
+
+
+def render_nav_buttons(current_step: int, total_steps: int):
+    """원형 네비게이션 버튼 (Streamlit 버튼)"""
+    prev_disabled = current_step <= 1
+    next_disabled = current_step >= total_steps
+    
+    # CSS for circular buttons
+    st.markdown("""
+    <style>
+    .nav-btn-container {
+        display: flex;
+        justify-content: space-between;
+        padding: 0 15px;
+        margin-top: -25px;
+        position: relative;
+        z-index: 100;
+    }
+    /* 사이드바 네비게이션 버튼 - 원형 */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] .stButton > button {
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        padding: 0 !important;
+        border-radius: 50% !important;
+        font-size: 1.1rem !important;
+        font-weight: 700 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    /* 이전 버튼 (secondary) */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] .stButton > button[data-testid="baseButton-secondary"] {
+        background: var(--secondary-background-color, #f0f2f6) !important;
+        border: 1px solid rgba(128,128,128,0.2) !important;
+        color: var(--text-color, #333) !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] .stButton > button[data-testid="baseButton-secondary"]:hover:not(:disabled) {
+        transform: translateY(-3px) !important;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.15) !important;
+    }
+    /* 다음 버튼 (primary) */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] .stButton > button[data-testid="baseButton-primary"] {
+        background: linear-gradient(135deg, #1E88E5 0%, #1565C0 100%) !important;
+        border: none !important;
+        color: white !important;
+        box-shadow: 0 4px 15px rgba(30,136,229,0.3) !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] .stButton > button[data-testid="baseButton-primary"]:hover:not(:disabled) {
+        transform: translateY(-3px) !important;
+        box-shadow: 0 6px 20px rgba(30,136,229,0.4) !important;
+    }
+    /* 비활성화 상태 */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] .stButton > button:disabled {
+        opacity: 0.3 !important;
+        cursor: not-allowed !important;
+        transform: none !important;
+        box-shadow: none !important;
+    }
+    /* 다크모드 */
+    @media (prefers-color-scheme: dark) {
+        [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] .stButton > button[data-testid="baseButton-secondary"] {
+            background: rgba(255,255,255,0.08) !important;
+            border-color: rgba(255,255,255,0.15) !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] .stButton > button[data-testid="baseButton-secondary"]:hover:not(:disabled) {
+            background: rgba(255,255,255,0.12) !important;
+        }
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col1:
+        if st.button("←", key="nav_prev", disabled=prev_disabled, use_container_width=True):
+            st.session_state.current_step = current_step - 1
+            st.rerun()
+    
+    with col3:
+        if st.button("→", key="nav_next", type="primary", disabled=next_disabled, use_container_width=True):
+            st.session_state.current_step = current_step + 1
+            st.rerun()
 
 
 def render_smtp_sidebar():
@@ -1777,27 +1997,12 @@ def render_smtp_sidebar():
         if current_page == "📧 메일 발송":
             current_step = st.session_state.current_step
             total_steps = len(STEPS)
-            st.markdown(render_circular_progress(current_step, total_steps), unsafe_allow_html=True)
             
-            # 이전 / 다음 버튼 (텍스트만, 테두리 없음)
-            col_prev, col_next = st.columns(2)
-            with col_prev:
-                prev_disabled = current_step <= 1
-                if not prev_disabled:
-                    if st.button("< 이전", key="sidebar_prev", use_container_width=True):
-                        st.session_state.current_step = current_step - 1
-                        st.rerun()
-                else:
-                    st.markdown("<div style='text-align:center;color:rgba(128,128,128,0.4);padding:8px;'>< 이전</div>", unsafe_allow_html=True)
+            # 원형 프로그레스 바 표시
+            st.markdown(render_circular_progress_with_nav(current_step, total_steps), unsafe_allow_html=True)
             
-            with col_next:
-                next_disabled = current_step >= total_steps
-                if not next_disabled:
-                    if st.button("다음 >", key="sidebar_next", type="primary", use_container_width=True):
-                        st.session_state.current_step = current_step + 1
-                        st.rerun()
-                else:
-                    st.markdown("<div style='text-align:center;color:rgba(128,128,128,0.4);padding:8px;'>다음 ></div>", unsafe_allow_html=True)
+            # 원형 네비게이션 버튼 (← →)
+            render_nav_buttons(current_step, total_steps)
         
         # ============================================================
         # SMTP 상태 LED 인디케이터 (HTML 기반)
