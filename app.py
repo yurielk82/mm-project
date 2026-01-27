@@ -1310,12 +1310,7 @@ def render_smtp_sidebar():
                 else:
                     st.warning("입력값 확인 필요")
             
-            # 저장된 정보 삭제 버튼
-            if from_cookie or from_secrets or st.session_state.get('saved_smtp_user'):
-                if st.button("🗑️ 저장 정보 삭제", use_container_width=True,
-                            help="브라우저에 저장된 SMTP 정보를 삭제합니다"):
-                    clear_session_credentials()
-                    st.rerun()
+
         
         # 설정 가이드
         with st.expander("📖 도움말", expanded=False):
