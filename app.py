@@ -187,7 +187,7 @@ CUSTOM_CSS = """
     
     /* ============================================
        🔧 사이드바 - 8px Grid SaaS UI
-       상용 SaaS 기준: 8px 단위 간격
+       상단(프로그레스) 컴팩트 / 하단(설정) 여유
        ============================================ */
     [data-testid="stSidebar"] {
         background: var(--st-secondary-bg) !important;
@@ -197,34 +197,34 @@ CUSTOM_CSS = """
         padding: 12px 16px !important;
     }
     
-    /* 사이드바 요소 간 간격 - 8px 단위 */
+    /* 사이드바 요소 간 기본 간격 */
     [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
-        gap: 4px !important;
+        gap: 8px !important;
     }
     
-    /* 이전/다음 버튼 영역 */
+    /* 이전/다음 버튼 영역 - 컴팩트 */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
         margin: 0 !important;
-        padding: 4px 0 !important;
+        padding: 2px 0 !important;
     }
     
-    /* 사이드바 버튼 - 32px 높이 (SaaS 표준) */
+    /* 사이드바 버튼 - 36px 높이 (SaaS 표준) */
     [data-testid="stSidebar"] .stButton > button {
-        min-height: 32px !important;
-        padding: 4px 12px !important;
+        min-height: 36px !important;
+        padding: 6px 12px !important;
     }
     
-    /* Expander - 컴팩트 */
+    /* Expander - 적절한 여백 */
     [data-testid="stSidebar"] [data-testid="stExpander"] {
-        margin: 2px 0 !important;
+        margin: 4px 0 !important;
     }
     [data-testid="stSidebar"] [data-testid="stExpander"] summary {
-        padding: 8px 12px !important;
+        padding: 10px 12px !important;
     }
     
     /* Divider */
     [data-testid="stSidebar"] hr {
-        margin: 8px 0 !important;
+        margin: 12px 0 !important;
     }
     
     /* 사이드바 텍스트 - 테마 색상 상속 + 가독성 확보 */
@@ -1915,10 +1915,13 @@ def render_smtp_sidebar():
         # ============================================================
         # SMTP 상태 LED 인디케이터 (HTML 기반)
         # ============================================================
+        # 프로그레스 영역과 SMTP 영역 구분을 위한 여백
+        st.markdown('<div style="margin-top: 12px;"></div>', unsafe_allow_html=True)
+        
         if st.session_state.smtp_config:
             # 연결됨 - 녹색 LED
             st.markdown("""
-            <div class="led-indicator connected" style="width: 100%; justify-content: center; margin: 0.5rem 0;">
+            <div class="led-indicator connected" style="width: 100%; justify-content: center; margin: 8px 0;">
                 <span class="led-dot"></span>
                 <span>SMTP 연결됨</span>
             </div>
@@ -1926,7 +1929,7 @@ def render_smtp_sidebar():
         else:
             # 연결 필요 - 노란색 LED (클릭 유도)
             st.markdown("""
-            <div class="led-indicator disconnected" style="width: 100%; justify-content: center; margin: 0.5rem 0; cursor: pointer;" title="아래 SMTP 설정을 열어 연결하세요">
+            <div class="led-indicator disconnected" style="width: 100%; justify-content: center; margin: 8px 0; cursor: pointer;" title="아래 SMTP 설정을 열어 연결하세요">
                 <span class="led-dot"></span>
                 <span>SMTP 연결 필요</span>
             </div>
