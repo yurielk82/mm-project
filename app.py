@@ -1777,28 +1777,7 @@ def render_smtp_sidebar():
         
         st.divider()
         
-        # ============================================================
-        # 작업 현황 메트릭 카드 (세로 배치 - 가로로 길게)
-        # ============================================================
-        st.markdown("##### 📊 작업 현황")
-        
-        data_count = len(st.session_state.df) if st.session_state.df is not None else 0
-        
-        # 데이터 행 수 (세로 배치 - 전체 너비)
-        st.metric("📄 데이터 행 수", f"{data_count:,}행" if data_count > 0 else "—")
-        
-        # 발송 현황 (세로 배치 - 전체 너비)
-        if st.session_state.grouped_data:
-            valid = sum(1 for g in st.session_state.grouped_data.values() 
-                       if g['recipient_email'] and validate_email(g['recipient_email']))
-            total = len(st.session_state.grouped_data)
-            st.metric("📬 발송 현황", f"{valid} / {total}건", delta=f"발송 가능 {valid}건" if valid > 0 else None)
-        else:
-            st.metric("📬 발송 현황", "—")
-        
 
-        
-        st.divider()
         
         # ============================================================
         # SMTP 계정 설정 (항상 닫힌 상태로 시작)
@@ -1931,23 +1910,27 @@ streamlit run app.py
             """)
         
         # ============================================================
-        # 📌 페이지 네비게이션 (메일 발송 / 발송 이력) - 바로 클릭 이동
+        # 페이지 네비게이션 (메일 발송 / 발송 이력) - expander 스타일
         # ============================================================
-        st.markdown("##### 📌 페이지")
-        
         current_page = st.session_state.get('current_page', '📧 메일 발송')
         
-        # 메일 발송 버튼
-        mail_type = "primary" if current_page == "📧 메일 발송" else "secondary"
-        if st.button("📧 메일 발송", use_container_width=True, key="goto_mail", type=mail_type):
-            st.session_state.current_page = '📧 메일 발송'
-            st.rerun()
+        with st.expander("📧 메일 발송", expanded=current_page == "📧 메일 발송"):
+            st.caption("엑셀 데이터 기반 메일머지 발송")
+            if current_page != "📧 메일 발송":
+                if st.button("이동", use_container_width=True, key="goto_mail"):
+                    st.session_state.current_page = '📧 메일 발송'
+                    st.rerun()
+            else:
+                st.success("현재 페이지", icon="✓")
         
-        # 발송 이력 버튼
-        history_type = "primary" if current_page == "📜 발송 이력" else "secondary"
-        if st.button("📜 발송 이력", use_container_width=True, key="goto_history", type=history_type):
-            st.session_state.current_page = '📜 발송 이력'
-            st.rerun()
+        with st.expander("📜 발송 이력", expanded=current_page == "📜 발송 이력"):
+            st.caption("과거 발송 기록 조회 및 검색")
+            if current_page != "📜 발송 이력":
+                if st.button("이동", use_container_width=True, key="goto_history"):
+                    st.session_state.current_page = '📜 발송 이력'
+                    st.rerun()
+            else:
+                st.success("현재 페이지", icon="✓")
         
         st.markdown("""
         <div class="sidebar-footer">
