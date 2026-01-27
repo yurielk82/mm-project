@@ -2043,11 +2043,16 @@ SMTP_PW = "app_password"
                 st.rerun()
         
         # ============================================================
-        # 로컬 실행 가이드 버튼 (팝업으로 열기)
+        # 로컬 실행 가이드 - expander
         # ============================================================
-        if st.button("💻 로컬 실행 가이드", use_container_width=True, key="local_guide_btn"):
-            st.session_state.show_local_guide = True
-            st.rerun()
+        with st.expander("💻 로컬 실행 가이드", expanded=False):
+            if st.button("📖 가이드 보기", use_container_width=True, key="local_guide_btn"):
+                st.session_state.show_local_guide = True
+                st.rerun()
+            
+            st.link_button("📦 ZIP 다운로드", 
+                          "https://github.com/yurielk82/mm-project/archive/refs/heads/main.zip",
+                          use_container_width=True)
         
         st.markdown("""
         <div class="sidebar-footer">
