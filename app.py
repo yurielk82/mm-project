@@ -85,11 +85,24 @@ def apply_saas_style():
     - 부드러운 호버/트랜지션 효과
     """
     css = """
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
         /* ============================================
            🎨 SaaS-Grade Design System
            Light/Dark 모드 완벽 대응
            ============================================ */
+        
+        /* Material Icons 아이콘 숨기기 (Expander 텍스트 깨짐 방지) */
+        .material-icons {
+            font-family: 'Material Icons' !important;
+            font-size: 24px !important;
+        }
+        
+        /* Streamlit Expander 내 Material Icons 숨기기 */
+        [data-testid="stExpander"] summary span.material-icons,
+        [data-testid="stExpander"] .material-icons {
+            display: none !important;
+        }
         
         :root {
             /* Streamlit 테마 변수 참조 */
