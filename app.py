@@ -76,428 +76,264 @@ DEFAULT_BATCH_DELAY = 30
 CUSTOM_CSS = """
 <style>
     /* ============================================
-       🎨 Theme-Adaptive CSS Variables
-       Streamlit 테마 엔진 변수 전용
-       하드코딩 색상 완전 제거
+       🎨 Commercial SaaS-Grade CSS
+       Streamlit Theme-Adaptive Design System
+       Light/Dark 모드 완벽 대응
        ============================================ */
     
+    /* 폰트 시스템 - Pretendard/Inter 우선 */
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+    
     :root {
-        /* Streamlit 테마 변수 참조 (하드코딩 금지) */
+        /* Streamlit 테마 변수 참조 */
         --st-primary: var(--primary-color);
         --st-bg: var(--background-color);
         --st-secondary-bg: var(--secondary-background-color);
         --st-text: var(--text-color);
         
-        /* 반투명 효과 (테마 적응형 - 중립 회색) */
-        --glass-overlay: rgba(128, 128, 128, 0.06);
-        --glass-border: rgba(128, 128, 128, 0.12);
-        --glass-shadow: 0 4px 16px rgba(128, 128, 128, 0.08);
-        --glass-hover-shadow: 0 8px 24px rgba(128, 128, 128, 0.12);
+        /* 글로벌 폰트 */
+        --font-family: 'Pretendard', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         
-        /* 상태 색상 (의미론적 고정 - 접근성 유지) */
-        --color-success: #22c55e;
-        --color-success-soft: rgba(34, 197, 94, 0.12);
+        /* Glass 효과 (테마 적응형) */
+        --glass-overlay: rgba(128, 128, 128, 0.05);
+        --glass-border: rgba(128, 128, 128, 0.1);
+        --glass-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        --glass-hover-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        
+        /* 상태 색상 */
+        --color-success: #10b981;
+        --color-success-soft: rgba(16, 185, 129, 0.1);
         --color-warning: #f59e0b;
-        --color-warning-soft: rgba(245, 158, 11, 0.12);
+        --color-warning-soft: rgba(245, 158, 11, 0.1);
         --color-error: #ef4444;
-        --color-error-soft: rgba(239, 68, 68, 0.12);
+        --color-error-soft: rgba(239, 68, 68, 0.1);
         --color-info: #3b82f6;
-        --color-info-soft: rgba(59, 130, 246, 0.12);
+        --color-info-soft: rgba(59, 130, 246, 0.1);
         
-        /* 반응형 간격 */
-        --space-xs: 0.25rem;
-        --space-sm: 0.5rem;
-        --space-md: 1rem;
-        --space-lg: 1.5rem;
-        --space-xl: 2rem;
+        /* 8px 그리드 시스템 */
+        --space-xs: 4px;
+        --space-sm: 8px;
+        --space-md: 16px;
+        --space-lg: 24px;
+        --space-xl: 32px;
         
         /* 모서리 반경 */
         --radius-sm: 6px;
-        --radius-md: 12px;
-        --radius-lg: 16px;
-        --radius-full: 50px;
+        --radius-md: 10px;
+        --radius-lg: 14px;
+        --radius-full: 9999px;
         
-        /* 타이포그래피 */
-        --font-weight-normal: 400;
-        --font-weight-medium: 500;
-        --font-weight-semibold: 600;
-        --font-weight-bold: 700;
+        /* 트랜지션 */
+        --transition-fast: 150ms ease;
+        --transition-normal: 250ms ease;
+    }
+    
+    /* 전역 폰트 적용 */
+    html, body, [class*="st-"] {
+        font-family: var(--font-family) !important;
     }
     
     /* ============================================
-       📱 반응형 미디어 쿼리 (완전 반응형)
+       📐 메인 레이아웃 - 시원하고 정돈된 느낌
        ============================================ */
-    
-    /* 모바일 (< 640px) */
-    @media (max-width: 640px) {
-        .main .block-container {
-            padding: var(--space-sm) !important;
-        }
-        [data-testid="stMetric"] {
-            padding: var(--space-sm) !important;
-        }
-        [data-testid="stMetric"] [data-testid="stMetricValue"] {
-            font-size: 1.1rem !important;
-        }
-        [data-testid="stMetric"] [data-testid="stMetricLabel"] {
-            font-size: 0.65rem !important;
-        }
-        .step-container {
-            flex-wrap: wrap;
-            gap: var(--space-sm);
-        }
-        .step-circle {
-            width: 28px !important;
-            height: 28px !important;
-            font-size: 0.75rem !important;
-        }
-        .step-label {
-            font-size: 0.65rem !important;
-        }
-        .led-indicator {
-            padding: 6px 12px !important;
-            font-size: 0.75rem !important;
-        }
-    }
-    
-    /* 태블릿 (640px - 1024px) */
-    @media (min-width: 640px) and (max-width: 1024px) {
-        .main .block-container {
-            padding: var(--space-md) !important;
-        }
-        [data-testid="stMetric"] [data-testid="stMetricValue"] {
-            font-size: 1.3rem !important;
-        }
-    }
-    
-    /* 데스크톱 (> 1024px) */
-    @media (min-width: 1024px) {
-        .main .block-container {
-            max-width: 1200px;
-            padding: var(--space-lg) var(--space-xl) !important;
-        }
-    }
-    
-    /* 대형 화면 (> 1400px) */
-    @media (min-width: 1400px) {
-        .main .block-container {
-            max-width: 1400px;
-        }
+    .main .block-container {
+        max-width: 1200px;
+        padding: var(--space-lg) var(--space-xl) !important;
     }
     
     /* ============================================
-       🔧 사이드바 - 영역별 분리 CSS
-       상단(프로그레스) 컴팩트 / 하단(설정) 여유
+       🔧 사이드바 - 메인과 동일한 디자인 언어
        ============================================ */
     [data-testid="stSidebar"] {
         background: var(--st-secondary-bg) !important;
+        border-right: 1px solid var(--glass-border);
     }
     
     [data-testid="stSidebar"] > div:first-child {
-        padding: 12px 16px !important;
+        padding: var(--space-md) !important;
     }
     
-    /* 상단 영역 - 프로그레스 + 네비게이션 (컴팩트) */
+    /* 상단 영역 - 프로그레스 (컴팩트) */
     .sidebar-top-section {
-        padding-bottom: 8px;
-        margin-bottom: 12px;
-        border-bottom: 1px solid rgba(128,128,128,0.15);
-    }
-    .sidebar-top-section + div [data-testid="stVerticalBlock"] {
-        gap: 2px !important;
+        padding-bottom: var(--space-sm);
+        margin-bottom: var(--space-md);
+        border-bottom: 1px solid var(--glass-border);
     }
     
-    /* 하단 영역 - SMTP 설정 등 (여유있게) */
-    .sidebar-bottom-section [data-testid="stVerticalBlock"],
-    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
-        gap: 10px !important;
-    }
-    
-    /* 이전/다음 버튼 영역 - 컴팩트 */
-    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
-        margin: 0 !important;
-        padding: 2px 0 !important;
-    }
-    
-    /* 사이드바 버튼 - 36px 높이 (SaaS 표준) */
-    [data-testid="stSidebar"] .stButton > button {
-        min-height: 36px !important;
-        padding: 6px 12px !important;
-    }
-    
-    /* Expander - 적절한 여백 */
-    [data-testid="stSidebar"] [data-testid="stExpander"] {
-        margin: 6px 0 !important;
-    }
-    [data-testid="stSidebar"] [data-testid="stExpander"] summary {
-        padding: 10px 12px !important;
-    }
-    
-    /* Divider */
-    [data-testid="stSidebar"] hr {
-        margin: 12px 0 !important;
-    }
-    
-    /* 사이드바 텍스트 - 테마 색상 상속 + 가독성 확보 */
-    [data-testid="stSidebar"] * {
-        color: var(--st-text) !important;
-    }
-    
-    /* 사이드바 섹션 구분 */
-    [data-testid="stSidebar"] hr {
-        margin: var(--space-sm) 0;
-        border: none;
-        border-top: 1px solid var(--glass-border);
-        opacity: 0.5;
-    }
-    
-    /* 사이드바 메트릭 카드 - 세로 배치, 가로로 길게 */
-    [data-testid="stSidebar"] [data-testid="stMetric"] {
-        background: var(--glass-overlay) !important;
-        border: 1px solid var(--glass-border) !important;
-        border-radius: var(--radius-md) !important;
-        padding: var(--space-md) var(--space-md) !important;
-        margin-bottom: var(--space-sm) !important;
+    /* 하단 영역 - 설정 (여유있게) */
+    .sidebar-bottom-section {
         display: flex;
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
+        flex-direction: column;
+        gap: var(--space-sm);
     }
     
-    [data-testid="stSidebar"] [data-testid="stMetricValue"] {
-        font-size: 1.4rem !important;
-        font-weight: var(--font-weight-bold) !important;
-        text-align: right;
-    }
-    
-    [data-testid="stSidebar"] [data-testid="stMetricLabel"] {
-        font-size: 0.8rem !important;
-        font-weight: var(--font-weight-medium) !important;
-        opacity: 0.9;
-        text-align: left;
-    }
-    
-    [data-testid="stSidebar"] [data-testid="stMetricDelta"] {
-        font-size: 0.7rem !important;
-        text-align: right;
+    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+        gap: var(--space-sm) !important;
     }
     
     /* ============================================
-       💡 LED 상태 인디케이터 (강화된 글로우 효과)
+       🎯 Input Widgets - 통일된 스타일
+       메인/사이드바 동일 적용
+       ============================================ */
+    
+    /* Text Input, Select Box, Number Input */
+    [data-testid="stTextInput"] input,
+    [data-testid="stSelectbox"] > div > div,
+    [data-testid="stNumberInput"] input,
+    [data-testid="stTextArea"] textarea {
+        border-radius: var(--radius-md) !important;
+        border: 1px solid var(--glass-border) !important;
+        background: var(--st-bg) !important;
+        box-shadow: var(--glass-shadow) !important;
+        transition: all var(--transition-fast) !important;
+        padding: 10px 14px !important;
+    }
+    
+    [data-testid="stTextInput"] input:focus,
+    [data-testid="stSelectbox"] > div > div:focus-within,
+    [data-testid="stNumberInput"] input:focus,
+    [data-testid="stTextArea"] textarea:focus {
+        border-color: var(--st-primary) !important;
+        box-shadow: 0 0 0 3px var(--color-info-soft) !important;
+        outline: none !important;
+    }
+    
+    /* ============================================
+       🔘 Buttons - 호버 효과 & 트랜지션
+       ============================================ */
+    .stButton > button {
+        border-radius: var(--radius-md) !important;
+        font-weight: 500 !important;
+        transition: all var(--transition-normal) !important;
+        border: 1px solid var(--glass-border) !important;
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: var(--glass-hover-shadow) !important;
+    }
+    
+    .stButton > button:active {
+        transform: translateY(0) !important;
+    }
+    
+    /* Primary 버튼 */
+    .stButton > button[data-testid="baseButton-primary"] {
+        background: var(--st-primary) !important;
+        border-color: var(--st-primary) !important;
+    }
+    
+    .stButton > button[data-testid="baseButton-primary"]:hover {
+        filter: brightness(1.1) !important;
+    }
+    
+    /* Secondary 버튼 */
+    .stButton > button[data-testid="baseButton-secondary"] {
+        background: var(--glass-overlay) !important;
+    }
+    
+    .stButton > button[data-testid="baseButton-secondary"]:hover {
+        background: var(--glass-border) !important;
+    }
+    
+    /* ============================================
+       📦 Expander - 깔끔한 접이식
+       ============================================ */
+    [data-testid="stExpander"] {
+        border: 1px solid var(--glass-border) !important;
+        border-radius: var(--radius-md) !important;
+        background: var(--glass-overlay) !important;
+        overflow: hidden;
+    }
+    
+    [data-testid="stExpander"] summary {
+        padding: 12px 16px !important;
+        font-weight: 500 !important;
+    }
+    
+    [data-testid="stExpander"] summary:hover {
+        background: var(--glass-border) !important;
+    }
+    
+    /* ============================================
+       📊 Metrics - 카드 스타일
+       ============================================ */
+    [data-testid="stMetric"] {
+        background: var(--glass-overlay) !important;
+        border: 1px solid var(--glass-border) !important;
+        border-radius: var(--radius-md) !important;
+        padding: var(--space-md) !important;
+        transition: all var(--transition-normal) !important;
+    }
+    
+    [data-testid="stMetric"]:hover {
+        box-shadow: var(--glass-hover-shadow) !important;
+        transform: translateY(-2px) !important;
+    }
+    
+    [data-testid="stMetricValue"] {
+        font-size: 1.5rem !important;
+        font-weight: 700 !important;
+    }
+    
+    [data-testid="stMetricLabel"] {
+        font-size: 0.75rem !important;
+        font-weight: 500 !important;
+        opacity: 0.8;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* ============================================
+       💡 LED 상태 인디케이터
        Light/Dark 모두에서 선명하게 보임
        ============================================ */
     .led-indicator {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 10px;
-        padding: 10px 18px;
+        gap: 8px;
+        padding: 10px 16px;
         border-radius: var(--radius-full);
-        font-size: 0.85rem;
-        font-weight: var(--font-weight-semibold);
+        font-size: 0.8rem;
+        font-weight: 500;
         background: var(--glass-overlay);
         border: 1px solid var(--glass-border);
         color: var(--st-text);
-        transition: all 0.3s ease;
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
+        transition: all var(--transition-normal);
     }
     
     .led-indicator .led-dot {
-        width: 12px;
-        height: 12px;
+        width: 10px;
+        height: 10px;
         border-radius: 50%;
-        position: relative;
     }
     
-    /* 연결됨 - 초록색 LED 글로우 (강화) */
+    /* 연결됨 - 녹색 */
     .led-indicator.connected {
         background: var(--color-success-soft);
         border-color: var(--color-success);
     }
-    
     .led-indicator.connected .led-dot {
         background: var(--color-success);
-        animation: led-pulse-success 2s ease-in-out infinite;
-        box-shadow: 
-            0 0 6px var(--color-success),
-            0 0 12px var(--color-success),
-            0 0 20px rgba(34, 197, 94, 0.5),
-            inset 0 0 4px rgba(255, 255, 255, 0.3);
+        box-shadow: 0 0 8px var(--color-success);
+        animation: led-pulse 2s ease-in-out infinite;
     }
     
-    /* 연결 필요 - 노란색 LED 글로우 (강화) */
+    /* 연결 필요 - 노란색 */
     .led-indicator.disconnected {
         background: var(--color-warning-soft);
         border-color: var(--color-warning);
     }
-    
     .led-indicator.disconnected .led-dot {
         background: var(--color-warning);
-        animation: led-pulse-warning 1.5s ease-in-out infinite;
-        box-shadow: 
-            0 0 6px var(--color-warning),
-            0 0 12px var(--color-warning),
-            0 0 20px rgba(245, 158, 11, 0.5),
-            inset 0 0 4px rgba(255, 255, 255, 0.3);
+        box-shadow: 0 0 8px var(--color-warning);
+        animation: led-pulse 1.5s ease-in-out infinite;
     }
     
-    @keyframes led-pulse-success {
-        0%, 100% { 
-            opacity: 1; 
-            transform: scale(1);
-            box-shadow: 
-                0 0 6px var(--color-success),
-                0 0 12px var(--color-success),
-                0 0 20px rgba(34, 197, 94, 0.5);
-        }
-        50% { 
-            opacity: 0.85; 
-            transform: scale(0.95);
-            box-shadow: 
-                0 0 4px var(--color-success),
-                0 0 8px var(--color-success),
-                0 0 14px rgba(34, 197, 94, 0.3);
-        }
-    }
-    
-    @keyframes led-pulse-warning {
-        0%, 100% { 
-            opacity: 1; 
-            transform: scale(1);
-            box-shadow: 
-                0 0 6px var(--color-warning),
-                0 0 12px var(--color-warning),
-                0 0 20px rgba(245, 158, 11, 0.5);
-        }
-        50% { 
-            opacity: 0.85; 
-            transform: scale(0.95);
-            box-shadow: 
-                0 0 4px var(--color-warning),
-                0 0 8px var(--color-warning),
-                0 0 14px rgba(245, 158, 11, 0.3);
-        }
-    }
-    
-    /* ============================================
-       🔌 SMTP 연결 버튼 (LED 스타일)
-       클릭 가능한 상태 인디케이터
-       ============================================ */
-    
-    /* SMTP 연결 필요 버튼 - 경고 LED 스타일 */
-    [data-testid="stSidebar"] button[data-testid="baseButton-secondary"]:first-of-type,
-    .smtp-connect-btn {
-        background: var(--color-warning-soft) !important;
-        border: 1px solid var(--color-warning) !important;
-        color: var(--st-text) !important;
-        border-radius: 50px !important;
-        padding: 10px 18px !important;
-        font-weight: 600 !important;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .smtp-connect-btn::before {
-        content: '';
-        position: absolute;
-        left: 16px;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: var(--color-warning);
-        animation: led-pulse-warning 1.5s ease-in-out infinite;
-        box-shadow: 
-            0 0 6px var(--color-warning),
-            0 0 12px var(--color-warning);
-    }
-    
-    .smtp-connect-btn:hover {
-        background: rgba(245, 158, 11, 0.2) !important;
-        transform: translateY(-2px);
-        box-shadow: 
-            0 4px 15px rgba(245, 158, 11, 0.3),
-            0 0 20px rgba(245, 158, 11, 0.15) !important;
-    }
-    
-    /* ============================================
-       📊 메트릭 카드 - Glassmorphism (강화)
-       테마 배경색 기반 반투명
-       ============================================ */
-    [data-testid="stMetric"] {
-        background: var(--glass-overlay) !important;
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        padding: var(--space-md);
-        border-radius: var(--radius-md);
-        border: 1px solid var(--glass-border) !important;
-        box-shadow: var(--glass-shadow);
-        transition: all 0.25s ease;
-    }
-    
-    [data-testid="stMetric"]:hover {
-        transform: translateY(-3px);
-        box-shadow: var(--glass-hover-shadow);
-        border-color: rgba(128, 128, 128, 0.2) !important;
-    }
-    
-    /* 메트릭 값 - 테마 텍스트 색상 상속 + 강조 */
-    [data-testid="stMetric"] [data-testid="stMetricValue"] {
-        font-size: 1.6rem !important;
-        font-weight: var(--font-weight-bold) !important;
-        color: var(--st-text) !important;
-        line-height: 1.2;
-    }
-    
-    /* 메트릭 레이블 - 명확한 가독성 */
-    [data-testid="stMetric"] [data-testid="stMetricLabel"] {
-        font-size: 0.72rem !important;
-        font-weight: var(--font-weight-medium);
-        text-transform: uppercase;
-        letter-spacing: 0.6px;
-        opacity: 0.75;
-        color: var(--st-text) !important;
-        margin-bottom: 4px;
-    }
-    
-    /* 메트릭 델타 (변화량) */
-    [data-testid="stMetric"] [data-testid="stMetricDelta"] {
-        font-size: 0.8rem !important;
-        font-weight: var(--font-weight-medium);
-    }
-    
-    /* ============================================
-       🔘 버튼 스타일 (테마 적응형)
-       ============================================ */
-    .stButton > button {
-        border-radius: var(--radius-sm) !important;
-        font-weight: var(--font-weight-medium);
-        padding: var(--space-sm) var(--space-md);
-        transition: all 0.2s ease;
-        border: 1px solid var(--glass-border) !important;
-        background: var(--glass-overlay) !important;
-        color: var(--st-text) !important;
-    }
-    
-    .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--glass-hover-shadow);
-        border-color: var(--st-primary) !important;
-    }
-    
-    .stButton > button:active {
-        transform: translateY(0);
-    }
-    
-    /* Primary 버튼 - 강조 */
-    .stButton > button[kind="primary"],
-    .stButton > button[data-testid="baseButton-primary"] {
-        background: var(--st-primary) !important;
-        border-color: var(--st-primary) !important;
-        color: white !important;
-        font-weight: var(--font-weight-semibold);
+    @keyframes led-pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.7; transform: scale(0.9); }
     }
     
     .stButton > button[kind="primary"]:hover,
