@@ -23,6 +23,9 @@ email-validator>=2.0.0  # 이메일 형식 검증
 # Utilities
 python-dateutil>=2.8.0  # 날짜 파싱
 
+# Cookie Management
+extra-streamlit-components>=0.1.60  # 쿠키 기반 설정 저장
+
 # Visualization (History Dashboard)
 plotly>=5.18.0          # 통계 차트
 

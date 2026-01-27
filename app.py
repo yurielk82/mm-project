@@ -15,7 +15,7 @@ import streamlit.components.v1 as components
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Optional, Tuple, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -24,6 +24,8 @@ import time
 import io
 from jinja2 import Template
 import re
+import base64
+import extra_streamlit_components as stx
 
 # 로컬 모듈
 from style import (
@@ -739,15 +741,91 @@ def render_step_indicator():
     st.divider()
 
 
-def get_smtp_config() -> dict:
-    """SMTP 설정 로드 (Secrets First)"""
+def get_cookie_manager():
+    """쿠키 매니저 싱글톤"""
+    return stx.CookieManager(key="smtp_cookie_manager")
+
+
+def encode_credential(value: str) -> str:
+    """자격증명 인코딩 (Base64)"""
+    if not value:
+        return ""
+    return base64.b64encode(value.encode()).decode()
+
+
+def decode_credential(value: str) -> str:
+    """자격증명 디코딩 (Base64)"""
+    if not value:
+        return ""
+    try:
+        return base64.b64decode(value.encode()).decode()
+    except Exception:
+        return ""
+
+
+def save_to_cookie(provider: str, username: str, password: str):
+    """SMTP 자격증명을 쿠키에 저장 (90일 유효)"""
+    try:
+        cookie_manager = get_cookie_manager()
+        expires = datetime.now() + timedelta(days=90)
+        
+        cookie_manager.set("smtp_provider", provider, expires_at=expires, key="set_provider")
+        cookie_manager.set("smtp_username", encode_credential(username), expires_at=expires, key="set_username")
+        cookie_manager.set("smtp_password", encode_credential(password), expires_at=expires, key="set_password")
+    except Exception as e:
+        # 쿠키 저장 실패해도 계속 진행
+        pass
+
+
+def load_from_cookie() -> dict:
+    """쿠키에서 SMTP 자격증명 로드"""
     config = {
         'username': '',
         'password': '',
         'provider': 'Hiworks (하이웍스)',
-        'from_secrets': False
+        'from_cookie': False
     }
     
+    try:
+        cookie_manager = get_cookie_manager()
+        
+        provider = cookie_manager.get("smtp_provider")
+        username_encoded = cookie_manager.get("smtp_username")
+        password_encoded = cookie_manager.get("smtp_password")
+        
+        if username_encoded and password_encoded:
+            config['provider'] = provider or 'Hiworks (하이웍스)'
+            config['username'] = decode_credential(username_encoded)
+            config['password'] = decode_credential(password_encoded)
+            config['from_cookie'] = True
+    except Exception:
+        pass
+    
+    return config
+
+
+def clear_cookie_credentials():
+    """쿠키에서 SMTP 자격증명 삭제"""
+    try:
+        cookie_manager = get_cookie_manager()
+        cookie_manager.delete("smtp_provider", key="del_provider")
+        cookie_manager.delete("smtp_username", key="del_username")
+        cookie_manager.delete("smtp_password", key="del_password")
+    except Exception:
+        pass
+
+
+def get_smtp_config() -> dict:
+    """SMTP 설정 로드 (Secrets > Cookie > Session > 수동 입력)"""
+    config = {
+        'username': '',
+        'password': '',
+        'provider': 'Hiworks (하이웍스)',
+        'from_secrets': False,
+        'from_cookie': False
+    }
+    
+    # 1. Secrets에서 로드 (최우선)
     try:
         if 'SMTP_ID' in st.secrets and 'SMTP_PW' in st.secrets:
             config['username'] = st.secrets['SMTP_ID']
@@ -759,26 +837,43 @@ def get_smtp_config() -> dict:
     except Exception:
         pass
     
+    # 2. Session State에서 로드
     if st.session_state.get('saved_smtp_user'):
         config['username'] = st.session_state.saved_smtp_user
         config['password'] = st.session_state.get('saved_smtp_pass', '')
         config['provider'] = st.session_state.get('saved_smtp_provider', 'Hiworks (하이웍스)')
+        return config
+    
+    # 3. Cookie에서 로드
+    cookie_config = load_from_cookie()
+    if cookie_config.get('from_cookie') and cookie_config.get('username'):
+        config.update(cookie_config)
+        # 쿠키에서 불러온 값을 세션에도 저장
+        st.session_state.saved_smtp_user = config['username']
+        st.session_state.saved_smtp_pass = config['password']
+        st.session_state.saved_smtp_provider = config['provider']
     
     return config
 
 
 def save_to_session(provider: str, username: str, password: str):
-    """SMTP 자격증명 세션 저장"""
+    """SMTP 자격증명 세션 + 쿠키 저장"""
     st.session_state.saved_smtp_provider = provider
     st.session_state.saved_smtp_user = username
     st.session_state.saved_smtp_pass = password
+    
+    # 쿠키에도 저장 (90일 유효)
+    save_to_cookie(provider, username, password)
 
 
 def clear_session_credentials():
-    """세션 자격증명 삭제"""
+    """세션 및 쿠키 자격증명 삭제"""
     for key in ['saved_smtp_provider', 'saved_smtp_user', 'saved_smtp_pass']:
         if key in st.session_state:
             del st.session_state[key]
+    
+    # 쿠키도 삭제
+    clear_cookie_credentials()
 
 
 def render_local_guide_dialog():
@@ -946,10 +1041,14 @@ def render_smtp_sidebar():
         
         with st.expander("⚙️ SMTP 설정", expanded=smtp_expanded):
             smtp_defaults = get_smtp_config()
-            from_secrets = smtp_defaults['from_secrets']
+            from_secrets = smtp_defaults.get('from_secrets', False)
+            from_cookie = smtp_defaults.get('from_cookie', False)
             
+            # 로드 소스 표시
             if from_secrets:
                 st.info("🔐 Secrets에서 로드됨", icon="ℹ️")
+            elif from_cookie:
+                st.info("🍪 저장된 설정 로드됨", icon="ℹ️")
             
             provider_list = list(SMTP_PROVIDERS.keys())
             default_provider_idx = 0
@@ -985,6 +1084,16 @@ def render_smtp_sidebar():
                 key="smtp_pass"
             )
             
+            # 저장 옵션 (Secrets가 아닐 때만)
+            if not from_secrets:
+                save_credentials = st.checkbox(
+                    "이 브라우저에 저장 (90일)",
+                    value=True,
+                    help="쿠키에 암호화하여 저장합니다"
+                )
+            else:
+                save_credentials = False
+            
             if st.button("🔌 연결 테스트", use_container_width=True, type="primary"):
                 final_username = smtp_username if smtp_username else smtp_defaults['username']
                 final_password = smtp_password if smtp_password else smtp_defaults['password']
@@ -1003,13 +1112,21 @@ def render_smtp_sidebar():
                             st.success("연결 성공!")
                             server.quit()
                             st.session_state.smtp_config = config
-                            if not from_secrets:
+                            # 저장 옵션 체크 시 쿠키에 저장
+                            if save_credentials and not from_secrets:
                                 save_to_session(provider, final_username, final_password)
                             st.rerun()
                         else:
                             st.error(f"{error}")
                 else:
                     st.warning("입력값 확인 필요")
+            
+            # 저장된 정보 삭제 버튼
+            if from_cookie or st.session_state.get('saved_smtp_user'):
+                if st.button("🗑️ 저장된 정보 삭제", use_container_width=True):
+                    clear_session_credentials()
+                    st.success("삭제 완료!")
+                    st.rerun()
         
         # 설정 가이드
         with st.expander("📖 도움말", expanded=False):
