@@ -65,14 +65,29 @@ DEFAULT_BATCH_DELAY = 30
 
 
 # ============================================================================
-# CUSTOM CSS - Enterprise Dashboard Style
+# CUSTOM CSS - SaaS-Level UI with Theme Variables (Light/Dark Mode)
 # ============================================================================
 
 CUSTOM_CSS = """
 <style>
     /* ============================================
-       Enterprise Dashboard Style - UI 정교화
+       SaaS-Level Enterprise UI
+       반응형 테마 대응 (Light/Dark Mode)
        ============================================ */
+    
+    /* CSS 변수 정의 - Streamlit 테마 변수 활용 */
+    :root {
+        --card-bg: var(--secondary-background-color);
+        --card-border: rgba(128, 128, 128, 0.2);
+        --text-primary: var(--text-color);
+        --text-secondary: rgba(128, 128, 128, 0.8);
+        --accent-color: #4a9eff;
+        --success-color: #10b981;
+        --warning-color: #f59e0b;
+        --error-color: #ef4444;
+        --shadow-light: rgba(0, 0, 0, 0.05);
+        --shadow-medium: rgba(0, 0, 0, 0.1);
+    }
     
     /* 전체 레이아웃 */
     .main .block-container {
@@ -81,108 +96,238 @@ CUSTOM_CSS = """
         max-width: 1200px;
     }
     
-    /* 사이드바 전체 가운데 정렬 */
+    /* ============================================
+       사이드바 스타일
+       ============================================ */
+    [data-testid="stSidebar"] {
+        background: var(--secondary-background-color);
+    }
+    
     [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
         text-align: center;
     }
-    [data-testid="stSidebar"] .stButton {
-        display: flex;
-        justify-content: center;
+    
+    /* SMTP 상태 LED 인디케이터 */
+    .smtp-status-led {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
     }
-    [data-testid="stSidebar"] [data-testid="stMetric"] {
-        text-align: center;
+    .smtp-status-led .led {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
     }
-    [data-testid="stSidebar"] .stAlert {
-        text-align: center;
+    .smtp-status-led.connected .led {
+        background: var(--success-color);
+        box-shadow: 0 0 8px var(--success-color);
+    }
+    .smtp-status-led.disconnected .led {
+        background: var(--warning-color);
+        box-shadow: 0 0 8px var(--warning-color);
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
     }
     
-    /* 메트릭 카드 스타일 - 차분한 블루/그레이 톤 */
+    /* ============================================
+       메트릭 카드 스타일 - 테마 반응형
+       ============================================ */
     [data-testid="stMetric"] {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        background: var(--card-bg);
         padding: 1rem;
-        border-radius: 10px;
-        border: 1px solid #dee2e6;
+        border-radius: 12px;
+        border: 1px solid var(--card-border);
+        box-shadow: 0 2px 8px var(--shadow-light);
+        transition: all 0.2s ease;
+    }
+    [data-testid="stMetric"]:hover {
+        box-shadow: 0 4px 16px var(--shadow-medium);
+        transform: translateY(-2px);
     }
     [data-testid="stMetric"] [data-testid="stMetricValue"] {
-        font-size: 1.8rem !important;
+        font-size: 1.6rem !important;
         font-weight: 700 !important;
-        color: #1e3a5f !important;
+        color: var(--text-primary) !important;
     }
     [data-testid="stMetric"] [data-testid="stMetricLabel"] {
-        font-size: 0.85rem !important;
-        color: #6c757d !important;
+        font-size: 0.8rem !important;
+        color: var(--text-secondary) !important;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
     
-    /* 버튼 스타일 - 일관된 디자인 */
+    /* ============================================
+       버튼 스타일 - 모던 트랜지션
+       ============================================ */
     .stButton > button {
-        border-radius: 8px;
+        border-radius: 10px;
         font-weight: 500;
-        transition: all 0.2s ease;
-        border: 1px solid #dee2e6;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid var(--card-border);
+        background: var(--card-bg);
+        color: var(--text-primary);
     }
     .stButton > button:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px var(--shadow-medium);
+    }
+    .stButton > button:active {
+        transform: translateY(0);
     }
     .stButton > button[kind="primary"] {
-        background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+        background: linear-gradient(135deg, var(--accent-color) 0%, #357abd 100%);
         border: none;
+        color: white;
+    }
+    .stButton > button[kind="primary"]:hover {
+        background: linear-gradient(135deg, #357abd 0%, var(--accent-color) 100%);
     }
     
-    /* 데이터프레임/테이블 스타일 */
-    .stDataFrame {
-        border-radius: 8px;
-        overflow: hidden;
-        border: 1px solid #dee2e6;
+    /* ============================================
+       파일 업로드 영역 - Drag & Drop 스타일
+       ============================================ */
+    [data-testid="stFileUploader"] {
+        border: 2px dashed var(--card-border);
+        border-radius: 12px;
+        padding: 1rem;
+        background: var(--card-bg);
+        transition: all 0.3s ease;
+    }
+    [data-testid="stFileUploader"]:hover {
+        border-color: var(--accent-color);
+        background: rgba(74, 158, 255, 0.05);
+    }
+    [data-testid="stFileUploader"] section {
+        padding: 1.5rem;
     }
     
-    /* 수치 데이터 우측 정렬 */
-    .stDataFrame td[data-type="number"] {
-        text-align: right !important;
-    }
-    
-    /* 컨테이너 카드 스타일 */
+    /* ============================================
+       컨테이너/카드 스타일
+       ============================================ */
     [data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"] {
-        border-radius: 10px;
-        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        border: 1px solid var(--card-border);
+        box-shadow: 0 2px 8px var(--shadow-light);
+        background: var(--card-bg);
     }
     
-    /* 상태 배지 */
-    .status-badge {
-        display: inline-block;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: 500;
-    }
-    .status-success { background: rgba(40, 167, 69, 0.15); color: #28a745; }
-    .status-warning { background: rgba(255, 193, 7, 0.15); color: #856404; }
-    .status-error { background: rgba(220, 53, 69, 0.15); color: #dc3545; }
-    .status-pending { background: rgba(108, 117, 125, 0.15); color: #6c757d; }
-    
-    /* 프로그레스 바 */
-    .stProgress > div > div {
-        background: linear-gradient(90deg, #1e3a5f 0%, #2d5a87 100%);
+    /* ============================================
+       데이터프레임/테이블 스타일
+       ============================================ */
+    .stDataFrame {
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid var(--card-border);
+        box-shadow: 0 2px 8px var(--shadow-light);
     }
     
-    /* Expander 스타일 */
+    /* ============================================
+       Expander 스타일
+       ============================================ */
     .streamlit-expanderHeader {
         font-weight: 600;
-        color: #1e3a5f;
-        background: #f8f9fa;
+        background: var(--card-bg);
+        border-radius: 10px;
+        transition: all 0.2s ease;
+    }
+    .streamlit-expanderHeader:hover {
+        background: rgba(74, 158, 255, 0.1);
+    }
+    
+    /* ============================================
+       알림 메시지 스타일
+       ============================================ */
+    .stAlert {
+        border-radius: 10px;
+        border-left-width: 4px;
+    }
+    
+    /* ============================================
+       프로그레스 바
+       ============================================ */
+    .stProgress > div > div {
+        background: linear-gradient(90deg, var(--accent-color) 0%, #357abd 100%);
+        border-radius: 10px;
+    }
+    
+    /* ============================================
+       인풋 필드 스타일
+       ============================================ */
+    .stTextInput > div > div > input,
+    .stSelectbox > div > div,
+    .stMultiSelect > div > div {
+        border-radius: 10px;
+        border: 1px solid var(--card-border);
+        transition: all 0.2s ease;
+    }
+    .stTextInput > div > div > input:focus {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.2);
+    }
+    
+    /* ============================================
+       실시간 로그 박스
+       ============================================ */
+    .log-container {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 10px;
+        padding: 1rem;
+        max-height: 300px;
+        overflow-y: auto;
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 0.85rem;
+    }
+    .log-entry {
+        padding: 4px 8px;
+        border-radius: 4px;
+        margin-bottom: 4px;
+    }
+    .log-success { background: rgba(16, 185, 129, 0.1); color: var(--success-color); }
+    .log-error { background: rgba(239, 68, 68, 0.1); color: var(--error-color); }
+    .log-info { background: rgba(74, 158, 255, 0.1); color: var(--accent-color); }
+    
+    /* ============================================
+       사이드바 푸터
+       ============================================ */
+    .sidebar-footer {
+        text-align: center;
+        padding: 1rem 0;
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+        border-top: 1px solid var(--card-border);
+        margin-top: 1rem;
+    }
+    
+    /* ============================================
+       미니멀 배너 (SMTP 경고용)
+       ============================================ */
+    .mini-banner {
+        padding: 8px 12px;
         border-radius: 8px;
+        font-size: 0.75rem;
+        text-align: center;
+        margin-bottom: 0.5rem;
     }
-    
-    /* 툴팁 강조 */
-    .stTooltipIcon {
-        color: #6c757d;
+    .mini-banner.warning {
+        background: rgba(245, 158, 11, 0.15);
+        color: var(--warning-color);
+        border: 1px solid rgba(245, 158, 11, 0.3);
     }
-    
-    /* 성공/경고/에러 메시지 */
-    .stSuccess { border-left: 4px solid #28a745; }
-    .stWarning { border-left: 4px solid #ffc107; }
-    .stError { border-left: 4px solid #dc3545; }
-    .stInfo { border-left: 4px solid #17a2b8; }
+    .mini-banner.success {
+        background: rgba(16, 185, 129, 0.15);
+        color: var(--success-color);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+    }
 </style>
 """
 
@@ -741,10 +886,11 @@ def render_step_indicator():
     st.divider()
 
 
-@st.cache_resource
 def get_cookie_manager():
-    """쿠키 매니저 싱글톤 (리소스 캐싱)"""
-    return stx.CookieManager(key="smtp_cookie_manager")
+    """쿠키 매니저 - 세션별 싱글톤 (캐싱 경고 해결)"""
+    if 'cookie_manager' not in st.session_state:
+        st.session_state.cookie_manager = stx.CookieManager(key="smtp_cookie_manager")
+    return st.session_state.cookie_manager
 
 
 def encode_credential(value: str) -> str:
@@ -765,10 +911,10 @@ def decode_credential(value: str) -> str:
 
 
 def save_to_cookie(provider: str, username: str, password: str):
-    """SMTP 자격증명을 쿠키에 저장 (90일 유효)"""
+    """SMTP 자격증명을 쿠키에 저장 (30일 유효)"""
     try:
         cookie_manager = get_cookie_manager()
-        expires = datetime.now() + timedelta(days=90)
+        expires = datetime.now() + timedelta(days=30)
         
         cookie_manager.set("smtp_provider", provider, expires_at=expires, key="set_provider")
         cookie_manager.set("smtp_username", encode_credential(username), expires_at=expires, key="set_username")
@@ -884,18 +1030,15 @@ def get_smtp_config() -> dict:
 
 
 def save_to_session(provider: str, username: str, password: str, save_cookie: bool = True):
-    """SMTP 자격증명 세션 저장 (+ 옵션으로 쿠키 저장)"""
+    """SMTP 자격증명 세션 저장 (+ 옵션으로 쿠키 저장, 30일 유효)"""
     st.session_state.saved_smtp_provider = provider
     st.session_state.saved_smtp_user = username
     st.session_state.saved_smtp_pass = password
     
-    # 쿠키에도 저장 (90일 유효)
+    # 쿠키에도 저장 (30일 유효)
     if save_cookie:
         save_to_cookie(provider, username, password)
         st.session_state.loaded_from_cookie = True
-    
-    # 쿠키에도 저장 (90일 유효)
-    save_to_cookie(provider, username, password)
 
 
 def clear_session_credentials():
@@ -1003,48 +1146,57 @@ streamlit run app.py""", language="bash")
 
 
 def render_smtp_sidebar():
-    """사이드바 - Light/Dark 모드 호환, 깔끔한 UX"""
+    """사이드바 - SaaS 수준 UI, Light/Dark 테마 대응"""
     with st.sidebar:
         
         # ============================================================
-        # TOP: 브랜드 타이틀 + 버전 (Streamlit 네이티브)
+        # TOP: 브랜드 + SMTP 상태 LED
         # ============================================================
         st.markdown("### 📧 CSO 메일머지")
         st.caption(f"v{VERSION}")
         
-        # SMTP 상태 배지 (Streamlit 네이티브 컴포넌트 사용)
+        # SMTP 상태 LED 스타일 인디케이터
         if st.session_state.smtp_config:
-            st.success("● SMTP 연결됨", icon="✅")
+            st.markdown("""
+            <div class="smtp-status-led connected">
+                <span class="led"></span>
+                <span>SMTP 연결됨</span>
+            </div>
+            """, unsafe_allow_html=True)
         else:
-            st.warning("○ SMTP 연결 필요", icon="⚠️")
+            st.markdown("""
+            <div class="mini-banner warning">
+                ⚠️ SMTP 연결이 필요합니다
+            </div>
+            """, unsafe_allow_html=True)
         
         st.divider()
         
         # ============================================================
-        # MIDDLE: 작업 현황 (Streamlit 네이티브 metric)
+        # MIDDLE: 메트릭 카드 (데이터/발송)
         # ============================================================
-        st.markdown("**📊 작업 현황**")
+        data_count = len(st.session_state.df) if st.session_state.df is not None else 0
         
         col1, col2 = st.columns(2)
         with col1:
-            data_count = len(st.session_state.df) if st.session_state.df is not None else 0
-            st.metric("데이터", f"{data_count:,}행")
+            st.metric("데이터", f"{data_count:,}")
         
         with col2:
             if st.session_state.grouped_data:
                 valid = sum(1 for g in st.session_state.grouped_data.values() 
                            if g['recipient_email'] and validate_email(g['recipient_email']))
                 total = len(st.session_state.grouped_data)
+                success_rate = f"{(valid/total*100):.0f}%" if total > 0 else "0%"
                 st.metric("발송", f"{valid}/{total}")
             else:
                 st.metric("발송", "0/0")
         
-        # 초기화 확인 상태
+        # 초기화 버튼
         if 'confirm_reset' not in st.session_state:
             st.session_state.confirm_reset = False
         
         if not st.session_state.confirm_reset:
-            if st.button("🔄 처음부터", use_container_width=True, 
+            if st.button("↻ 처음부터", use_container_width=True, 
                         help="모든 데이터를 초기화합니다"):
                 st.session_state.confirm_reset = True
                 st.rerun()
@@ -1064,40 +1216,24 @@ def render_smtp_sidebar():
         st.divider()
         
         # ============================================================
-        # BOTTOM: 설정 영역 (Expander)
+        # SMTP 계정 설정 영역
         # ============================================================
-        
-        # SMTP 미연결 시 자동 열림
         smtp_connected = st.session_state.smtp_config is not None
         smtp_expanded = not smtp_connected
         
-        with st.expander("⚙️ SMTP 설정", expanded=smtp_expanded):
+        with st.expander("⚙️ SMTP 계정", expanded=smtp_expanded):
             # Cookie에서 자격증명 로드 (기본 동작)
             smtp_defaults = get_smtp_config()
             from_cookie = smtp_defaults.get('from_cookie', False)
             from_secrets = smtp_defaults.get('from_secrets', False)
             
-            # 로드 소스 표시
+            # 로드 소스 표시 (미니멀)
             if from_cookie:
-                st.success("🍪 저장된 설정 로드됨", icon="✅")
+                st.markdown('<div class="mini-banner success">🍪 저장된 설정 로드됨</div>', 
+                           unsafe_allow_html=True)
             elif from_secrets:
-                st.info("🔐 관리자 설정 적용됨", icon="ℹ️")
-            
-            # 관리자 설정 불러오기 버튼 (Secrets가 있을 때만 표시)
-            if has_secrets_config() and not from_secrets:
-                if st.button("🔐 관리자 설정 불러오기", use_container_width=True,
-                            help="secrets.toml에 설정된 SMTP 정보를 불러옵니다"):
-                    secrets_config = load_from_secrets()
-                    if secrets_config.get('from_secrets'):
-                        st.session_state.saved_smtp_user = secrets_config['username']
-                        st.session_state.saved_smtp_pass = secrets_config['password']
-                        st.session_state.saved_smtp_provider = secrets_config['provider']
-                        st.session_state.loaded_from_secrets = True
-                        st.session_state.loaded_from_cookie = False
-                        st.success("관리자 설정을 불러왔습니다!")
-                        st.rerun()
-                    else:
-                        st.error("Secrets에 SMTP 설정이 없습니다")
+                st.markdown('<div class="mini-banner success">🔐 관리자 설정 적용됨</div>', 
+                           unsafe_allow_html=True)
             
             provider_list = list(SMTP_PROVIDERS.keys())
             default_provider_idx = 0
@@ -1135,43 +1271,56 @@ def render_smtp_sidebar():
             
             # 저장 옵션
             save_credentials = st.checkbox(
-                "이 브라우저에 저장 (90일)",
+                "이 브라우저에 저장 (30일)",
                 value=True,
                 help="쿠키에 Base64 인코딩하여 저장합니다"
             )
             
-            # 버튼 영역
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                if st.button("🔌 연결 테스트", use_container_width=True, type="primary"):
-                    final_username = smtp_username if smtp_username else smtp_defaults['username']
-                    final_password = smtp_password if smtp_password else smtp_defaults['password']
-                    
-                    if final_username and final_password:
-                        config = {
-                            'server': smtp_server, 
-                            'port': smtp_port,
-                            'username': final_username, 
-                            'password': final_password, 
-                            'use_tls': True
-                        }
-                        with st.spinner("연결 중..."):
-                            server, error = create_smtp_connection(config)
-                            if server:
-                                st.success("연결 성공!")
-                                server.quit()
-                                st.session_state.smtp_config = config
-                                # 저장 옵션 체크 시 쿠키에 저장
-                                if save_credentials:
-                                    save_to_session(provider, final_username, final_password, save_cookie=True)
-                                else:
-                                    save_to_session(provider, final_username, final_password, save_cookie=False)
-                                st.rerun()
+            # 연결 테스트 버튼
+            if st.button("🔌 연결 테스트", use_container_width=True, type="primary"):
+                final_username = smtp_username if smtp_username else smtp_defaults['username']
+                final_password = smtp_password if smtp_password else smtp_defaults['password']
+                
+                if final_username and final_password:
+                    config = {
+                        'server': smtp_server, 
+                        'port': smtp_port,
+                        'username': final_username, 
+                        'password': final_password, 
+                        'use_tls': True
+                    }
+                    with st.spinner("연결 중..."):
+                        server, error = create_smtp_connection(config)
+                        if server:
+                            st.success("✓ 연결 성공!")
+                            server.quit()
+                            st.session_state.smtp_config = config
+                            # 저장 옵션 체크 시 쿠키에 저장
+                            if save_credentials:
+                                save_to_session(provider, final_username, final_password, save_cookie=True)
                             else:
-                                st.error(f"{error}")
-                    else:
-                        st.warning("입력값 확인 필요")
+                                save_to_session(provider, final_username, final_password, save_cookie=False)
+                            st.rerun()
+                        else:
+                            st.error(f"{error}")
+                else:
+                    st.warning("입력값 확인 필요")
+            
+            # 하단 버튼 영역
+            col1, col2 = st.columns(2)
+            with col1:
+                # Secrets 로드 버튼 (하단)
+                if has_secrets_config() and not from_secrets:
+                    if st.button("🔐 Secrets", use_container_width=True,
+                                help="secrets.toml 설정 로드"):
+                        secrets_config = load_from_secrets()
+                        if secrets_config.get('from_secrets'):
+                            st.session_state.saved_smtp_user = secrets_config['username']
+                            st.session_state.saved_smtp_pass = secrets_config['password']
+                            st.session_state.saved_smtp_provider = secrets_config['provider']
+                            st.session_state.loaded_from_secrets = True
+                            st.session_state.loaded_from_cookie = False
+                            st.rerun()
             
             with col2:
                 # 저장된 정보 삭제 버튼
@@ -1179,7 +1328,6 @@ def render_smtp_sidebar():
                     if st.button("🗑️ 삭제", use_container_width=True,
                                 help="저장된 SMTP 정보를 삭제합니다"):
                         clear_session_credentials()
-                        st.success("삭제 완료!")
                         st.rerun()
         
         # 설정 가이드
@@ -1203,8 +1351,13 @@ SMTP_PW = "app_password"
             st.session_state.show_local_guide = True
             st.rerun()
         
-        st.caption("Designed & Developed by Kwon dae-hwan")
-        st.caption("© 2026 KUP Sales Management")
+        # 푸터 (테마 반응형)
+        st.markdown("""
+        <div class="sidebar-footer">
+            Designed & Developed by Kwon dae-hwan<br>
+            © 2026 KUP Sales Management
+        </div>
+        """, unsafe_allow_html=True)
 
 
 def render_step1():
