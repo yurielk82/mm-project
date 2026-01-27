@@ -186,17 +186,59 @@ CUSTOM_CSS = """
     }
     
     /* ============================================
-       🔧 사이드바 - 테마 적응형 (깔끔한 구분)
+       🔧 사이드바 - 컴팩트 SaaS UI
        ============================================ */
     [data-testid="stSidebar"] {
         background: var(--st-secondary-bg) !important;
     }
     
     [data-testid="stSidebar"] > div:first-child {
-        padding: var(--space-md);
-        display: flex;
-        flex-direction: column;
-        gap: var(--space-sm);
+        padding: 0.5rem 1rem !important;
+    }
+    
+    /* 사이드바 요소 간 간격 극소화 */
+    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+        gap: 0 !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] > div {
+        margin-bottom: 0 !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+    }
+    
+    /* 이전/다음 버튼 영역 - 상단 여백 제거 */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
+        margin-top: -0.5rem !important;
+        margin-bottom: 0.25rem !important;
+        gap: 0 !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] [data-testid="column"] {
+        padding: 0 !important;
+    }
+    
+    /* 사이드바 버튼 컴팩트 */
+    [data-testid="stSidebar"] .stButton {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    [data-testid="stSidebar"] .stButton > button {
+        padding: 4px 8px !important;
+        min-height: 0 !important;
+        height: auto !important;
+    }
+    
+    /* Expander 컴팩트 */
+    [data-testid="stSidebar"] [data-testid="stExpander"] {
+        margin-top: 0.25rem !important;
+        margin-bottom: 0.25rem !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stExpander"] summary {
+        padding: 0.4rem 0.5rem !important;
+    }
+    
+    /* Divider 여백 줄이기 */
+    [data-testid="stSidebar"] hr {
+        margin: 0.3rem 0 !important;
     }
     
     /* 사이드바 텍스트 - 테마 색상 상속 + 가독성 확보 */
@@ -1721,7 +1763,8 @@ def render_circular_progress(current_step: int, total_steps: int):
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 1rem 0;
+    padding: 0.3rem 0 0 0;
+    margin-bottom: -0.5rem;
 }}
 .progress-circle {{
     position: relative;
@@ -1760,15 +1803,16 @@ def render_circular_progress(current_step: int, total_steps: int):
 }}
 .progress-label {{
     text-align: center;
-    margin-top: 0.75rem;
+    margin-top: 0.3rem;
+    margin-bottom: 0;
 }}
 .progress-step-name {{
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     font-weight: 600;
     color: #00d4ff;
 }}
 .progress-status {{
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     color: rgba(128,128,128,0.7);
     margin-top: 2px;
 }}
@@ -1804,44 +1848,28 @@ def render_circular_progress(current_step: int, total_steps: int):
 
 
 def render_step_nav_buttons(current_step: int, total_steps: int):
-    """이전단계/다음단계 텍스트 버튼 (테두리 없음)"""
+    """이전/다음 텍스트 버튼 - 프로그레스 바와 밀착"""
     prev_disabled = current_step <= 1
     next_disabled = current_step >= total_steps
     
-    # 텍스트 버튼 스타일 CSS - 여백 대폭 축소, 글씨 작게
+    # 컴팩트 네비게이션 버튼 CSS
     st.markdown("""
     <style>
-    /* 사이드바 내 스텝 네비게이션 영역 전체 - 상단 여백 제거 */
-    [data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"]:has(.step-nav-container) {
-        margin-top: -1.5rem !important;
-        padding-top: 0 !important;
-    }
-    /* 네비게이션 버튼 컨테이너 - 여백 최소화 */
-    .step-nav-container {
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-    .step-nav-container + div {
-        margin-top: 0.5rem !important;
-    }
-    /* 사이드바 네비게이션 텍스트 버튼 - 테두리 없음, 여백 최소 */
+    /* 네비게이션 버튼 - 프로그레스 바와 밀착 */
     .step-nav-container .stButton > button {
         background: transparent !important;
         border: none !important;
         box-shadow: none !important;
-        padding: 0 2px !important;
+        padding: 2px 6px !important;
         margin: 0 !important;
         min-height: 0 !important;
         height: auto !important;
-        line-height: 1 !important;
-        font-size: 0.65rem !important;
+        line-height: 1.2 !important;
+        font-size: 0.68rem !important;
         font-weight: 500 !important;
     }
     .step-nav-container .stButton {
         margin: 0 !important;
-        padding: 0 !important;
-    }
-    .step-nav-container [data-testid="column"] {
         padding: 0 !important;
     }
     /* 이전 버튼 */
