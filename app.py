@@ -2460,70 +2460,12 @@ def render_step2():
                 base_keys = [k for k in base_keys if k and k.lower() not in ['nan', '(비어 있음)']]
                 st.success(f"예상 그룹 수: **{len(base_keys)}개**", icon="📊")
     
-    # 데이터 타입 설정 (세로 나열, 중복 선택 방지)
+    # ============================================================
+    # 1️⃣ 이메일 표시 컬럼 (먼저 선택)
+    # ============================================================
     with st.container(border=True):
-        st.markdown("##### 컬럼 타입 설정")
-        st.caption("금액, 퍼센트, 날짜, ID 컬럼을 지정하면 자동 포맷팅됩니다 (중복 선택 불가)")
-        
-        # 이전 저장된 값 또는 기본값
-        saved_amount = st.session_state.get('amount_cols', [])
-        saved_percent = st.session_state.get('percent_cols', [])
-        saved_date = st.session_state.get('date_cols', [])
-        saved_id = st.session_state.get('id_cols', [])
-        
-        # 기본 후보
-        amount_candidates = [c for c in columns if any(k in c for k in ['금액', '처방', '수수료'])]
-        percent_candidates = [c for c in columns if any(k in c for k in ['%', '율', '퍼센트', 'percent', 'rate'])]
-        date_candidates = [c for c in columns if '월' in c or 'date' in c.lower()]
-        id_candidates = [c for c in columns if '코드' in c or '번호' in c]
-        
-        # 금액 컬럼
-        amount_default = [c for c in saved_amount if c in columns] or [c for c in amount_candidates if c in columns]
-        amount_cols = st.multiselect(
-            "💰 금액 컬럼", 
-            columns, 
-            default=amount_default,
-            help="천단위 쉼표가 적용됩니다 (예: 1,250,000)"
-        )
-        st.session_state.amount_cols = amount_cols
-        
-        # 퍼센트 컬럼 (금액과 겹치지 않게)
-        available_for_percent = [c for c in columns if c not in amount_cols]
-        percent_default = [c for c in saved_percent if c in available_for_percent] or [c for c in percent_candidates if c in available_for_percent]
-        percent_cols = st.multiselect(
-            "📊 퍼센트 컬럼", 
-            available_for_percent, 
-            default=percent_default,
-            help="% 기호가 적용됩니다 (예: 15.0%)"
-        )
-        st.session_state.percent_cols = percent_cols
-        
-        # 날짜 컬럼 (금액/퍼센트와 겹치지 않게)
-        available_for_date = [c for c in columns if c not in amount_cols and c not in percent_cols]
-        date_default = [c for c in saved_date if c in available_for_date] or [c for c in date_candidates if c in available_for_date]
-        date_cols = st.multiselect(
-            "📅 날짜 컬럼", 
-            available_for_date, 
-            default=date_default,
-            help="YYYY-MM-DD 형식으로 통일됩니다"
-        )
-        st.session_state.date_cols = date_cols
-        
-        # ID 컬럼 (금액/퍼센트/날짜와 겹치지 않게)
-        available_for_id = [c for c in columns if c not in amount_cols and c not in percent_cols and c not in date_cols]
-        id_default = [c for c in saved_id if c in available_for_id] or [c for c in id_candidates if c in available_for_id]
-        id_cols = st.multiselect(
-            "🔢 ID 컬럼", 
-            available_for_id, 
-            default=id_default,
-            help="숫자 끝의 .0이 제거됩니다"
-        )
-        st.session_state.id_cols = id_cols
-    
-    # 표시 컬럼 선택 + 순서 조절
-    with st.container(border=True):
-        st.markdown("##### 이메일 표시 컬럼")
-        st.caption("이메일 본문 테이블에 표시할 컬럼을 선택하고 순서를 조절하세요")
+        st.markdown("##### 📧 이메일 표시 컬럼")
+        st.caption("이메일 본문 테이블에 표시할 컬럼을 선택하세요")
         
         # 최초 로드 시 모든 컬럼 선택 (그룹키 제외)
         saved_display = st.session_state.get('display_cols', [])
@@ -2533,44 +2475,123 @@ def render_step2():
             default_display = [c for c in saved_display if c in columns]
         
         display_cols = st.multiselect(
-            "컬럼 선택 (전체)", 
+            "표시할 컬럼 선택", 
             columns, 
             default=default_display,
-            label_visibility="collapsed"
+            label_visibility="collapsed",
+            help="이메일에 포함될 테이블의 컬럼을 선택하세요"
         )
-        
-        # 컬럼 순서 조절
-        if display_cols and len(display_cols) > 1:
-            st.markdown("**컬럼 순서 조절** (드래그 또는 번호로 조절)")
-            
-            # 현재 순서 또는 기본 순서
-            current_order = st.session_state.get('display_cols_order', [])
-            ordered_cols = [c for c in current_order if c in display_cols]
-            ordered_cols += [c for c in display_cols if c not in ordered_cols]
-            
-            # 순서 조절 UI - 간단한 selectbox 방식
-            new_order = []
-            cols_per_row = 4
-            for i in range(0, len(ordered_cols), cols_per_row):
-                row_cols = st.columns(cols_per_row)
-                for j, col in enumerate(row_cols):
-                    idx = i + j
-                    if idx < len(ordered_cols):
-                        with col:
-                            available = [c for c in ordered_cols if c not in new_order]
-                            if available:
-                                selected = st.selectbox(
-                                    f"{idx+1}번째",
-                                    available,
-                                    index=available.index(ordered_cols[idx]) if ordered_cols[idx] in available else 0,
-                                    key=f"col_order_{idx}"
-                                )
-                                new_order.append(selected)
-            
-            display_cols = new_order if new_order else display_cols
-            st.session_state.display_cols_order = display_cols
-        
         st.session_state.display_cols = display_cols
+        
+        # 컬럼 순서 조절 (선택된 컬럼이 2개 이상일 때)
+        if display_cols and len(display_cols) > 1:
+            with st.expander("🔀 컬럼 순서 조절", expanded=False):
+                # 현재 순서 또는 기본 순서
+                current_order = st.session_state.get('display_cols_order', [])
+                ordered_cols = [c for c in current_order if c in display_cols]
+                ordered_cols += [c for c in display_cols if c not in ordered_cols]
+                
+                # 순서 조절 UI
+                new_order = []
+                cols_per_row = 4
+                for i in range(0, len(ordered_cols), cols_per_row):
+                    row_cols = st.columns(cols_per_row)
+                    for j, col in enumerate(row_cols):
+                        idx = i + j
+                        if idx < len(ordered_cols):
+                            with col:
+                                available = [c for c in ordered_cols if c not in new_order]
+                                if available:
+                                    selected = st.selectbox(
+                                        f"{idx+1}번째",
+                                        available,
+                                        index=available.index(ordered_cols[idx]) if ordered_cols[idx] in available else 0,
+                                        key=f"col_order_{idx}"
+                                    )
+                                    new_order.append(selected)
+                
+                if new_order:
+                    display_cols = new_order
+                    st.session_state.display_cols_order = display_cols
+                    st.session_state.display_cols = display_cols
+    
+    # ============================================================
+    # 2️⃣ 컬럼 타입 설정 (이미 선택된 타입은 다른 옵션에서 제외)
+    # ============================================================
+    with st.container(border=True):
+        st.markdown("##### 🏷️ 컬럼 타입 설정")
+        st.caption("자동 포맷팅을 적용할 컬럼을 선택하세요 (선택된 컬럼은 다른 타입에서 자동 제외)")
+        
+        # 이전 저장된 값
+        saved_amount = st.session_state.get('amount_cols', [])
+        saved_percent = st.session_state.get('percent_cols', [])
+        saved_date = st.session_state.get('date_cols', [])
+        saved_id = st.session_state.get('id_cols', [])
+        
+        # 기본 후보 (자동 감지)
+        amount_candidates = [c for c in columns if any(k in c for k in ['금액', '처방', '수수료'])]
+        percent_candidates = [c for c in columns if any(k in c for k in ['%', '율', '퍼센트', 'percent', 'rate'])]
+        date_candidates = [c for c in columns if '월' in c or 'date' in c.lower()]
+        id_candidates = [c for c in columns if '코드' in c or '번호' in c]
+        
+        # 현재 선택된 모든 타입 컬럼 추적
+        all_typed_cols = []
+        
+        # 💰 금액 컬럼
+        amount_default = [c for c in saved_amount if c in columns] or [c for c in amount_candidates if c in columns]
+        amount_cols = st.multiselect(
+            "💰 금액 컬럼",
+            [c for c in columns if c not in all_typed_cols],
+            default=[c for c in amount_default if c not in all_typed_cols],
+            help="천단위 쉼표 적용 (예: 1,250,000)"
+        )
+        st.session_state.amount_cols = amount_cols
+        all_typed_cols.extend(amount_cols)
+        
+        # 📊 퍼센트 컬럼
+        percent_default = [c for c in saved_percent if c in columns and c not in all_typed_cols] or [c for c in percent_candidates if c in columns and c not in all_typed_cols]
+        percent_cols = st.multiselect(
+            "📊 퍼센트 컬럼",
+            [c for c in columns if c not in all_typed_cols],
+            default=[c for c in percent_default if c not in all_typed_cols],
+            help="% 기호 적용 (예: 15.0%)"
+        )
+        st.session_state.percent_cols = percent_cols
+        all_typed_cols.extend(percent_cols)
+        
+        # 📅 날짜 컬럼
+        date_default = [c for c in saved_date if c in columns and c not in all_typed_cols] or [c for c in date_candidates if c in columns and c not in all_typed_cols]
+        date_cols = st.multiselect(
+            "📅 날짜 컬럼",
+            [c for c in columns if c not in all_typed_cols],
+            default=[c for c in date_default if c not in all_typed_cols],
+            help="YYYY-MM-DD 형식으로 통일"
+        )
+        st.session_state.date_cols = date_cols
+        all_typed_cols.extend(date_cols)
+        
+        # 🔢 ID 컬럼
+        id_default = [c for c in saved_id if c in columns and c not in all_typed_cols] or [c for c in id_candidates if c in columns and c not in all_typed_cols]
+        id_cols = st.multiselect(
+            "🔢 ID 컬럼",
+            [c for c in columns if c not in all_typed_cols],
+            default=[c for c in id_default if c not in all_typed_cols],
+            help="숫자 끝 .0 제거"
+        )
+        st.session_state.id_cols = id_cols
+        
+        # 선택된 타입 요약
+        if amount_cols or percent_cols or date_cols or id_cols:
+            type_summary = []
+            if amount_cols:
+                type_summary.append(f"💰 금액: {len(amount_cols)}개")
+            if percent_cols:
+                type_summary.append(f"📊 퍼센트: {len(percent_cols)}개")
+            if date_cols:
+                type_summary.append(f"📅 날짜: {len(date_cols)}개")
+            if id_cols:
+                type_summary.append(f"🔢 ID: {len(id_cols)}개")
+            st.info(" | ".join(type_summary))
     
     # 충돌 해결
     with st.container(border=True):
