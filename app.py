@@ -67,610 +67,800 @@ DEFAULT_BATCH_DELAY = 30
 # ============================================================================
 # CUSTOM CSS - Theme-Adaptive & Fully Responsive UI
 # ============================================================================
-# 단일 CSS 블록으로 SaaS급 UI 구현
-# - Streamlit 테마 변수를 활용한 Light/Dark 모드 완벽 대응
-# - 사이드바와 메인 화면의 위젯 스타일 통일
-# - 8px 그리드 시스템 기반 일관된 여백
+# 핵심 원칙:
+# 1. 하드코딩 색상 금지 - Streamlit 테마 변수만 사용
+# 2. rgba() 기반 반투명 효과 - 테마 적응형
+# 3. Flexbox/Grid + 미디어 쿼리 - 완전 반응형
 # ============================================================================
 
-def apply_saas_style():
-    """
-    단일 CSS 블록으로 Streamlit 앱을 SaaS급 UI로 변환
+CUSTOM_CSS = """
+<style>
+    /* ============================================
+       🎨 Theme-Adaptive CSS Variables
+       Streamlit 테마 엔진 변수 전용
+       하드코딩 색상 완전 제거
+       ============================================ */
     
-    특징:
-    - Light/Dark 모드 자동 대응 (Streamlit 테마 변수 활용)
-    - 사이드바/메인 위젯 동일 스타일
-    - 8px 그리드 기반 일관된 여백
-    - Glass Morphism 효과
-    - 부드러운 호버/트랜지션 효과
-    """
-    css = """
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <style>
-        /* ============================================
-           🎨 SaaS-Grade Design System
-           Light/Dark 모드 완벽 대응
-           ============================================ */
+    :root {
+        /* Streamlit 테마 변수 참조 (하드코딩 금지) */
+        --st-primary: var(--primary-color);
+        --st-bg: var(--background-color);
+        --st-secondary-bg: var(--secondary-background-color);
+        --st-text: var(--text-color);
         
-        /* ============================================
-           🔧 extra-streamlit-components Material Icons 숨기기
-           CookieManager 등이 사용하는 아이콘 텍스트 제거
-           ============================================ */
+        /* 반투명 효과 (테마 적응형 - 중립 회색) */
+        --glass-overlay: rgba(128, 128, 128, 0.06);
+        --glass-border: rgba(128, 128, 128, 0.12);
+        --glass-shadow: 0 4px 16px rgba(128, 128, 128, 0.08);
+        --glass-hover-shadow: 0 8px 24px rgba(128, 128, 128, 0.12);
         
-        /* Material Icons 폰트 적용 */
-        .material-icons {
-            font-family: 'Material Icons' !important;
-            font-size: 0 !important;
-            visibility: hidden !important;
+        /* 상태 색상 (의미론적 고정 - 접근성 유지) */
+        --color-success: #22c55e;
+        --color-success-soft: rgba(34, 197, 94, 0.12);
+        --color-warning: #f59e0b;
+        --color-warning-soft: rgba(245, 158, 11, 0.12);
+        --color-error: #ef4444;
+        --color-error-soft: rgba(239, 68, 68, 0.12);
+        --color-info: #3b82f6;
+        --color-info-soft: rgba(59, 130, 246, 0.12);
+        
+        /* 반응형 간격 */
+        --space-xs: 0.25rem;
+        --space-sm: 0.5rem;
+        --space-md: 1rem;
+        --space-lg: 1.5rem;
+        --space-xl: 2rem;
+        
+        /* 모서리 반경 */
+        --radius-sm: 6px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --radius-full: 50px;
+        
+        /* 타이포그래피 */
+        --font-weight-normal: 400;
+        --font-weight-medium: 500;
+        --font-weight-semibold: 600;
+        --font-weight-bold: 700;
+    }
+    
+    /* ============================================
+       📱 반응형 미디어 쿼리 (완전 반응형)
+       ============================================ */
+    
+    /* 모바일 (< 640px) */
+    @media (max-width: 640px) {
+        .main .block-container {
+            padding: var(--space-sm) !important;
         }
-        
-        /* stx 컴포넌트의 아이콘 텍스트 완전 숨기기 */
-        [class*="keyboard_double"],
-        [class*="arrow_right"],
-        [class*="arrow_left"],
-        span:has(> .material-icons) {
-            display: none !important;
+        [data-testid="stMetric"] {
+            padding: var(--space-sm) !important;
         }
-        
-        /* iframe 내부 Material Icons도 숨기기 */
-        iframe[title*="extra"] {
-            display: none !important;
+        [data-testid="stMetric"] [data-testid="stMetricValue"] {
+            font-size: 1.1rem !important;
         }
-        
-        /* Expander summary 내 불필요한 텍스트 숨기기 */
-        [data-testid="stExpander"] summary > div > div:first-child {
-            display: flex !important;
-            align-items: center !important;
+        [data-testid="stMetric"] [data-testid="stMetricLabel"] {
+            font-size: 0.65rem !important;
         }
-        
-        /* _arrow 텍스트가 포함된 요소 숨기기 */
-        [data-testid="stMarkdown"] p:empty,
-        [data-testid="stMarkdown"]:has(> div:empty) {
-            display: none !important;
+        .step-container {
+            flex-wrap: wrap;
+            gap: var(--space-sm);
         }
-        
-        :root {
-            /* Streamlit 테마 변수 참조 */
-            --st-primary: var(--primary-color);
-            --st-bg: var(--background-color);
-            --st-secondary-bg: var(--secondary-background-color);
-            --st-text: var(--text-color);
-            
-            /* 시스템 폰트 - 이모지 완벽 지원 */
-            --font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 
-                           'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
-            
-            /* Glass Morphism (테마 적응형) */
-            --glass-overlay: rgba(128, 128, 128, 0.05);
-            --glass-border: rgba(128, 128, 128, 0.12);
-            --glass-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-            --glass-hover-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-            
-            /* 상태 색상 */
-            --color-success: #10b981;
-            --color-success-soft: rgba(16, 185, 129, 0.1);
-            --color-warning: #f59e0b;
-            --color-warning-soft: rgba(245, 158, 11, 0.1);
-            --color-error: #ef4444;
-            --color-error-soft: rgba(239, 68, 68, 0.1);
-            --color-info: #3b82f6;
-            --color-info-soft: rgba(59, 130, 246, 0.1);
-            
-            /* 8px 그리드 시스템 */
-            --space-xs: 4px;
-            --space-sm: 8px;
-            --space-md: 16px;
-            --space-lg: 24px;
-            --space-xl: 32px;
-            
-            /* 모서리 반경 */
-            --radius-sm: 6px;
-            --radius-md: 12px;
-            --radius-lg: 16px;
-            --radius-full: 9999px;
-            
-            /* 트랜지션 */
-            --transition-fast: 150ms ease;
-            --transition-normal: 250ms ease;
-            
-            /* 다크모드 지원 */
-            color-scheme: light dark;
+        .step-circle {
+            width: 28px !important;
+            height: 28px !important;
+            font-size: 0.75rem !important;
         }
-        
-        /* ============================================
-           🌐 전역 폰트 적용
-           ============================================ */
-        html, body, [class*="st-"] {
-            font-family: var(--font-family) !important;
+        .step-label {
+            font-size: 0.65rem !important;
         }
-        
-        /* ============================================
-           📐 메인 레이아웃 컨테이너
-           ============================================ */
+        .led-indicator {
+            padding: 6px 12px !important;
+            font-size: 0.75rem !important;
+        }
+    }
+    
+    /* 태블릿 (640px - 1024px) */
+    @media (min-width: 640px) and (max-width: 1024px) {
+        .main .block-container {
+            padding: var(--space-md) !important;
+        }
+        [data-testid="stMetric"] [data-testid="stMetricValue"] {
+            font-size: 1.3rem !important;
+        }
+    }
+    
+    /* 데스크톱 (> 1024px) */
+    @media (min-width: 1024px) {
         .main .block-container {
             max-width: 1200px;
             padding: var(--space-lg) var(--space-xl) !important;
         }
-        
-        /* ============================================
-           🔧 사이드바 - 메인과 동일한 디자인 언어
-           ============================================ */
-        [data-testid="stSidebar"] {
-            background: var(--st-secondary-bg) !important;
-            border-right: 1px solid var(--glass-border);
+    }
+    
+    /* 대형 화면 (> 1400px) */
+    @media (min-width: 1400px) {
+        .main .block-container {
+            max-width: 1400px;
         }
-        
-        [data-testid="stSidebar"] > div:first-child {
-            padding: var(--space-md) !important;
+    }
+    
+    /* ============================================
+       🔧 사이드바 - 테마 적응형 (깔끔한 구분)
+       ============================================ */
+    [data-testid="stSidebar"] {
+        background: var(--st-secondary-bg) !important;
+    }
+    
+    [data-testid="stSidebar"] > div:first-child {
+        padding: var(--space-md);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-sm);
+    }
+    
+    /* 사이드바 텍스트 - 테마 색상 상속 + 가독성 확보 */
+    [data-testid="stSidebar"] * {
+        color: var(--st-text) !important;
+    }
+    
+    /* 사이드바 섹션 구분 */
+    [data-testid="stSidebar"] hr {
+        margin: var(--space-sm) 0;
+        border: none;
+        border-top: 1px solid var(--glass-border);
+        opacity: 0.5;
+    }
+    
+    /* 사이드바 메트릭 카드 - 세로 배치, 가로로 길게 */
+    [data-testid="stSidebar"] [data-testid="stMetric"] {
+        background: var(--glass-overlay) !important;
+        border: 1px solid var(--glass-border) !important;
+        border-radius: var(--radius-md) !important;
+        padding: var(--space-md) var(--space-md) !important;
+        margin-bottom: var(--space-sm) !important;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    [data-testid="stSidebar"] [data-testid="stMetricValue"] {
+        font-size: 1.4rem !important;
+        font-weight: var(--font-weight-bold) !important;
+        text-align: right;
+    }
+    
+    [data-testid="stSidebar"] [data-testid="stMetricLabel"] {
+        font-size: 0.8rem !important;
+        font-weight: var(--font-weight-medium) !important;
+        opacity: 0.9;
+        text-align: left;
+    }
+    
+    [data-testid="stSidebar"] [data-testid="stMetricDelta"] {
+        font-size: 0.7rem !important;
+        text-align: right;
+    }
+    
+    /* ============================================
+       💡 LED 상태 인디케이터 (강화된 글로우 효과)
+       Light/Dark 모두에서 선명하게 보임
+       ============================================ */
+    .led-indicator {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 10px 18px;
+        border-radius: var(--radius-full);
+        font-size: 0.85rem;
+        font-weight: var(--font-weight-semibold);
+        background: var(--glass-overlay);
+        border: 1px solid var(--glass-border);
+        color: var(--st-text);
+        transition: all 0.3s ease;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+    
+    .led-indicator .led-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        position: relative;
+    }
+    
+    /* 연결됨 - 초록색 LED 글로우 (강화) */
+    .led-indicator.connected {
+        background: var(--color-success-soft);
+        border-color: var(--color-success);
+    }
+    
+    .led-indicator.connected .led-dot {
+        background: var(--color-success);
+        animation: led-pulse-success 2s ease-in-out infinite;
+        box-shadow: 
+            0 0 6px var(--color-success),
+            0 0 12px var(--color-success),
+            0 0 20px rgba(34, 197, 94, 0.5),
+            inset 0 0 4px rgba(255, 255, 255, 0.3);
+    }
+    
+    /* 연결 필요 - 노란색 LED 글로우 (강화) */
+    .led-indicator.disconnected {
+        background: var(--color-warning-soft);
+        border-color: var(--color-warning);
+    }
+    
+    .led-indicator.disconnected .led-dot {
+        background: var(--color-warning);
+        animation: led-pulse-warning 1.5s ease-in-out infinite;
+        box-shadow: 
+            0 0 6px var(--color-warning),
+            0 0 12px var(--color-warning),
+            0 0 20px rgba(245, 158, 11, 0.5),
+            inset 0 0 4px rgba(255, 255, 255, 0.3);
+    }
+    
+    @keyframes led-pulse-success {
+        0%, 100% { 
+            opacity: 1; 
+            transform: scale(1);
+            box-shadow: 
+                0 0 6px var(--color-success),
+                0 0 12px var(--color-success),
+                0 0 20px rgba(34, 197, 94, 0.5);
         }
-        
-        [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
-            gap: var(--space-sm) !important;
+        50% { 
+            opacity: 0.85; 
+            transform: scale(0.95);
+            box-shadow: 
+                0 0 4px var(--color-success),
+                0 0 8px var(--color-success),
+                0 0 14px rgba(34, 197, 94, 0.3);
         }
-        
-        /* ============================================
-           🎯 Input Widgets - 통일된 스타일
-           (사이드바 + 메인 동일 적용)
-           ============================================ */
-        [data-testid="stTextInput"] input,
-        [data-testid="stSelectbox"] > div > div,
-        [data-testid="stNumberInput"] input,
-        [data-testid="stTextArea"] textarea,
-        div[data-baseweb="input"] input,
-        div[data-baseweb="select"] > div {
-            border-radius: var(--radius-md) !important;
-            border: 1px solid var(--glass-border) !important;
-            background: var(--st-bg) !important;
-            color: var(--st-text) !important;
-            box-shadow: var(--glass-shadow) !important;
-            transition: all var(--transition-fast) !important;
-            padding: 10px 14px !important;
+    }
+    
+    @keyframes led-pulse-warning {
+        0%, 100% { 
+            opacity: 1; 
+            transform: scale(1);
+            box-shadow: 
+                0 0 6px var(--color-warning),
+                0 0 12px var(--color-warning),
+                0 0 20px rgba(245, 158, 11, 0.5);
         }
-        
-        [data-testid="stTextInput"] input:focus,
-        [data-testid="stSelectbox"] > div > div:focus-within,
-        [data-testid="stNumberInput"] input:focus,
-        [data-testid="stTextArea"] textarea:focus,
-        div[data-baseweb="input"] input:focus {
-            border-color: var(--st-primary) !important;
-            box-shadow: 0 0 0 3px var(--color-info-soft) !important;
-            outline: none !important;
+        50% { 
+            opacity: 0.85; 
+            transform: scale(0.95);
+            box-shadow: 
+                0 0 4px var(--color-warning),
+                0 0 8px var(--color-warning),
+                0 0 14px rgba(245, 158, 11, 0.3);
         }
-        
-        /* ============================================
-           🔘 Buttons - 통일된 스타일 + 호버 효과
-           (사이드바 + 메인 동일 적용)
-           ============================================ */
-        .stButton > button {
-            border-radius: var(--radius-md) !important;
-            font-weight: 500 !important;
-            transition: all var(--transition-normal) !important;
-            border: 1px solid var(--glass-border) !important;
-            min-height: 38px !important;
-        }
-        
-        .stButton > button:hover {
-            transform: translateY(-1px) !important;
-            box-shadow: var(--glass-hover-shadow) !important;
-        }
-        
-        .stButton > button:active {
-            transform: translateY(0) !important;
-        }
-        
-        /* Primary 버튼 */
-        .stButton > button[data-testid="baseButton-primary"],
-        .stButton > button[kind="primary"] {
-            background: var(--st-primary) !important;
-            border-color: var(--st-primary) !important;
-            color: white !important;
-        }
-        
-        .stButton > button[data-testid="baseButton-primary"]:hover,
-        .stButton > button[kind="primary"]:hover {
-            filter: brightness(1.1) !important;
-            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.35) !important;
-        }
-        
-        /* Secondary 버튼 */
-        .stButton > button[data-testid="baseButton-secondary"],
-        .stButton > button[kind="secondary"] {
-            background: var(--glass-overlay) !important;
-            border: 1px solid var(--st-primary) !important;
-            color: var(--st-primary) !important;
-        }
-        
-        .stButton > button[data-testid="baseButton-secondary"]:hover,
-        .stButton > button[kind="secondary"]:hover {
-            background: var(--color-info-soft) !important;
-        }
-        
-        /* ============================================
-           📦 Expander - 깔끔한 접이식
-           ============================================ */
-        [data-testid="stExpander"] {
-            border: 1px solid var(--glass-border) !important;
-            border-radius: var(--radius-md) !important;
-            background: var(--glass-overlay) !important;
-            overflow: hidden;
-            margin: var(--space-xs) 0 !important;
-        }
-        
-        [data-testid="stExpander"] summary {
-            padding: 12px 16px !important;
-            font-weight: 500 !important;
-        }
-        
-        [data-testid="stExpander"] summary:hover {
-            background: var(--glass-border) !important;
-        }
-        
-        /* ============================================
-           📊 Metrics - 카드 스타일
-           ============================================ */
-        [data-testid="stMetric"] {
-            background: var(--glass-overlay) !important;
-            border: 1px solid var(--glass-border) !important;
-            border-radius: var(--radius-md) !important;
-            padding: var(--space-md) !important;
-            transition: all var(--transition-normal) !important;
-        }
-        
-        [data-testid="stMetric"]:hover {
-            box-shadow: var(--glass-hover-shadow) !important;
-            transform: translateY(-2px) !important;
-        }
-        
-        [data-testid="stMetricValue"] {
-            font-size: 1.5rem !important;
-            font-weight: 700 !important;
-        }
-        
-        [data-testid="stMetricLabel"] {
-            font-size: 0.75rem !important;
-            font-weight: 500 !important;
-            opacity: 0.8;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        /* ============================================
-           💡 LED 상태 인디케이터
-           ============================================ */
-        .led-indicator {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 10px 16px;
-            border-radius: var(--radius-full);
-            font-size: 0.8rem;
-            font-weight: 500;
-            background: var(--glass-overlay);
-            border: 1px solid var(--glass-border);
-            color: var(--st-text);
-            transition: all var(--transition-normal);
-        }
-        
-        .led-indicator .led-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-        }
-        
-        /* 연결됨 - 녹색 */
-        .led-indicator.connected {
-            background: var(--color-success-soft);
-            border-color: var(--color-success);
-        }
-        .led-indicator.connected .led-dot {
-            background: var(--color-success);
-            box-shadow: 0 0 8px var(--color-success);
-            animation: led-pulse 2s ease-in-out infinite;
-        }
-        
-        /* 연결 필요 - 노란색 */
-        .led-indicator.disconnected {
-            background: var(--color-warning-soft);
-            border-color: var(--color-warning);
-        }
-        .led-indicator.disconnected .led-dot {
-            background: var(--color-warning);
-            box-shadow: 0 0 8px var(--color-warning);
-            animation: led-pulse 1.5s ease-in-out infinite;
-        }
-        
-        @keyframes led-pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.7; transform: scale(0.9); }
-        }
-        
-        /* ============================================
-           📁 파일 업로드 - Drag & Drop
-           ============================================ */
-        [data-testid="stFileUploader"] {
-            border: 2px dashed var(--glass-border) !important;
-            border-radius: var(--radius-md);
-            padding: var(--space-lg);
-            background: var(--glass-overlay);
-            transition: all var(--transition-normal);
-        }
-        
-        [data-testid="stFileUploader"]:hover {
-            border-color: var(--st-primary) !important;
-            background: var(--color-info-soft);
-            box-shadow: 0 0 0 4px var(--color-info-soft);
-        }
-        
-        /* ============================================
-           📦 컨테이너/카드 (테마 적응형)
-           ============================================ */
-        [data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"] {
-            border-radius: var(--radius-md) !important;
-            border: 1px solid var(--glass-border) !important;
-            background: var(--glass-overlay);
-        }
-        
-        [data-testid="stVerticalBlockBorderWrapper"] {
-            border-radius: var(--radius-md) !important;
-        }
-        
-        /* ============================================
-           📋 데이터프레임
-           ============================================ */
-        .stDataFrame {
-            border-radius: var(--radius-md) !important;
-            overflow: hidden;
-            border: 1px solid var(--glass-border) !important;
-        }
-        
-        /* ============================================
-           ⚠️ 알림 메시지
-           ============================================ */
-        .stAlert {
-            border-radius: var(--radius-sm) !important;
-            border-left-width: 4px !important;
-        }
-        
-        /* ============================================
-           📈 프로그레스 바
-           ============================================ */
-        .stProgress > div > div {
-            background: var(--st-primary);
-            border-radius: var(--radius-full);
-        }
-        
-        /* ============================================
-           🏷️ 상태 배지 (Status Badge)
-           ============================================ */
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 14px;
-            border-radius: var(--radius-full);
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-        
-        .status-badge.success {
-            background: var(--color-success-soft);
-            color: var(--color-success);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-        }
-        
-        .status-badge.warning {
-            background: var(--color-warning-soft);
-            color: var(--color-warning);
-            border: 1px solid rgba(245, 158, 11, 0.3);
-        }
-        
-        .status-badge.error {
-            background: var(--color-error-soft);
-            color: var(--color-error);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-        }
-        
-        .status-badge.info {
-            background: var(--color-info-soft);
-            color: var(--color-info);
-            border: 1px solid rgba(59, 130, 246, 0.3);
-        }
-        
-        .status-badge.sm {
-            padding: 4px 10px;
-            font-size: 0.7rem;
-        }
-        
-        /* ============================================
-           🔽 사이드바 푸터
-           ============================================ */
-        .sidebar-footer {
-            text-align: center;
-            padding: var(--space-md) 0;
-            margin-top: var(--space-lg);
-            font-size: 0.7rem;
-            opacity: 0.7;
-            border-top: 1px solid var(--glass-border);
-            color: var(--st-text);
-        }
-        
-        /* ============================================
-           📱 탭 스타일
-           ============================================ */
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 4px;
-            background: var(--glass-overlay);
-            border-radius: var(--radius-md);
-            padding: 4px;
-        }
-        
-        .stTabs [data-baseweb="tab"] {
-            border-radius: var(--radius-sm);
-            font-weight: 500;
-        }
-        
-        .stTabs [aria-selected="true"] {
-            background: var(--st-primary) !important;
-        }
-        
-        /* ============================================
-           🎯 스텝 인디케이터
-           ============================================ */
-        .step-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: var(--space-xs);
-            padding: var(--space-md) var(--space-sm);
-            background: var(--glass-overlay);
-            border-radius: var(--radius-md);
-            border: 1px solid var(--glass-border);
-        }
-        
-        .step-item {
-            flex: 1;
-            text-align: center;
-        }
-        
-        .step-circle {
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 0.9rem;
-            margin-bottom: var(--space-xs);
-            transition: all 0.3s ease;
-        }
-        
-        .step-circle.active {
-            background: var(--st-primary);
-            color: white;
-            box-shadow: 0 0 0 4px var(--color-info-soft), 0 4px 12px rgba(59, 130, 246, 0.3);
-            transform: scale(1.05);
-        }
-        
-        .step-circle.completed {
-            background: var(--color-success);
-            color: white;
-            box-shadow: 0 2px 8px var(--color-success-soft);
-        }
-        
-        .step-circle.pending {
-            background: var(--st-secondary-bg);
-            color: var(--st-text);
-            border: 2px solid var(--glass-border);
-            opacity: 0.6;
-        }
-        
-        .step-label {
-            font-size: 0.72rem;
-            font-weight: 500;
-            color: var(--st-text);
-        }
-        
-        .step-label.active { color: var(--st-primary); font-weight: 600; }
-        .step-label.completed { color: var(--color-success); }
-        .step-label.pending { opacity: 0.6; }
-        
-        .step-line {
-            flex: 0.5;
-            height: 3px;
-            background: var(--glass-border);
-            margin-bottom: 22px;
-            border-radius: 2px;
-        }
-        
-        .step-line.completed {
-            background: var(--color-success);
-            box-shadow: 0 0 8px var(--color-success-soft);
-        }
-        
-        .step-line.active {
-            background: linear-gradient(90deg, var(--color-success), var(--st-primary));
-        }
-        
-        /* ============================================
-           🔄 로딩/스피너 스타일
-           ============================================ */
-        .stSpinner > div {
-            border-top-color: var(--st-primary) !important;
-        }
-        
-        .loading-shimmer {
-            background: linear-gradient(90deg, var(--glass-overlay) 25%, rgba(128, 128, 128, 0.15) 50%, var(--glass-overlay) 75%);
-            background-size: 200% 100%;
-            animation: shimmer 1.5s infinite;
-        }
-        
-        @keyframes shimmer {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-        
-        /* ============================================
-           ✨ 전역 트랜지션 (테마 전환 부드럽게)
-           ============================================ */
-        * {
-            transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-        }
-        
-        /* 스크롤바 스타일 */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: var(--glass-overlay); border-radius: var(--radius-full); }
-        ::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: var(--radius-full); }
-        ::-webkit-scrollbar-thumb:hover { background: var(--st-primary); }
-        
-        /* 포커스 가시성 (접근성) */
-        *:focus-visible {
-            outline: 2px solid var(--st-primary);
-            outline-offset: 2px;
-        }
-        
-        /* ============================================
-           🍪 쿠키/Secrets 로드 입력 필드 강조
-           ============================================ */
-        .input-loaded-from-session input,
-        .input-loaded-from-session textarea {
-            border-color: var(--color-success) !important;
-            border-width: 2px !important;
-            box-shadow: 0 0 0 3px var(--color-success-soft) !important;
-        }
-        
-        /* 비밀번호 필드 */
-        .stTextInput input[type="password"] {
-            letter-spacing: 2px;
-            font-family: monospace;
-        }
-        
-        /* ============================================
-           📱 반응형 (모바일/태블릿)
-           ============================================ */
-        @media (max-width: 768px) {
-            .main .block-container {
-                padding: var(--space-md) var(--space-sm) !important;
-            }
-            
-            [data-testid="stMetricValue"] {
-                font-size: 1.2rem !important;
-            }
-            
-            .step-circle {
-                width: 32px;
-                height: 32px;
-                font-size: 0.8rem;
-            }
-        }
-    </style>
-    """
-    st.markdown(css, unsafe_allow_html=True)
-
-
-# 하위 호환성을 위한 CUSTOM_CSS 변수 유지 (apply_saas_style 함수 사용 권장)
-CUSTOM_CSS = ""
+    }
+    
+    /* ============================================
+       🔌 SMTP 연결 버튼 (LED 스타일)
+       클릭 가능한 상태 인디케이터
+       ============================================ */
+    
+    /* SMTP 연결 필요 버튼 - 경고 LED 스타일 */
+    [data-testid="stSidebar"] button[data-testid="baseButton-secondary"]:first-of-type,
+    .smtp-connect-btn {
+        background: var(--color-warning-soft) !important;
+        border: 1px solid var(--color-warning) !important;
+        color: var(--st-text) !important;
+        border-radius: 50px !important;
+        padding: 10px 18px !important;
+        font-weight: 600 !important;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .smtp-connect-btn::before {
+        content: '';
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--color-warning);
+        animation: led-pulse-warning 1.5s ease-in-out infinite;
+        box-shadow: 
+            0 0 6px var(--color-warning),
+            0 0 12px var(--color-warning);
+    }
+    
+    .smtp-connect-btn:hover {
+        background: rgba(245, 158, 11, 0.2) !important;
+        transform: translateY(-2px);
+        box-shadow: 
+            0 4px 15px rgba(245, 158, 11, 0.3),
+            0 0 20px rgba(245, 158, 11, 0.15) !important;
+    }
+    
+    /* ============================================
+       📊 메트릭 카드 - Glassmorphism (강화)
+       테마 배경색 기반 반투명
+       ============================================ */
+    [data-testid="stMetric"] {
+        background: var(--glass-overlay) !important;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        padding: var(--space-md);
+        border-radius: var(--radius-md);
+        border: 1px solid var(--glass-border) !important;
+        box-shadow: var(--glass-shadow);
+        transition: all 0.25s ease;
+    }
+    
+    [data-testid="stMetric"]:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--glass-hover-shadow);
+        border-color: rgba(128, 128, 128, 0.2) !important;
+    }
+    
+    /* 메트릭 값 - 테마 텍스트 색상 상속 + 강조 */
+    [data-testid="stMetric"] [data-testid="stMetricValue"] {
+        font-size: 1.6rem !important;
+        font-weight: var(--font-weight-bold) !important;
+        color: var(--st-text) !important;
+        line-height: 1.2;
+    }
+    
+    /* 메트릭 레이블 - 명확한 가독성 */
+    [data-testid="stMetric"] [data-testid="stMetricLabel"] {
+        font-size: 0.72rem !important;
+        font-weight: var(--font-weight-medium);
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        opacity: 0.75;
+        color: var(--st-text) !important;
+        margin-bottom: 4px;
+    }
+    
+    /* 메트릭 델타 (변화량) */
+    [data-testid="stMetric"] [data-testid="stMetricDelta"] {
+        font-size: 0.8rem !important;
+        font-weight: var(--font-weight-medium);
+    }
+    
+    /* ============================================
+       🔘 버튼 스타일 (테마 적응형)
+       ============================================ */
+    .stButton > button {
+        border-radius: var(--radius-sm) !important;
+        font-weight: var(--font-weight-medium);
+        padding: var(--space-sm) var(--space-md);
+        transition: all 0.2s ease;
+        border: 1px solid var(--glass-border) !important;
+        background: var(--glass-overlay) !important;
+        color: var(--st-text) !important;
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--glass-hover-shadow);
+        border-color: var(--st-primary) !important;
+    }
+    
+    .stButton > button:active {
+        transform: translateY(0);
+    }
+    
+    /* Primary 버튼 - 강조 */
+    .stButton > button[kind="primary"],
+    .stButton > button[data-testid="baseButton-primary"] {
+        background: var(--st-primary) !important;
+        border-color: var(--st-primary) !important;
+        color: white !important;
+        font-weight: var(--font-weight-semibold);
+    }
+    
+    .stButton > button[kind="primary"]:hover,
+    .stButton > button[data-testid="baseButton-primary"]:hover {
+        box-shadow: 0 4px 16px rgba(59, 130, 246, 0.35);
+        filter: brightness(1.1);
+    }
+    
+    /* Secondary 버튼 */
+    .stButton > button[kind="secondary"] {
+        background: transparent !important;
+        border: 1px solid var(--st-primary) !important;
+        color: var(--st-primary) !important;
+    }
+    
+    /* ============================================
+       📁 파일 업로드 - Drag & Drop (강화)
+       ============================================ */
+    [data-testid="stFileUploader"] {
+        border: 2px dashed var(--glass-border) !important;
+        border-radius: var(--radius-md);
+        padding: var(--space-lg);
+        background: var(--glass-overlay);
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    [data-testid="stFileUploader"]:hover {
+        border-color: var(--st-primary) !important;
+        border-style: dashed !important;
+        background: var(--color-info-soft);
+        box-shadow: 0 0 0 4px var(--color-info-soft);
+    }
+    
+    [data-testid="stFileUploader"]:hover::after {
+        content: "📂 파일을 놓으세요";
+        position: absolute;
+        bottom: 8px;
+        right: 12px;
+        font-size: 0.75rem;
+        color: var(--st-primary);
+        opacity: 0.8;
+    }
+    
+    /* 파일 업로드 드래그 오버 상태 */
+    [data-testid="stFileUploader"].drag-over {
+        border-color: var(--color-success) !important;
+        background: var(--color-success-soft);
+    }
+    
+    /* ============================================
+       📦 컨테이너/카드
+       ============================================ */
+    [data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"] {
+        border-radius: var(--radius-md) !important;
+        border: 1px solid var(--glass-border) !important;
+        background: var(--glass-overlay);
+        backdrop-filter: blur(8px);
+    }
+    
+    /* ============================================
+       ✏️ 입력 필드 스타일
+       쿠키 로드 시 테두리 강조 (시각적 세션 표시)
+       ============================================ */
+    .stTextInput > div > div > input,
+    .stTextArea > div > div > textarea,
+    .stSelectbox > div > div > div {
+        border-radius: var(--radius-sm) !important;
+        border: 1px solid var(--glass-border) !important;
+        background: var(--st-bg) !important;
+        color: var(--st-text) !important;
+        transition: all 0.2s ease;
+    }
+    
+    .stTextInput > div > div > input:focus,
+    .stTextArea > div > div > textarea:focus {
+        border-color: var(--st-primary) !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+        outline: none !important;
+    }
+    
+    /* 쿠키/Secrets에서 로드된 입력 필드 강조 (녹색 테두리) */
+    .input-loaded-from-session input,
+    .input-loaded-from-session textarea {
+        border-color: var(--color-success) !important;
+        border-width: 2px !important;
+        box-shadow: 
+            0 0 0 3px var(--color-success-soft) !important,
+            inset 0 0 0 1px rgba(34, 197, 94, 0.1) !important;
+    }
+    
+    /* 쿠키에서 로드된 입력 필드 라벨 표시 */
+    .input-loaded-from-session::before {
+        content: "🍪";
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.8rem;
+        opacity: 0.7;
+    }
+    
+    /* 비밀번호 필드 특수 스타일 */
+    .stTextInput input[type="password"] {
+        letter-spacing: 2px;
+        font-family: monospace;
+    }
+    
+    /* ============================================
+       📋 데이터프레임
+       ============================================ */
+    .stDataFrame {
+        border-radius: var(--radius-md) !important;
+        overflow: hidden;
+        border: 1px solid var(--glass-border) !important;
+    }
+    
+    /* ============================================
+       📂 Expander
+       ============================================ */
+    .streamlit-expanderHeader {
+        font-weight: 600;
+        border-radius: var(--radius-sm);
+        background: var(--glass-overlay) !important;
+    }
+    
+    /* ============================================
+       ⚠️ 알림 메시지
+       ============================================ */
+    .stAlert {
+        border-radius: var(--radius-sm) !important;
+        border-left-width: 4px !important;
+    }
+    
+    /* ============================================
+       📈 프로그레스 바
+       ============================================ */
+    .stProgress > div > div {
+        background: var(--st-primary);
+        border-radius: var(--radius-full);
+    }
+    
+    /* ============================================
+       🏷️ 상태 배지 (Status Badge) - 테마 적응형
+       ============================================ */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        border-radius: var(--radius-full);
+        font-size: 0.8rem;
+        font-weight: var(--font-weight-semibold);
+        transition: all 0.2s ease;
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+    }
+    
+    .status-badge.success {
+        background: var(--color-success-soft);
+        color: var(--color-success);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    
+    .status-badge.warning {
+        background: var(--color-warning-soft);
+        color: var(--color-warning);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    
+    .status-badge.error {
+        background: var(--color-error-soft);
+        color: var(--color-error);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    
+    .status-badge.info {
+        background: var(--color-info-soft);
+        color: var(--color-info);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+    
+    /* 작은 배지 변형 */
+    .status-badge.sm {
+        padding: 4px 10px;
+        font-size: 0.7rem;
+    }
+    
+    /* ============================================
+       🔽 사이드바 푸터
+       ============================================ */
+    .sidebar-footer {
+        text-align: center;
+        padding: var(--space-md) 0;
+        margin-top: var(--space-lg);
+        font-size: 0.7rem;
+        opacity: 0.7;
+        border-top: 1px solid var(--glass-border);
+        color: var(--st-text);
+    }
+    
+    /* ============================================
+       📱 탭 스타일
+       ============================================ */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 4px;
+        background: var(--glass-overlay);
+        border-radius: var(--radius-md);
+        padding: 4px;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        border-radius: var(--radius-sm);
+        font-weight: 500;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: var(--st-primary) !important;
+    }
+    
+    /* ============================================
+       🎯 스텝 인디케이터 (강화된 시각적 구분)
+       ============================================ */
+    .step-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: var(--space-xs);
+        padding: var(--space-md) var(--space-sm);
+        background: var(--glass-overlay);
+        border-radius: var(--radius-md);
+        border: 1px solid var(--glass-border);
+    }
+    
+    .step-item {
+        flex: 1;
+        text-align: center;
+        position: relative;
+    }
+    
+    .step-circle {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: var(--font-weight-semibold);
+        font-size: 0.9rem;
+        margin-bottom: var(--space-xs);
+        transition: all 0.3s ease;
+    }
+    
+    /* 현재 단계 - Primary 색상 + 강한 글로우 */
+    .step-circle.active {
+        background: var(--st-primary);
+        color: white;
+        box-shadow: 
+            0 0 0 4px var(--color-info-soft),
+            0 4px 12px rgba(59, 130, 246, 0.3);
+        transform: scale(1.05);
+    }
+    
+    /* 완료된 단계 - 성공 색상 */
+    .step-circle.completed {
+        background: var(--color-success);
+        color: white;
+        box-shadow: 0 2px 8px var(--color-success-soft);
+    }
+    
+    /* 대기 단계 - 연한 배경 + 테두리 */
+    .step-circle.pending {
+        background: var(--st-secondary-bg);
+        color: var(--st-text);
+        border: 2px solid var(--glass-border);
+        opacity: 0.6;
+    }
+    
+    .step-label {
+        font-size: 0.72rem;
+        font-weight: var(--font-weight-medium);
+        color: var(--st-text);
+    }
+    
+    .step-label.active {
+        font-weight: var(--font-weight-semibold);
+        color: var(--st-primary);
+    }
+    
+    .step-label.completed {
+        color: var(--color-success);
+    }
+    
+    .step-label.pending {
+        opacity: 0.6;
+    }
+    
+    .step-line {
+        flex: 0.5;
+        height: 3px;
+        background: var(--glass-border);
+        margin-bottom: 22px;
+        border-radius: 2px;
+        transition: all 0.3s ease;
+    }
+    
+    .step-line.completed {
+        background: linear-gradient(90deg, var(--color-success), var(--color-success));
+        box-shadow: 0 0 8px var(--color-success-soft);
+    }
+    
+    .step-line.active {
+        background: linear-gradient(90deg, var(--color-success), var(--st-primary));
+    }
+    
+    /* ============================================
+       🔄 로딩 상태 표시
+       ============================================ */
+    .loading-shimmer {
+        background: linear-gradient(
+            90deg,
+            var(--glass-overlay) 25%,
+            rgba(128, 128, 128, 0.15) 50%,
+            var(--glass-overlay) 75%
+        );
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+    }
+    
+    @keyframes shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+    
+    /* ============================================
+       ✨ 전역 트랜지션 (부드러운 테마 전환)
+       ============================================ */
+    * {
+        transition: background-color 0.15s ease, 
+                    border-color 0.15s ease,
+                    color 0.15s ease,
+                    box-shadow 0.2s ease;
+    }
+    
+    /* 스크롤바 스타일 (테마 적응) */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: var(--glass-overlay);
+        border-radius: var(--radius-full);
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: var(--glass-border);
+        border-radius: var(--radius-full);
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--st-primary);
+    }
+    
+    /* ============================================
+       🎭 포커스 가시성 (접근성)
+       ============================================ */
+    *:focus-visible {
+        outline: 2px solid var(--st-primary);
+        outline-offset: 2px;
+    }
+    
+    /* ============================================
+       📱 컨테이너/카드 추가 스타일
+       ============================================ */
+    [data-testid="stVerticalBlockBorderWrapper"] {
+        border-radius: var(--radius-md) !important;
+    }
+    
+    /* 테마 적응형 카드 배경 */
+    .main [data-testid="stVerticalBlockBorderWrapper"] > div {
+        background: var(--glass-overlay);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-md);
+    }
+    
+    /* ============================================
+       🔄 로딩/스피너 스타일
+       ============================================ */
+    .stSpinner > div {
+        border-top-color: var(--st-primary) !important;
+    }
+    
+    /* ============================================
+       📊 탭 패널 내부 여백
+       ============================================ */
+    [data-testid="stTabs"] [data-testid="stVerticalBlock"] {
+        padding-top: var(--space-md);
+    }
+    
+</style>
+"""
 
 
 # ============================================================================
@@ -1242,12 +1432,9 @@ def render_step_indicator():
 
 
 def get_cookie_manager():
-    """쿠키 매니저 - 세션별 싱글톤 (Material Icons 텍스트 숨김)"""
+    """쿠키 매니저 - 세션별 싱글톤 (캐싱 경고 해결)"""
     if 'cookie_manager' not in st.session_state:
-        # CookieManager 초기화 시 Material Icons 텍스트가 렌더링되므로 숨김 처리
-        st.markdown('<div style="display:none !important; height:0; overflow:hidden;">', unsafe_allow_html=True)
         st.session_state.cookie_manager = stx.CookieManager(key="smtp_cookie_manager")
-        st.markdown('</div>', unsafe_allow_html=True)
     return st.session_state.cookie_manager
 
 
@@ -1534,7 +1721,7 @@ def render_circular_progress(current_step: int, total_steps: int):
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 8px 0 4px 0;
+    padding: 1rem 0;
 }}
 .progress-circle {{
     position: relative;
@@ -1573,17 +1760,16 @@ def render_circular_progress(current_step: int, total_steps: int):
 }}
 .progress-label {{
     text-align: center;
-    margin-top: 6px;
+    margin-top: 0.75rem;
 }}
 .progress-step-name {{
-    font-size: 0.85rem;
+    font-size: 0.95rem;
     font-weight: 600;
     color: #00d4ff;
 }}
 .progress-status {{
-    font-size: 0.65rem;
+    font-size: 0.7rem;
     color: rgba(128,128,128,0.7);
-    margin-top: 1px;
     margin-top: 2px;
 }}
 </style>
@@ -1618,27 +1804,49 @@ def render_circular_progress(current_step: int, total_steps: int):
 
 
 def render_step_nav_buttons(current_step: int, total_steps: int):
-    """이전/다음 텍스트 버튼 - 프로그레스 바와 밀착"""
+    """이전단계/다음단계 텍스트 버튼 (테두리 없음)"""
     prev_disabled = current_step <= 1
     next_disabled = current_step >= total_steps
     
-    # 컴팩트 네비게이션 버튼 CSS
+    # 텍스트 버튼 스타일 CSS - 여백 대폭 축소, 글씨 작게
     st.markdown("""
     <style>
-    /* 네비게이션 버튼 - 8px 그리드 */
+    /* 사이드바 내 스텝 네비게이션 영역 전체 - 상단 여백 제거 */
+    [data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"]:has(.step-nav-container) {
+        margin-top: -1.5rem !important;
+        padding-top: 0 !important;
+    }
+    /* 네비게이션 버튼 컨테이너 - 여백 최소화 */
+    .step-nav-container {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    .step-nav-container + div {
+        margin-top: 0.5rem !important;
+    }
+    /* 사이드바 네비게이션 텍스트 버튼 - 테두리 없음, 여백 최소 */
     .step-nav-container .stButton > button {
         background: transparent !important;
         border: none !important;
         box-shadow: none !important;
-        padding: 4px 8px !important;
-        min-height: 28px !important;
-        line-height: 1.2 !important;
-        font-size: 0.72rem !important;
+        padding: 0 2px !important;
+        margin: 0 !important;
+        min-height: 0 !important;
+        height: auto !important;
+        line-height: 1 !important;
+        font-size: 0.65rem !important;
         font-weight: 500 !important;
+    }
+    .step-nav-container .stButton {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    .step-nav-container [data-testid="column"] {
+        padding: 0 !important;
     }
     /* 이전 버튼 */
     .step-nav-container .nav-prev .stButton > button {
-        color: rgba(128,128,128,0.65) !important;
+        color: rgba(128,128,128,0.7) !important;
     }
     .step-nav-container .nav-prev .stButton > button:hover:not(:disabled) {
         color: #fff !important;
@@ -1658,7 +1866,7 @@ def render_step_nav_buttons(current_step: int, total_steps: int):
     </style>
     """, unsafe_allow_html=True)
     
-    # 레이아웃: [이전] [다음]
+    # 레이아웃: [이전] [다음] - 여백 최소화
     st.markdown('<div class="step-nav-container">', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     
@@ -1691,19 +1899,19 @@ def render_smtp_sidebar():
             current_step = st.session_state.current_step
             total_steps = len(STEPS)
             
-            # 원형 프로그레스 바
+            # 원형 프로그레스 바 (원래 크기)
             st.markdown(render_circular_progress(current_step, total_steps), unsafe_allow_html=True)
             
-            # 이전/다음 텍스트 버튼
+            # 이전단계/다음단계 텍스트 버튼
             render_step_nav_buttons(current_step, total_steps)
-            
-            # 구분선
-            st.markdown('<hr style="margin: 12px 0; border: none; border-top: 1px solid rgba(128,128,128,0.15);">', unsafe_allow_html=True)
         
+        # ============================================================
+        # SMTP 상태 LED 인디케이터 (HTML 기반)
+        # ============================================================
         if st.session_state.smtp_config:
             # 연결됨 - 녹색 LED
             st.markdown("""
-            <div class="led-indicator connected" style="width: 100%; justify-content: center; margin: 8px 0;">
+            <div class="led-indicator connected" style="width: 100%; justify-content: center; margin: 0.5rem 0;">
                 <span class="led-dot"></span>
                 <span>SMTP 연결됨</span>
             </div>
@@ -1711,11 +1919,15 @@ def render_smtp_sidebar():
         else:
             # 연결 필요 - 노란색 LED (클릭 유도)
             st.markdown("""
-            <div class="led-indicator disconnected" style="width: 100%; justify-content: center; margin: 8px 0; cursor: pointer;" title="아래 SMTP 설정을 열어 연결하세요">
+            <div class="led-indicator disconnected" style="width: 100%; justify-content: center; margin: 0.5rem 0; cursor: pointer;" title="아래 SMTP 설정을 열어 연결하세요">
                 <span class="led-dot"></span>
                 <span>SMTP 연결 필요</span>
             </div>
             """, unsafe_allow_html=True)
+        
+        st.divider()
+        
+
         
         # ============================================================
         # SMTP 계정 설정 (연결 성공 시 자동으로 닫힘)
@@ -1828,6 +2040,8 @@ SMTP_PW = "app_password"
 2. 🔐 secrets.toml 파일
 3. ✏️ 수동 입력
             """)
+        
+        st.divider()
         
         # ============================================================
         # 메뉴 (페이지 네비게이션) - expander
@@ -3249,8 +3463,8 @@ def main():
         initial_sidebar_state="expanded"
     )
     
-    # SaaS급 CSS 스타일 적용
-    apply_saas_style()
+    # Custom CSS 적용
+    st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
     
     init_session_state()
     
