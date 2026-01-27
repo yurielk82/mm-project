@@ -433,6 +433,223 @@ CUSTOM_CSS = """
     }
     
     /* ============================================
+       🔀 스텝 네비게이션 버튼 (Capsule 스타일)
+       다크: Neon Glow / 라이트: Soft Shadow
+       ============================================ */
+    .step-nav-container {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin: 0.75rem 0;
+        padding: 0 0.5rem;
+    }
+    
+    .step-nav-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 8px 18px;
+        border-radius: 50px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: none;
+        outline: none;
+        text-decoration: none;
+        user-select: none;
+        min-width: 80px;
+    }
+    
+    /* 이전 버튼 - 은은한 회색 */
+    .step-nav-btn.prev {
+        background: rgba(128, 128, 128, 0.12);
+        color: var(--st-text);
+        border: 1px solid rgba(128, 128, 128, 0.25);
+    }
+    
+    .step-nav-btn.prev:hover:not(:disabled) {
+        background: rgba(128, 128, 128, 0.2);
+        border-color: rgba(128, 128, 128, 0.4);
+        transform: translateY(-2px);
+    }
+    
+    .step-nav-btn.prev:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    /* 다음 버튼 - 강조색 (네온 블루) */
+    .step-nav-btn.next {
+        background: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%);
+        color: #ffffff;
+        border: 1px solid rgba(0, 212, 255, 0.5);
+    }
+    
+    .step-nav-btn.next:hover:not(:disabled) {
+        transform: translateY(-2px);
+        filter: brightness(1.1);
+    }
+    
+    .step-nav-btn.next:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        transform: none;
+        filter: grayscale(0.5);
+    }
+    
+    .step-nav-btn:active:not(:disabled) {
+        transform: translateY(0) scale(0.98);
+    }
+    
+    /* 다크 모드 - Neon Glow */
+    @media (prefers-color-scheme: dark) {
+        .step-nav-btn.prev:hover:not(:disabled) {
+            box-shadow: 
+                0 4px 15px rgba(128, 128, 128, 0.2),
+                0 0 20px rgba(128, 128, 128, 0.1);
+        }
+        
+        .step-nav-btn.next {
+            box-shadow: 
+                0 0 10px rgba(0, 212, 255, 0.3),
+                0 0 20px rgba(0, 212, 255, 0.1);
+        }
+        
+        .step-nav-btn.next:hover:not(:disabled) {
+            box-shadow: 
+                0 0 15px rgba(0, 212, 255, 0.5),
+                0 0 30px rgba(0, 212, 255, 0.2),
+                0 4px 20px rgba(124, 58, 237, 0.3);
+        }
+    }
+    
+    /* 라이트 모드 - Soft Shadow */
+    @media (prefers-color-scheme: light) {
+        .step-nav-btn.prev {
+            background: rgba(128, 128, 128, 0.08);
+            border-color: rgba(128, 128, 128, 0.2);
+        }
+        
+        .step-nav-btn.prev:hover:not(:disabled) {
+            box-shadow: 
+                0 4px 12px rgba(0, 0, 0, 0.1),
+                0 2px 6px rgba(0, 0, 0, 0.05);
+        }
+        
+        .step-nav-btn.next {
+            box-shadow: 
+                0 2px 8px rgba(0, 212, 255, 0.25),
+                0 4px 12px rgba(124, 58, 237, 0.15);
+        }
+        
+        .step-nav-btn.next:hover:not(:disabled) {
+            box-shadow: 
+                0 4px 16px rgba(0, 212, 255, 0.35),
+                0 6px 20px rgba(124, 58, 237, 0.2);
+        }
+    }
+    
+    /* Streamlit 다크 테마 감지 (fallback) */
+    [data-testid="stSidebar"][data-theme="dark"] .step-nav-btn.next,
+    .stApp[data-theme="dark"] .step-nav-btn.next {
+        box-shadow: 
+            0 0 10px rgba(0, 212, 255, 0.3),
+            0 0 20px rgba(0, 212, 255, 0.1);
+    }
+    
+    /* ============================================
+       🔀 사이드바 네비게이션 버튼 (Capsule 스타일)
+       Streamlit 버튼 오버라이드
+       ============================================ */
+    [data-testid="stSidebar"] .stButton > button {
+        border-radius: 50px !important;
+        padding: 8px 16px !important;
+        font-size: 0.8rem !important;
+        font-weight: 600 !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        min-height: 36px !important;
+    }
+    
+    /* 사이드바 - 이전 버튼 스타일 (Secondary/기본) */
+    [data-testid="stSidebar"] .stButton > button:not([data-testid="baseButton-primary"]) {
+        background: rgba(128, 128, 128, 0.1) !important;
+        border: 1px solid rgba(128, 128, 128, 0.25) !important;
+        color: var(--st-text) !important;
+    }
+    
+    [data-testid="stSidebar"] .stButton > button:not([data-testid="baseButton-primary"]):hover:not(:disabled) {
+        background: rgba(128, 128, 128, 0.2) !important;
+        border-color: rgba(128, 128, 128, 0.4) !important;
+        transform: translateY(-2px);
+    }
+    
+    /* 사이드바 - 다음 버튼 스타일 (Primary/강조) */
+    [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"] {
+        background: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%) !important;
+        border: 1px solid rgba(0, 212, 255, 0.5) !important;
+        color: #ffffff !important;
+    }
+    
+    [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"]:hover:not(:disabled) {
+        filter: brightness(1.1);
+        transform: translateY(-2px);
+    }
+    
+    /* 다크 모드 - 네온 글로우 */
+    @media (prefers-color-scheme: dark) {
+        [data-testid="stSidebar"] .stButton > button:not([data-testid="baseButton-primary"]):hover:not(:disabled) {
+            box-shadow: 
+                0 4px 15px rgba(128, 128, 128, 0.2),
+                0 0 20px rgba(128, 128, 128, 0.1) !important;
+        }
+        
+        [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"] {
+            box-shadow: 
+                0 0 10px rgba(0, 212, 255, 0.3),
+                0 0 20px rgba(0, 212, 255, 0.1) !important;
+        }
+        
+        [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"]:hover:not(:disabled) {
+            box-shadow: 
+                0 0 15px rgba(0, 212, 255, 0.5),
+                0 0 30px rgba(0, 212, 255, 0.2),
+                0 4px 20px rgba(124, 58, 237, 0.3) !important;
+        }
+    }
+    
+    /* 라이트 모드 - 소프트 섀도우 */
+    @media (prefers-color-scheme: light) {
+        [data-testid="stSidebar"] .stButton > button:not([data-testid="baseButton-primary"]):hover:not(:disabled) {
+            box-shadow: 
+                0 4px 12px rgba(0, 0, 0, 0.1),
+                0 2px 6px rgba(0, 0, 0, 0.05) !important;
+        }
+        
+        [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"] {
+            box-shadow: 
+                0 2px 8px rgba(0, 212, 255, 0.25),
+                0 4px 12px rgba(124, 58, 237, 0.15) !important;
+        }
+        
+        [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"]:hover:not(:disabled) {
+            box-shadow: 
+                0 4px 16px rgba(0, 212, 255, 0.35),
+                0 6px 20px rgba(124, 58, 237, 0.2) !important;
+        }
+    }
+    
+    /* 비활성화 상태 */
+    [data-testid="stSidebar"] .stButton > button:disabled {
+        opacity: 0.4 !important;
+        cursor: not-allowed !important;
+        transform: none !important;
+        box-shadow: none !important;
+    }
+    
+    /* ============================================
        📁 파일 업로드 - Drag & Drop (강화)
        ============================================ */
     [data-testid="stFileUploader"] {
@@ -1720,6 +1937,36 @@ def render_smtp_sidebar():
                 <span>SMTP 연결 필요</span>
             </div>
             """, unsafe_allow_html=True)
+        
+        # ============================================================
+        # 🔀 이전/다음 네비게이션 버튼 (Capsule 스타일)
+        # ============================================================
+        total_steps = len(STEPS)
+        prev_disabled = current_step <= 1
+        next_disabled = current_step >= total_steps
+        
+        col_prev, col_next = st.columns(2)
+        
+        with col_prev:
+            if st.button("← 이전", 
+                        key="nav_prev_btn",
+                        use_container_width=True,
+                        disabled=prev_disabled,
+                        help="이전 단계로 이동"):
+                if current_step > 1:
+                    st.session_state.current_step = current_step - 1
+                    st.rerun()
+        
+        with col_next:
+            if st.button("다음 →", 
+                        key="nav_next_btn",
+                        use_container_width=True,
+                        disabled=next_disabled,
+                        type="primary",
+                        help="다음 단계로 이동"):
+                if current_step < total_steps:
+                    st.session_state.current_step = current_step + 1
+                    st.rerun()
         
         st.divider()
         
