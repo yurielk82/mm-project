@@ -3025,63 +3025,51 @@ def render_step2():
     
     # ============================================================
     # JSON 설정 파일에서 이전 설정 로드 (최초 1회)
+    # - 이메일 표시 컬럼: 항상 현재 파일의 모든 컬럼 (기본값)
+    # - 형식 설정(금액/퍼센트/날짜/ID): 컬럼 이름 매칭으로 자동 복원
     # ============================================================
     if 'step2_config_loaded' not in st.session_state:
         saved_config = load_column_config_from_json()
-        missing_cols = []
         
+        # ✅ 이메일 표시 컬럼: 항상 현재 파일의 모든 컬럼으로 시작
+        st.session_state.display_cols = columns.copy()
+        st.session_state.excluded_cols = []
+        
+        # ✅ 형식 설정: 저장된 컬럼 이름과 매칭되는 것만 복원
         if saved_config:
-            # 저장된 표시 컬럼 복원 (존재하는 것만)
-            saved_display = saved_config.get('display_cols', [])
-            saved_excluded = saved_config.get('excluded_cols', [])
+            matched_formats = []
             
-            # ✅ 핵심 수정: 현재 파일 컬럼과 저장된 설정의 컬럼 매칭 확인
-            # 저장된 display + excluded가 현재 컬럼의 대부분을 커버하는지 확인
-            all_saved_cols = set(saved_display + saved_excluded)
-            current_cols_set = set(columns)
+            # 금액 컬럼 매칭
+            saved_amount = saved_config.get('amount_cols', [])
+            matched_amount = [c for c in saved_amount if c in columns]
+            st.session_state.amount_cols = matched_amount
+            if matched_amount:
+                matched_formats.append(f"금액 {len(matched_amount)}개")
             
-            # 저장된 설정에 없는 새 컬럼들 (새 파일에만 있는 컬럼)
-            new_cols_in_file = [c for c in columns if c not in all_saved_cols]
+            # 퍼센트 컬럼 매칭
+            saved_percent = saved_config.get('percent_cols', [])
+            matched_percent = [c for c in saved_percent if c in columns]
+            st.session_state.percent_cols = matched_percent
+            if matched_percent:
+                matched_formats.append(f"퍼센트 {len(matched_percent)}개")
             
-            # 이메일 표시 컬럼: 저장된 설정이 있으면 복원 + 새 컬럼 추가
-            if saved_display:
-                restored_display = [c for c in saved_display if c in columns]
-                # 새 파일에만 있는 컬럼은 표시 컬럼에 추가 (원본 순서 유지)
-                for c in columns:
-                    if c in new_cols_in_file and c not in restored_display:
-                        restored_display.append(c)
-                st.session_state.display_cols = restored_display
-                missing_cols.extend([c for c in saved_display if c not in columns])
-            else:
-                # 기본값: 모든 컬럼 (원본 순서)
-                st.session_state.display_cols = columns.copy()
+            # 날짜 컬럼 매칭
+            saved_date = saved_config.get('date_cols', [])
+            matched_date = [c for c in saved_date if c in columns]
+            st.session_state.date_cols = matched_date
+            if matched_date:
+                matched_formats.append(f"날짜 {len(matched_date)}개")
             
-            # 제외된 컬럼 복원 (현재 파일에 존재하는 것만)
-            st.session_state.excluded_cols = [c for c in saved_excluded if c in columns]
+            # ID 컬럼 매칭
+            saved_id = saved_config.get('id_cols', [])
+            matched_id = [c for c in saved_id if c in columns]
+            st.session_state.id_cols = matched_id
+            if matched_id:
+                matched_formats.append(f"ID {len(matched_id)}개")
             
-            # 형식 설정 복원 (이메일 표시와 독립적)
-            st.session_state.amount_cols = [c for c in saved_config.get('amount_cols', []) if c in columns]
-            st.session_state.percent_cols = [c for c in saved_config.get('percent_cols', []) if c in columns]
-            st.session_state.date_cols = [c for c in saved_config.get('date_cols', []) if c in columns]
-            st.session_state.id_cols = [c for c in saved_config.get('id_cols', []) if c in columns]
-            
-            missing_cols.extend([c for c in saved_config.get('amount_cols', []) if c not in columns])
-            missing_cols.extend([c for c in saved_config.get('percent_cols', []) if c not in columns])
-            missing_cols.extend([c for c in saved_config.get('date_cols', []) if c not in columns])
-            missing_cols.extend([c for c in saved_config.get('id_cols', []) if c not in columns])
-            
-            missing_cols = list(set(missing_cols))  # 중복 제거
-            
-            if missing_cols:
-                st.warning(f"⚠️ 기존 설정 중 일부 컬럼이 현재 파일에 없어 제외되었습니다: {', '.join(missing_cols)}")
-            elif new_cols_in_file:
-                st.info(f"ℹ️ 새 컬럼 {len(new_cols_in_file)}개가 표시 목록에 추가되었습니다: {', '.join(new_cols_in_file[:5])}{'...' if len(new_cols_in_file) > 5 else ''}")
-            else:
-                st.toast("💾 이전 컬럼 설정을 불러왔습니다", icon="✅")
+            if matched_formats:
+                st.toast(f"💾 형식 설정 복원: {', '.join(matched_formats)}", icon="✅")
         else:
-            # 새로운 설정 - 모든 컬럼을 이메일 표시에
-            st.session_state.display_cols = columns.copy()
-            st.session_state.excluded_cols = []
             st.session_state.amount_cols = []
             st.session_state.percent_cols = []
             st.session_state.date_cols = []
