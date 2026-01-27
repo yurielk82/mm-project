@@ -607,41 +607,42 @@ CUSTOM_CSS = """
     }
     
     /* ============================================
-       🔀 사이드바 네비게이션 버튼 (Capsule 스타일)
-       Streamlit 버튼 오버라이드
+       🔀 사이드바 네비게이션 버튼 (< > 스타일)
+       작은 Capsule, 테마 적응형 Glow/Shadow
        ============================================ */
     [data-testid="stSidebar"] .stButton > button {
         border-radius: 50px !important;
-        padding: 8px 16px !important;
-        font-size: 0.8rem !important;
-        font-weight: 600 !important;
+        padding: 6px 12px !important;
+        font-size: 1rem !important;
+        font-weight: 700 !important;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        min-height: 36px !important;
+        min-height: 32px !important;
+        min-width: 40px !important;
     }
     
-    /* 사이드바 - 이전 버튼 스타일 (Secondary/기본) */
+    /* 사이드바 - 이전 버튼 < 스타일 (Secondary/은은한 회색) */
     [data-testid="stSidebar"] .stButton > button:not([data-testid="baseButton-primary"]) {
-        background: rgba(128, 128, 128, 0.1) !important;
-        border: 1px solid rgba(128, 128, 128, 0.25) !important;
+        background: rgba(128, 128, 128, 0.08) !important;
+        border: 1px solid rgba(128, 128, 128, 0.2) !important;
         color: var(--st-text) !important;
     }
     
     [data-testid="stSidebar"] .stButton > button:not([data-testid="baseButton-primary"]):hover:not(:disabled) {
-        background: rgba(128, 128, 128, 0.2) !important;
-        border-color: rgba(128, 128, 128, 0.4) !important;
-        transform: translateY(-2px);
+        background: rgba(128, 128, 128, 0.15) !important;
+        border-color: rgba(128, 128, 128, 0.35) !important;
+        transform: translateY(-1px);
     }
     
-    /* 사이드바 - 다음 버튼 스타일 (Primary/강조) */
+    /* 사이드바 - 다음 버튼 > 스타일 (Primary/강조색) */
     [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"] {
         background: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%) !important;
-        border: 1px solid rgba(0, 212, 255, 0.5) !important;
+        border: 1.5px solid rgba(0, 212, 255, 0.6) !important;
         color: #ffffff !important;
     }
     
     [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"]:hover:not(:disabled) {
         filter: brightness(1.1);
-        transform: translateY(-2px);
+        transform: translateY(-1px);
     }
     
     /* 다크 모드 - 네온 글로우 */
@@ -1969,12 +1970,43 @@ def render_smtp_sidebar():
         st.markdown(render_circular_progress(current_step, len(STEPS)), unsafe_allow_html=True)
         
         # ============================================================
+        # 🔀 이전/다음 네비게이션 버튼 (< > 스타일, 작은 Capsule)
+        # SMTP 연결 버튼 위에 배치
+        # ============================================================
+        total_steps = len(STEPS)
+        prev_disabled = current_step <= 1
+        next_disabled = current_step >= total_steps
+        
+        col_prev, col_next = st.columns(2)
+        
+        with col_prev:
+            if st.button("〈", 
+                        key="nav_prev_btn",
+                        use_container_width=True,
+                        disabled=prev_disabled,
+                        help="이전 단계로 이동"):
+                if current_step > 1:
+                    st.session_state.current_step = current_step - 1
+                    st.rerun()
+        
+        with col_next:
+            if st.button("〉", 
+                        key="nav_next_btn",
+                        use_container_width=True,
+                        disabled=next_disabled,
+                        type="primary",
+                        help="다음 단계로 이동"):
+                if current_step < total_steps:
+                    st.session_state.current_step = current_step + 1
+                    st.rerun()
+        
+        # ============================================================
         # SMTP 상태 LED 인디케이터 (클릭 가능한 버튼)
         # ============================================================
         if st.session_state.smtp_config:
             # 연결됨 - 정보 표시만
             st.markdown("""
-            <div class="led-indicator connected" style="width: 100%; justify-content: center; margin-bottom: 0.5rem;">
+            <div class="led-indicator connected" style="width: 100%; justify-content: center; margin: 0.5rem 0;">
                 <span class="led-dot"></span>
                 <span>SMTP 연결됨</span>
             </div>
@@ -1987,36 +2019,6 @@ def render_smtp_sidebar():
                         help="클릭하여 SMTP 설정을 열고 연결하세요"):
                 st.session_state.show_smtp_settings = True
                 st.rerun()
-        
-        # ============================================================
-        # 🔀 이전/다음 네비게이션 버튼 (Capsule 스타일)
-        # ============================================================
-        total_steps = len(STEPS)
-        prev_disabled = current_step <= 1
-        next_disabled = current_step >= total_steps
-        
-        col_prev, col_next = st.columns(2)
-        
-        with col_prev:
-            if st.button("← 이전", 
-                        key="nav_prev_btn",
-                        use_container_width=True,
-                        disabled=prev_disabled,
-                        help="이전 단계로 이동"):
-                if current_step > 1:
-                    st.session_state.current_step = current_step - 1
-                    st.rerun()
-        
-        with col_next:
-            if st.button("다음 →", 
-                        key="nav_next_btn",
-                        use_container_width=True,
-                        disabled=next_disabled,
-                        type="primary",
-                        help="다음 단계로 이동"):
-                if current_step < total_steps:
-                    st.session_state.current_step = current_step + 1
-                    st.rerun()
         
         st.divider()
         
