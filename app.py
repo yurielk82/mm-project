@@ -65,349 +65,553 @@ DEFAULT_BATCH_DELAY = 30
 
 
 # ============================================================================
-# CUSTOM CSS - SaaS-Level Enterprise UI (Light/Dark Mode Responsive)
+# CUSTOM CSS - Theme-Adaptive & Fully Responsive UI
+# ============================================================================
+# 핵심 원칙:
+# 1. 하드코딩 색상 금지 - Streamlit 테마 변수만 사용
+# 2. rgba() 기반 반투명 효과 - 테마 적응형
+# 3. Flexbox/Grid + 미디어 쿼리 - 완전 반응형
 # ============================================================================
 
 CUSTOM_CSS = """
 <style>
     /* ============================================
-       🎨 SaaS Enterprise Dashboard CSS
-       Streamlit 테마 변수 기반 완전 반응형
-       Light/Dark 모드 자동 대응
+       🎨 Theme-Adaptive CSS Variables
+       Streamlit 테마 엔진 변수 전용
+       하드코딩 색상 완전 제거
        ============================================ */
     
-    /* -------------------------------------------
-       CSS 변수: Streamlit 테마 자동 상속
-       ------------------------------------------- */
     :root {
-        --glass-bg: rgba(255, 255, 255, 0.7);
-        --glass-border: rgba(255, 255, 255, 0.18);
-        --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-        --accent: #4a9eff;
-        --accent-hover: #357abd;
-        --success: #10b981;
-        --warning: #f59e0b;
-        --error: #ef4444;
-        --radius-sm: 8px;
+        /* Streamlit 테마 변수 참조 (하드코딩 금지) */
+        --st-primary: var(--primary-color);
+        --st-bg: var(--background-color);
+        --st-secondary-bg: var(--secondary-background-color);
+        --st-text: var(--text-color);
+        
+        /* 반투명 효과 (테마 적응형 - 중립 회색) */
+        --glass-overlay: rgba(128, 128, 128, 0.06);
+        --glass-border: rgba(128, 128, 128, 0.12);
+        --glass-shadow: 0 4px 16px rgba(128, 128, 128, 0.08);
+        --glass-hover-shadow: 0 8px 24px rgba(128, 128, 128, 0.12);
+        
+        /* 상태 색상 (의미론적 고정 - 접근성 유지) */
+        --color-success: #22c55e;
+        --color-success-soft: rgba(34, 197, 94, 0.12);
+        --color-warning: #f59e0b;
+        --color-warning-soft: rgba(245, 158, 11, 0.12);
+        --color-error: #ef4444;
+        --color-error-soft: rgba(239, 68, 68, 0.12);
+        --color-info: #3b82f6;
+        --color-info-soft: rgba(59, 130, 246, 0.12);
+        
+        /* 반응형 간격 */
+        --space-xs: 0.25rem;
+        --space-sm: 0.5rem;
+        --space-md: 1rem;
+        --space-lg: 1.5rem;
+        --space-xl: 2rem;
+        
+        /* 모서리 반경 */
+        --radius-sm: 6px;
         --radius-md: 12px;
         --radius-lg: 16px;
+        --radius-full: 50px;
+        
+        /* 타이포그래피 */
+        --font-weight-normal: 400;
+        --font-weight-medium: 500;
+        --font-weight-semibold: 600;
+        --font-weight-bold: 700;
     }
     
-    /* Dark 모드 감지 및 변수 오버라이드 */
-    @media (prefers-color-scheme: dark) {
-        :root {
-            --glass-bg: rgba(30, 41, 59, 0.8);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    /* ============================================
+       📱 반응형 미디어 쿼리 (완전 반응형)
+       ============================================ */
+    
+    /* 모바일 (< 640px) */
+    @media (max-width: 640px) {
+        .main .block-container {
+            padding: var(--space-sm) !important;
+        }
+        [data-testid="stMetric"] {
+            padding: var(--space-sm) !important;
+        }
+        [data-testid="stMetric"] [data-testid="stMetricValue"] {
+            font-size: 1.1rem !important;
+        }
+        [data-testid="stMetric"] [data-testid="stMetricLabel"] {
+            font-size: 0.65rem !important;
+        }
+        .step-container {
+            flex-wrap: wrap;
+            gap: var(--space-sm);
+        }
+        .step-circle {
+            width: 28px !important;
+            height: 28px !important;
+            font-size: 0.75rem !important;
+        }
+        .step-label {
+            font-size: 0.65rem !important;
+        }
+        .led-indicator {
+            padding: 6px 12px !important;
+            font-size: 0.75rem !important;
         }
     }
     
-    /* Streamlit Dark 테마 클래스 대응 */
-    [data-testid="stAppViewContainer"][data-theme="dark"],
-    .stApp[data-theme="dark"] {
-        --glass-bg: rgba(30, 41, 59, 0.8);
-        --glass-border: rgba(255, 255, 255, 0.1);
+    /* 태블릿 (640px - 1024px) */
+    @media (min-width: 640px) and (max-width: 1024px) {
+        .main .block-container {
+            padding: var(--space-md) !important;
+        }
+        [data-testid="stMetric"] [data-testid="stMetricValue"] {
+            font-size: 1.3rem !important;
+        }
     }
     
-    /* -------------------------------------------
-       메인 컨테이너 레이아웃
-       ------------------------------------------- */
-    .main .block-container {
-        padding: 1.5rem 2rem;
-        max-width: 1200px;
+    /* 데스크톱 (> 1024px) */
+    @media (min-width: 1024px) {
+        .main .block-container {
+            max-width: 1200px;
+            padding: var(--space-lg) var(--space-xl) !important;
+        }
     }
     
-    /* -------------------------------------------
-       🔧 사이드바 스타일
-       ------------------------------------------- */
+    /* 대형 화면 (> 1400px) */
+    @media (min-width: 1400px) {
+        .main .block-container {
+            max-width: 1400px;
+        }
+    }
+    
+    /* ============================================
+       🔧 사이드바 - 테마 적응형 (깔끔한 구분)
+       ============================================ */
     [data-testid="stSidebar"] {
-        background: var(--secondary-background-color) !important;
+        background: var(--st-secondary-bg) !important;
     }
     
     [data-testid="stSidebar"] > div:first-child {
-        padding-top: 1rem;
+        padding: var(--space-md);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-sm);
     }
     
-    /* 사이드바 내 요소 정렬 */
-    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] {
-        text-align: left;
+    /* 사이드바 텍스트 - 테마 색상 상속 + 가독성 확보 */
+    [data-testid="stSidebar"] * {
+        color: var(--st-text) !important;
     }
     
-    /* -------------------------------------------
-       💡 SMTP LED 상태 인디케이터
-       ------------------------------------------- */
-    .smtp-led-badge {
+    /* 사이드바 섹션 구분 */
+    [data-testid="stSidebar"] hr {
+        margin: var(--space-sm) 0;
+        border: none;
+        border-top: 1px solid var(--glass-border);
+        opacity: 0.5;
+    }
+    
+    /* 사이드바 메트릭 카드 - 테마 적응형 배경 */
+    [data-testid="stSidebar"] [data-testid="stMetric"] {
+        background: var(--glass-overlay) !important;
+        border: 1px solid var(--glass-border) !important;
+        border-radius: var(--radius-sm) !important;
+        padding: var(--space-sm) !important;
+    }
+    
+    [data-testid="stSidebar"] [data-testid="stMetricValue"] {
+        font-size: 1.25rem !important;
+        font-weight: var(--font-weight-bold) !important;
+    }
+    
+    [data-testid="stSidebar"] [data-testid="stMetricLabel"] {
+        font-size: 0.7rem !important;
+        font-weight: var(--font-weight-medium) !important;
+        opacity: 0.8;
+    }
+    
+    /* ============================================
+       💡 LED 상태 인디케이터 (강화된 글로우 효과)
+       Light/Dark 모두에서 선명하게 보임
+       ============================================ */
+    .led-indicator {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        padding: 8px 16px;
-        border-radius: 24px;
-        font-size: 0.82rem;
-        font-weight: 500;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        background: var(--glass-bg);
+        justify-content: center;
+        gap: 10px;
+        padding: 10px 18px;
+        border-radius: var(--radius-full);
+        font-size: 0.85rem;
+        font-weight: var(--font-weight-semibold);
+        background: var(--glass-overlay);
         border: 1px solid var(--glass-border);
-        box-shadow: var(--glass-shadow);
+        color: var(--st-text);
         transition: all 0.3s ease;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
     }
     
-    .smtp-led-badge .led-dot {
-        width: 10px;
-        height: 10px;
+    .led-indicator .led-dot {
+        width: 12px;
+        height: 12px;
         border-radius: 50%;
-        animation: led-pulse 2s ease-in-out infinite;
+        position: relative;
     }
     
-    .smtp-led-badge.connected .led-dot {
-        background: var(--success);
-        box-shadow: 0 0 12px var(--success), 0 0 4px var(--success);
+    /* 연결됨 - 초록색 LED 글로우 (강화) */
+    .led-indicator.connected {
+        background: var(--color-success-soft);
+        border-color: var(--color-success);
     }
     
-    .smtp-led-badge.disconnected .led-dot {
-        background: var(--warning);
-        box-shadow: 0 0 12px var(--warning), 0 0 4px var(--warning);
+    .led-indicator.connected .led-dot {
+        background: var(--color-success);
+        animation: led-pulse-success 2s ease-in-out infinite;
+        box-shadow: 
+            0 0 6px var(--color-success),
+            0 0 12px var(--color-success),
+            0 0 20px rgba(34, 197, 94, 0.5),
+            inset 0 0 4px rgba(255, 255, 255, 0.3);
     }
     
-    @keyframes led-pulse {
-        0%, 100% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.6; transform: scale(0.95); }
+    /* 연결 필요 - 노란색 LED 글로우 (강화) */
+    .led-indicator.disconnected {
+        background: var(--color-warning-soft);
+        border-color: var(--color-warning);
     }
     
-    /* -------------------------------------------
-       📊 메트릭 카드 (Glassmorphism)
-       ------------------------------------------- */
+    .led-indicator.disconnected .led-dot {
+        background: var(--color-warning);
+        animation: led-pulse-warning 1.5s ease-in-out infinite;
+        box-shadow: 
+            0 0 6px var(--color-warning),
+            0 0 12px var(--color-warning),
+            0 0 20px rgba(245, 158, 11, 0.5),
+            inset 0 0 4px rgba(255, 255, 255, 0.3);
+    }
+    
+    @keyframes led-pulse-success {
+        0%, 100% { 
+            opacity: 1; 
+            transform: scale(1);
+            box-shadow: 
+                0 0 6px var(--color-success),
+                0 0 12px var(--color-success),
+                0 0 20px rgba(34, 197, 94, 0.5);
+        }
+        50% { 
+            opacity: 0.85; 
+            transform: scale(0.95);
+            box-shadow: 
+                0 0 4px var(--color-success),
+                0 0 8px var(--color-success),
+                0 0 14px rgba(34, 197, 94, 0.3);
+        }
+    }
+    
+    @keyframes led-pulse-warning {
+        0%, 100% { 
+            opacity: 1; 
+            transform: scale(1);
+            box-shadow: 
+                0 0 6px var(--color-warning),
+                0 0 12px var(--color-warning),
+                0 0 20px rgba(245, 158, 11, 0.5);
+        }
+        50% { 
+            opacity: 0.85; 
+            transform: scale(0.95);
+            box-shadow: 
+                0 0 4px var(--color-warning),
+                0 0 8px var(--color-warning),
+                0 0 14px rgba(245, 158, 11, 0.3);
+        }
+    }
+    
+    /* ============================================
+       📊 메트릭 카드 - Glassmorphism (강화)
+       테마 배경색 기반 반투명
+       ============================================ */
     [data-testid="stMetric"] {
-        background: var(--glass-bg) !important;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        padding: 1.2rem 1rem;
+        background: var(--glass-overlay) !important;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        padding: var(--space-md);
         border-radius: var(--radius-md);
         border: 1px solid var(--glass-border) !important;
         box-shadow: var(--glass-shadow);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.25s ease;
     }
     
     [data-testid="stMetric"]:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+        transform: translateY(-3px);
+        box-shadow: var(--glass-hover-shadow);
+        border-color: rgba(128, 128, 128, 0.2) !important;
     }
     
+    /* 메트릭 값 - 테마 텍스트 색상 상속 + 강조 */
     [data-testid="stMetric"] [data-testid="stMetricValue"] {
-        font-size: 1.8rem !important;
-        font-weight: 700 !important;
-        letter-spacing: -0.5px;
+        font-size: 1.6rem !important;
+        font-weight: var(--font-weight-bold) !important;
+        color: var(--st-text) !important;
+        line-height: 1.2;
     }
     
+    /* 메트릭 레이블 - 명확한 가독성 */
     [data-testid="stMetric"] [data-testid="stMetricLabel"] {
-        font-size: 0.78rem !important;
+        font-size: 0.72rem !important;
+        font-weight: var(--font-weight-medium);
         text-transform: uppercase;
-        letter-spacing: 0.8px;
-        opacity: 0.7;
+        letter-spacing: 0.6px;
+        opacity: 0.75;
+        color: var(--st-text) !important;
+        margin-bottom: 4px;
     }
     
-    /* -------------------------------------------
-       🔘 버튼 스타일 (모던 트랜지션)
-       ------------------------------------------- */
+    /* 메트릭 델타 (변화량) */
+    [data-testid="stMetric"] [data-testid="stMetricDelta"] {
+        font-size: 0.8rem !important;
+        font-weight: var(--font-weight-medium);
+    }
+    
+    /* ============================================
+       🔘 버튼 스타일 (테마 적응형)
+       ============================================ */
     .stButton > button {
         border-radius: var(--radius-sm) !important;
-        font-weight: 500;
-        padding: 0.5rem 1rem;
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        border: 1px solid var(--glass-border);
+        font-weight: var(--font-weight-medium);
+        padding: var(--space-sm) var(--space-md);
+        transition: all 0.2s ease;
+        border: 1px solid var(--glass-border) !important;
+        background: var(--glass-overlay) !important;
+        color: var(--st-text) !important;
     }
     
     .stButton > button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        box-shadow: var(--glass-hover-shadow);
+        border-color: var(--st-primary) !important;
     }
     
     .stButton > button:active {
         transform: translateY(0);
     }
     
-    /* Primary 버튼 그라디언트 */
+    /* Primary 버튼 - 강조 */
     .stButton > button[kind="primary"],
-    .stButton > button[data-baseweb="button"][kind="primary"] {
-        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%) !important;
-        border: none !important;
+    .stButton > button[data-testid="baseButton-primary"] {
+        background: var(--st-primary) !important;
+        border-color: var(--st-primary) !important;
         color: white !important;
+        font-weight: var(--font-weight-semibold);
     }
     
-    .stButton > button[kind="primary"]:hover {
-        background: linear-gradient(135deg, var(--accent-hover) 0%, var(--accent) 100%) !important;
+    .stButton > button[kind="primary"]:hover,
+    .stButton > button[data-testid="baseButton-primary"]:hover {
+        box-shadow: 0 4px 16px rgba(59, 130, 246, 0.35);
+        filter: brightness(1.1);
     }
     
-    /* -------------------------------------------
-       📁 파일 업로드 (Drag & Drop)
-       ------------------------------------------- */
+    /* Secondary 버튼 */
+    .stButton > button[kind="secondary"] {
+        background: transparent !important;
+        border: 1px solid var(--st-primary) !important;
+        color: var(--st-primary) !important;
+    }
+    
+    /* ============================================
+       📁 파일 업로드 - Drag & Drop (강화)
+       ============================================ */
     [data-testid="stFileUploader"] {
-        border: 2px dashed rgba(74, 158, 255, 0.4) !important;
+        border: 2px dashed var(--glass-border) !important;
         border-radius: var(--radius-md);
-        padding: 1.5rem;
-        background: var(--glass-bg);
+        padding: var(--space-lg);
+        background: var(--glass-overlay);
         transition: all 0.3s ease;
+        position: relative;
     }
     
     [data-testid="stFileUploader"]:hover {
-        border-color: var(--accent) !important;
-        background: rgba(74, 158, 255, 0.08);
-        box-shadow: 0 0 20px rgba(74, 158, 255, 0.15);
+        border-color: var(--st-primary) !important;
+        border-style: dashed !important;
+        background: var(--color-info-soft);
+        box-shadow: 0 0 0 4px var(--color-info-soft);
     }
     
-    [data-testid="stFileUploader"] section {
-        padding: 1rem;
+    [data-testid="stFileUploader"]:hover::after {
+        content: "📂 파일을 놓으세요";
+        position: absolute;
+        bottom: 8px;
+        right: 12px;
+        font-size: 0.75rem;
+        color: var(--st-primary);
+        opacity: 0.8;
     }
     
-    /* -------------------------------------------
-       📦 카드/컨테이너 스타일
-       ------------------------------------------- */
+    /* 파일 업로드 드래그 오버 상태 */
+    [data-testid="stFileUploader"].drag-over {
+        border-color: var(--color-success) !important;
+        background: var(--color-success-soft);
+    }
+    
+    /* ============================================
+       📦 컨테이너/카드
+       ============================================ */
     [data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"] {
         border-radius: var(--radius-md) !important;
         border: 1px solid var(--glass-border) !important;
-        box-shadow: var(--glass-shadow);
-        background: var(--glass-bg);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-    }
-    
-    /* -------------------------------------------
-       📋 데이터프레임/테이블
-       ------------------------------------------- */
-    .stDataFrame {
-        border-radius: var(--radius-md) !important;
-        overflow: hidden;
-        border: 1px solid var(--glass-border) !important;
-        box-shadow: var(--glass-shadow);
-    }
-    
-    /* 테이블 헤더 강조 */
-    .stDataFrame thead th {
-        background: rgba(74, 158, 255, 0.1) !important;
-        font-weight: 600;
-    }
-    
-    /* -------------------------------------------
-       📂 Expander 스타일
-       ------------------------------------------- */
-    .streamlit-expanderHeader {
-        font-weight: 600;
-        border-radius: var(--radius-sm);
-        transition: all 0.2s ease;
-    }
-    
-    .streamlit-expanderHeader:hover {
-        background: rgba(74, 158, 255, 0.08);
-    }
-    
-    /* -------------------------------------------
-       ⚠️ 알림 메시지
-       ------------------------------------------- */
-    .stAlert {
-        border-radius: var(--radius-sm) !important;
-        border-left-width: 4px !important;
+        background: var(--glass-overlay);
         backdrop-filter: blur(8px);
     }
     
-    /* -------------------------------------------
-       📈 프로그레스 바
-       ------------------------------------------- */
-    .stProgress > div > div {
-        background: linear-gradient(90deg, var(--accent) 0%, var(--accent-hover) 100%);
-        border-radius: 10px;
-    }
-    
-    /* -------------------------------------------
-       ✏️ 입력 필드
-       ------------------------------------------- */
+    /* ============================================
+       ✏️ 입력 필드 스타일
+       쿠키 로드 시 테두리 강조 (시각적 세션 표시)
+       ============================================ */
     .stTextInput > div > div > input,
-    .stSelectbox > div > div,
-    .stMultiSelect > div > div,
-    .stTextArea > div > div > textarea {
+    .stTextArea > div > div > textarea,
+    .stSelectbox > div > div > div {
         border-radius: var(--radius-sm) !important;
         border: 1px solid var(--glass-border) !important;
+        background: var(--st-bg) !important;
+        color: var(--st-text) !important;
         transition: all 0.2s ease;
     }
     
     .stTextInput > div > div > input:focus,
     .stTextArea > div > div > textarea:focus {
-        border-color: var(--accent) !important;
-        box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2) !important;
+        border-color: var(--st-primary) !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+        outline: none !important;
     }
     
-    /* -------------------------------------------
-       📜 실시간 로그 컨테이너
-       ------------------------------------------- */
-    .log-container {
-        background: var(--glass-bg);
-        border: 1px solid var(--glass-border);
+    /* 쿠키/Secrets에서 로드된 입력 필드 강조 (녹색 테두리) */
+    .input-loaded-from-session input,
+    .input-loaded-from-session textarea {
+        border-color: var(--color-success) !important;
+        border-width: 2px !important;
+        box-shadow: 
+            0 0 0 3px var(--color-success-soft) !important,
+            inset 0 0 0 1px rgba(34, 197, 94, 0.1) !important;
+    }
+    
+    /* 쿠키에서 로드된 입력 필드 라벨 표시 */
+    .input-loaded-from-session::before {
+        content: "🍪";
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.8rem;
+        opacity: 0.7;
+    }
+    
+    /* 비밀번호 필드 특수 스타일 */
+    .stTextInput input[type="password"] {
+        letter-spacing: 2px;
+        font-family: monospace;
+    }
+    
+    /* ============================================
+       📋 데이터프레임
+       ============================================ */
+    .stDataFrame {
+        border-radius: var(--radius-md) !important;
+        overflow: hidden;
+        border: 1px solid var(--glass-border) !important;
+    }
+    
+    /* ============================================
+       📂 Expander
+       ============================================ */
+    .streamlit-expanderHeader {
+        font-weight: 600;
         border-radius: var(--radius-sm);
-        padding: 1rem;
-        max-height: 300px;
-        overflow-y: auto;
-        font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
-        font-size: 0.82rem;
+        background: var(--glass-overlay) !important;
     }
     
-    .log-entry {
-        padding: 6px 10px;
-        border-radius: 4px;
-        margin-bottom: 4px;
+    /* ============================================
+       ⚠️ 알림 메시지
+       ============================================ */
+    .stAlert {
+        border-radius: var(--radius-sm) !important;
+        border-left-width: 4px !important;
     }
     
-    .log-success { background: rgba(16, 185, 129, 0.12); color: var(--success); }
-    .log-error { background: rgba(239, 68, 68, 0.12); color: var(--error); }
-    .log-info { background: rgba(74, 158, 255, 0.12); color: var(--accent); }
+    /* ============================================
+       📈 프로그레스 바
+       ============================================ */
+    .stProgress > div > div {
+        background: var(--st-primary);
+        border-radius: var(--radius-full);
+    }
     
-    /* -------------------------------------------
-       🏷️ 미니 상태 배너
-       ------------------------------------------- */
-    .status-banner {
+    /* ============================================
+       🏷️ 상태 배지 (Status Badge) - 테마 적응형
+       ============================================ */
+    .status-badge {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 500;
+        padding: 6px 14px;
+        border-radius: var(--radius-full);
+        font-size: 0.8rem;
+        font-weight: var(--font-weight-semibold);
+        transition: all 0.2s ease;
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
     }
     
-    .status-banner.success {
-        background: rgba(16, 185, 129, 0.15);
-        color: var(--success);
-        border: 1px solid rgba(16, 185, 129, 0.3);
+    .status-badge.success {
+        background: var(--color-success-soft);
+        color: var(--color-success);
+        border: 1px solid rgba(34, 197, 94, 0.3);
     }
     
-    .status-banner.warning {
-        background: rgba(245, 158, 11, 0.15);
-        color: var(--warning);
+    .status-badge.warning {
+        background: var(--color-warning-soft);
+        color: var(--color-warning);
         border: 1px solid rgba(245, 158, 11, 0.3);
     }
     
-    .status-banner.error {
-        background: rgba(239, 68, 68, 0.15);
-        color: var(--error);
+    .status-badge.error {
+        background: var(--color-error-soft);
+        color: var(--color-error);
         border: 1px solid rgba(239, 68, 68, 0.3);
     }
     
-    /* -------------------------------------------
-       🔽 사이드바 푸터
-       ------------------------------------------- */
-    .sidebar-footer {
-        text-align: center;
-        padding: 1rem 0;
-        margin-top: 1.5rem;
-        font-size: 0.7rem;
-        opacity: 0.6;
-        border-top: 1px solid var(--glass-border);
+    .status-badge.info {
+        background: var(--color-info-soft);
+        color: var(--color-info);
+        border: 1px solid rgba(59, 130, 246, 0.3);
     }
     
-    /* -------------------------------------------
+    /* 작은 배지 변형 */
+    .status-badge.sm {
+        padding: 4px 10px;
+        font-size: 0.7rem;
+    }
+    
+    /* ============================================
+       🔽 사이드바 푸터
+       ============================================ */
+    .sidebar-footer {
+        text-align: center;
+        padding: var(--space-md) 0;
+        margin-top: var(--space-lg);
+        font-size: 0.7rem;
+        opacity: 0.7;
+        border-top: 1px solid var(--glass-border);
+        color: var(--st-text);
+    }
+    
+    /* ============================================
        📱 탭 스타일
-       ------------------------------------------- */
+       ============================================ */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background: var(--glass-bg);
+        gap: 4px;
+        background: var(--glass-overlay);
         border-radius: var(--radius-md);
         padding: 4px;
     }
@@ -415,30 +619,192 @@ CUSTOM_CSS = """
     .stTabs [data-baseweb="tab"] {
         border-radius: var(--radius-sm);
         font-weight: 500;
-        transition: all 0.2s ease;
     }
     
     .stTabs [aria-selected="true"] {
-        background: var(--accent) !important;
-        color: white !important;
+        background: var(--st-primary) !important;
     }
     
-    /* -------------------------------------------
-       🎯 스텝 인디케이터 강화
-       ------------------------------------------- */
-    .step-indicator-container {
+    /* ============================================
+       🎯 스텝 인디케이터 (강화된 시각적 구분)
+       ============================================ */
+    .step-container {
         display: flex;
         justify-content: space-between;
-        gap: 8px;
-        margin-bottom: 1.5rem;
+        align-items: center;
+        gap: var(--space-xs);
+        padding: var(--space-md) var(--space-sm);
+        background: var(--glass-overlay);
+        border-radius: var(--radius-md);
+        border: 1px solid var(--glass-border);
     }
     
-    /* -------------------------------------------
-       ✨ 호버 효과 전역
-       ------------------------------------------- */
-    * {
-        transition: color 0.2s ease;
+    .step-item {
+        flex: 1;
+        text-align: center;
+        position: relative;
     }
+    
+    .step-circle {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: var(--font-weight-semibold);
+        font-size: 0.9rem;
+        margin-bottom: var(--space-xs);
+        transition: all 0.3s ease;
+    }
+    
+    /* 현재 단계 - Primary 색상 + 강한 글로우 */
+    .step-circle.active {
+        background: var(--st-primary);
+        color: white;
+        box-shadow: 
+            0 0 0 4px var(--color-info-soft),
+            0 4px 12px rgba(59, 130, 246, 0.3);
+        transform: scale(1.05);
+    }
+    
+    /* 완료된 단계 - 성공 색상 */
+    .step-circle.completed {
+        background: var(--color-success);
+        color: white;
+        box-shadow: 0 2px 8px var(--color-success-soft);
+    }
+    
+    /* 대기 단계 - 연한 배경 + 테두리 */
+    .step-circle.pending {
+        background: var(--st-secondary-bg);
+        color: var(--st-text);
+        border: 2px solid var(--glass-border);
+        opacity: 0.6;
+    }
+    
+    .step-label {
+        font-size: 0.72rem;
+        font-weight: var(--font-weight-medium);
+        color: var(--st-text);
+    }
+    
+    .step-label.active {
+        font-weight: var(--font-weight-semibold);
+        color: var(--st-primary);
+    }
+    
+    .step-label.completed {
+        color: var(--color-success);
+    }
+    
+    .step-label.pending {
+        opacity: 0.6;
+    }
+    
+    .step-line {
+        flex: 0.5;
+        height: 3px;
+        background: var(--glass-border);
+        margin-bottom: 22px;
+        border-radius: 2px;
+        transition: all 0.3s ease;
+    }
+    
+    .step-line.completed {
+        background: linear-gradient(90deg, var(--color-success), var(--color-success));
+        box-shadow: 0 0 8px var(--color-success-soft);
+    }
+    
+    .step-line.active {
+        background: linear-gradient(90deg, var(--color-success), var(--st-primary));
+    }
+    
+    /* ============================================
+       🔄 로딩 상태 표시
+       ============================================ */
+    .loading-shimmer {
+        background: linear-gradient(
+            90deg,
+            var(--glass-overlay) 25%,
+            rgba(128, 128, 128, 0.15) 50%,
+            var(--glass-overlay) 75%
+        );
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+    }
+    
+    @keyframes shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+    
+    /* ============================================
+       ✨ 전역 트랜지션 (부드러운 테마 전환)
+       ============================================ */
+    * {
+        transition: background-color 0.15s ease, 
+                    border-color 0.15s ease,
+                    color 0.15s ease,
+                    box-shadow 0.2s ease;
+    }
+    
+    /* 스크롤바 스타일 (테마 적응) */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: var(--glass-overlay);
+        border-radius: var(--radius-full);
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: var(--glass-border);
+        border-radius: var(--radius-full);
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--st-primary);
+    }
+    
+    /* ============================================
+       🎭 포커스 가시성 (접근성)
+       ============================================ */
+    *:focus-visible {
+        outline: 2px solid var(--st-primary);
+        outline-offset: 2px;
+    }
+    
+    /* ============================================
+       📱 컨테이너/카드 추가 스타일
+       ============================================ */
+    [data-testid="stVerticalBlockBorderWrapper"] {
+        border-radius: var(--radius-md) !important;
+    }
+    
+    /* 테마 적응형 카드 배경 */
+    .main [data-testid="stVerticalBlockBorderWrapper"] > div {
+        background: var(--glass-overlay);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-md);
+    }
+    
+    /* ============================================
+       🔄 로딩/스피너 스타일
+       ============================================ */
+    .stSpinner > div {
+        border-top-color: var(--st-primary) !important;
+    }
+    
+    /* ============================================
+       📊 탭 패널 내부 여백
+       ============================================ */
+    [data-testid="stTabs"] [data-testid="stVerticalBlock"] {
+        padding-top: var(--space-md);
+    }
+    
 </style>
 """
 
@@ -955,72 +1321,55 @@ def render_header():
 
 
 def render_step_indicator():
-    """스텝 진행 상태 표시 - SaaS 스타일 (시각적 강화)"""
+    """스텝 진행 상태 표시 - 테마 적응형 CSS 클래스 사용 (강화된 시각적 구분)"""
     current = st.session_state.current_step
     
-    # 상단 여백
-    st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
-    
-    # 스텝 진행 바 (HTML/CSS)
-    steps_html = '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; gap: 4px;">'
+    # 스텝 진행 바 (CSS 클래스 기반 - 테마 적응형)
+    steps_html = '<div class="step-container">'
     
     for i, step_name in enumerate(STEPS, 1):
         if i < current:
-            # 완료된 스텝
-            bg = "linear-gradient(135deg, #10b981 0%, #059669 100%)"
-            color = "white"
+            circle_class = "completed"
+            label_class = "completed"
             icon = "✓"
-            opacity = "1"
         elif i == current:
-            # 현재 스텝
-            bg = "linear-gradient(135deg, #4a9eff 0%, #357abd 100%)"
-            color = "white"
+            circle_class = "active"
+            label_class = "active"
             icon = str(i)
-            opacity = "1"
         else:
-            # 대기 스텝
-            bg = "rgba(128, 128, 128, 0.2)"
-            color = "inherit"
+            circle_class = "pending"
+            label_class = "pending"
             icon = str(i)
-            opacity = "0.5"
         
         steps_html += f'''
-        <div style="flex: 1; text-align: center; opacity: {opacity};">
-            <div style="
-                width: 36px;
-                height: 36px;
-                margin: 0 auto 6px auto;
-                border-radius: 50%;
-                background: {bg};
-                color: {color};
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-weight: 600;
-                font-size: 0.85rem;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            ">{icon}</div>
-            <div style="font-size: 0.75rem; font-weight: {'600' if i == current else '400'};">{step_name}</div>
+        <div class="step-item">
+            <div class="step-circle {circle_class}">{icon}</div>
+            <div class="step-label {label_class}">{step_name}</div>
         </div>
         '''
         
         # 스텝 사이 연결선 (마지막 제외)
         if i < len(STEPS):
-            line_color = "#10b981" if i < current else "rgba(128,128,128,0.3)"
-            steps_html += f'<div style="flex: 0.3; height: 2px; background: {line_color}; margin-bottom: 20px;"></div>'
+            if i < current:
+                line_class = "completed"
+            elif i == current:
+                line_class = "active"
+            else:
+                line_class = ""
+            steps_html += f'<div class="step-line {line_class}"></div>'
     
     steps_html += '</div>'
     st.markdown(steps_html, unsafe_allow_html=True)
     
-    # 클릭 가능한 버튼 (숨김 처리, 실제 클릭용)
-    cols = st.columns(len(STEPS))
-    for i, (col, step_name) in enumerate(zip(cols, STEPS), 1):
-        with col:
-            if i < current:
-                # 완료된 스텝만 클릭 가능
-                if st.button(f"← {step_name}으로", key=f"step_nav_{i}", use_container_width=True):
-                    st.session_state.current_step = i
-                    st.rerun()
+    # 클릭 가능한 버튼 (완료된 스텝으로 이동) - 소형 버튼
+    if current > 1:
+        cols = st.columns(len(STEPS))
+        for i, (col, step_name) in enumerate(zip(cols, STEPS), 1):
+            with col:
+                if i < current:
+                    if st.button(f"← {i}", key=f"step_nav_{i}", help=f"{step_name}로 이동"):
+                        st.session_state.current_step = i
+                        st.rerun()
     
     st.divider()
 
@@ -1299,50 +1648,42 @@ streamlit run app.py""", language="bash")
 
 
 def render_smtp_sidebar():
-    """사이드바 - SaaS Enterprise Dashboard UI"""
+    """사이드바 - Theme-Adaptive & Responsive UI"""
     with st.sidebar:
         
         # ============================================================
-        # TOP: 브랜드 헤더 + 버전 배지
+        # TOP: 브랜드 헤더 + 버전 배지 (테마 적응형)
         # ============================================================
         st.markdown(f"""
         <div style="text-align: center; padding: 0.5rem 0 1rem 0;">
             <span style="font-size: 1.5rem;">📧</span>
-            <h2 style="margin: 0.3rem 0 0 0; font-size: 1.3rem; font-weight: 700;">CSO 메일머지</h2>
-            <span style="
-                display: inline-block;
-                margin-top: 0.3rem;
-                padding: 2px 10px;
-                font-size: 0.7rem;
-                border-radius: 12px;
-                background: rgba(74, 158, 255, 0.15);
-                color: var(--accent, #4a9eff);
-                font-weight: 500;
-            ">v{VERSION}</span>
+            <h2 style="margin: 0.3rem 0 0 0; font-size: 1.3rem; font-weight: 700; color: var(--text-color);">CSO 메일머지</h2>
+            <span class="status-badge info" style="margin-top: 0.3rem;">v{VERSION}</span>
         </div>
         """, unsafe_allow_html=True)
         
         # ============================================================
-        # SMTP 상태 LED 인디케이터 (상단 고정)
+        # SMTP 상태 LED 인디케이터 (글로우 효과)
         # ============================================================
         if st.session_state.smtp_config:
             st.markdown("""
-            <div class="smtp-led-badge connected" style="width: 100%; justify-content: center; margin-bottom: 0.8rem;">
+            <div class="led-indicator connected" style="width: 100%; justify-content: center; margin-bottom: 0.8rem;">
                 <span class="led-dot"></span>
                 <span>SMTP 연결됨</span>
             </div>
             """, unsafe_allow_html=True)
         else:
             st.markdown("""
-            <div class="status-banner warning" style="width: 100%; justify-content: center; display: flex; margin-bottom: 0.8rem;">
-                ⚠️ SMTP 연결 필요
+            <div class="led-indicator disconnected" style="width: 100%; justify-content: center; margin-bottom: 0.8rem;">
+                <span class="led-dot"></span>
+                <span>SMTP 연결 필요</span>
             </div>
             """, unsafe_allow_html=True)
         
         st.divider()
         
         # ============================================================
-        # 작업 현황 메트릭 카드
+        # 작업 현황 메트릭 카드 (Streamlit 네이티브)
         # ============================================================
         st.markdown("##### 📊 작업 현황")
         
@@ -1350,16 +1691,16 @@ def render_smtp_sidebar():
         
         col1, col2 = st.columns(2)
         with col1:
-            st.metric("📄 데이터", f"{data_count:,}행" if data_count > 0 else "—")
+            st.metric("데이터", f"{data_count:,}행" if data_count > 0 else "—")
         
         with col2:
             if st.session_state.grouped_data:
                 valid = sum(1 for g in st.session_state.grouped_data.values() 
                            if g['recipient_email'] and validate_email(g['recipient_email']))
                 total = len(st.session_state.grouped_data)
-                st.metric("📬 발송", f"{valid}/{total}")
+                st.metric("발송", f"{valid}/{total}")
             else:
-                st.metric("📬 발송", "—")
+                st.metric("발송", "—")
         
         # ============================================================
         # 초기화 버튼 (확인 절차 포함)
@@ -1398,11 +1739,11 @@ def render_smtp_sidebar():
             from_cookie = smtp_defaults.get('from_cookie', False)
             from_secrets = smtp_defaults.get('from_secrets', False)
             
-            # 로드 소스 표시 (미니멀 배너)
+            # 로드 소스 표시 (미니멀 배지)
             if from_cookie:
-                st.markdown('<div class="status-banner success" style="width:100%; justify-content:center; display:flex; margin-bottom:0.5rem;">🍪 저장된 설정 로드됨</div>', unsafe_allow_html=True)
+                st.markdown('<div class="status-badge success" style="width:100%; justify-content:center; display:flex; margin-bottom:0.5rem;">🍪 저장된 설정 로드됨</div>', unsafe_allow_html=True)
             elif from_secrets:
-                st.markdown('<div class="status-banner success" style="width:100%; justify-content:center; display:flex; margin-bottom:0.5rem;">🔐 관리자 설정 적용</div>', unsafe_allow_html=True)
+                st.markdown('<div class="status-badge success" style="width:100%; justify-content:center; display:flex; margin-bottom:0.5rem;">🔐 관리자 설정 적용</div>', unsafe_allow_html=True)
             
             # 메일 서비스 선택
             provider_list = list(SMTP_PROVIDERS.keys())
@@ -1425,21 +1766,31 @@ def render_smtp_sidebar():
                 smtp_port = SMTP_PROVIDERS[provider]["port"]
                 st.caption(f"📡 `{smtp_server}:{smtp_port}`")
             
-            # 자격증명 입력
+            # 자격증명 입력 (쿠키/Secrets 로드 시 시각적 표시)
+            # 쿠키/Secrets에서 로드된 경우 CSS 클래스 추가
+            session_loaded = from_cookie or from_secrets
+            
+            if session_loaded:
+                st.markdown('<div class="input-loaded-from-session">', unsafe_allow_html=True)
+            
             smtp_username = st.text_input(
-                "이메일 주소", 
+                "📧 이메일 주소" if session_loaded else "이메일 주소", 
                 value=smtp_defaults['username'],
                 key="smtp_user",
-                placeholder="your-email@company.com"
+                placeholder="your-email@company.com",
+                help="🍪 저장된 세션에서 로드됨" if from_cookie else ("🔐 관리자 설정에서 로드됨" if from_secrets else None)
             )
             
             smtp_password = st.text_input(
-                "앱 비밀번호", 
+                "🔑 앱 비밀번호" if session_loaded else "앱 비밀번호", 
                 type="password",
                 value=smtp_defaults['password'],
                 key="smtp_pass",
-                help="2단계 인증 사용 시 앱 비밀번호 필요"
+                help="2단계 인증 사용 시 앱 비밀번호 필요" + (" (저장됨 ✓)" if session_loaded else "")
             )
+            
+            if session_loaded:
+                st.markdown('</div>', unsafe_allow_html=True)
             
             # 연결 테스트 버튼
             if st.button("🔌 연결 테스트", use_container_width=True, type="primary"):
