@@ -2129,6 +2129,94 @@ def clear_session_credentials():
     clear_cookie_credentials()
 
 
+def render_auto_login_guide_dialog():
+    """자동로그인 설정 가이드 다이얼로그"""
+    
+    @st.dialog("🔐 자동로그인 설정", width="large")
+    def show_auto_login_guide():
+        st.markdown("""
+        <style>
+        .config-box {
+            background: rgba(74, 158, 255, 0.1);
+            border-left: 4px solid #4a9eff;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .config-code {
+            background: rgba(0,0,0,0.3);
+            padding: 0.8rem 1rem;
+            border-radius: 6px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+            margin: 0.5rem 0;
+        }
+        .config-note {
+            background: rgba(255, 193, 7, 0.15);
+            border-left: 4px solid #ffc107;
+            padding: 0.8rem 1rem;
+            margin: 0.5rem 0;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.9rem;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("### 🎯 자동로그인이란?")
+        st.info("앱 실행 시 SMTP 계정 정보를 자동으로 불러와서 매번 입력할 필요가 없습니다.", icon="💡")
+        
+        st.markdown("---")
+        st.markdown("### 📁 secrets.toml 파일 설정")
+        
+        # 파일 위치
+        st.markdown('<div class="config-box"><strong>파일 위치:</strong> <code>.streamlit/secrets.toml</code></div>', unsafe_allow_html=True)
+        st.caption("프로젝트 폴더 안에 `.streamlit` 폴더를 만들고 그 안에 `secrets.toml` 파일 생성")
+        
+        # 설정 내용
+        st.markdown("### ✏️ 파일 내용")
+        st.code('''# SMTP 자동로그인 설정
+SMTP_ID = "your_email@company.com"
+SMTP_PW = "your_app_password"
+SMTP_PROVIDER = "Hiworks (하이웍스)"
+SENDER_NAME = "한국유니온제약"''', language="toml")
+        
+        # 설정 항목 설명
+        with st.expander("📋 설정 항목 설명"):
+            st.markdown("""
+| 항목 | 설명 | 예시 |
+|------|------|------|
+| `SMTP_ID` | 이메일 계정 | `sales@company.com` |
+| `SMTP_PW` | 앱 비밀번호 | 이메일 서비스에서 발급 |
+| `SMTP_PROVIDER` | 메일 서비스 | `Hiworks (하이웍스)`, `Gmail` 등 |
+| `SENDER_NAME` | 발신자 표시명 | `한국유니온제약` |
+            """)
+        
+        st.markdown("---")
+        st.markdown("### 🔄 로드 우선순위")
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.markdown("**1순위**")
+            st.markdown("🍪 브라우저 쿠키")
+            st.caption("90일간 유지")
+        with col2:
+            st.markdown("**2순위**")
+            st.markdown("🔐 secrets.toml")
+            st.caption("파일 설정")
+        with col3:
+            st.markdown("**3순위**")
+            st.markdown("✏️ 수동 입력")
+            st.caption("직접 입력")
+        
+        st.markdown("---")
+        st.markdown('<div class="config-note">⚠️ <strong>주의:</strong> secrets.toml 파일은 절대 GitHub에 업로드하지 마세요! (.gitignore에 추가)</div>', unsafe_allow_html=True)
+        
+        if st.button("닫기", use_container_width=True, type="primary"):
+            st.rerun()
+    
+    return show_auto_login_guide
+
+
 def render_local_guide_dialog():
     """로컬 실행 가이드 다이얼로그"""
     
@@ -2612,40 +2700,20 @@ def render_smtp_sidebar():
                 st.rerun()
         
         # ============================================================
-        # 가이드 (로컬 실행 가이드 팝업 + ZIP 다운로드)
+        # 가이드 (모든 가이드를 팝업으로)
         # ============================================================
         with st.expander("📖 가이드", expanded=False):
             if st.button("💻 로컬 실행 가이드", use_container_width=True, key="local_guide_btn"):
                 st.session_state.show_local_guide = True
                 st.rerun()
             
+            if st.button("🔐 자동로그인 설정", use_container_width=True, key="auto_login_guide_btn"):
+                st.session_state.show_auto_login_guide = True
+                st.rerun()
+            
             st.link_button("📦 로컬 실행 ZIP 다운", 
                           "https://github.com/yurielk82/mm-project/archive/refs/heads/main.zip",
                           use_container_width=True)
-        
-        # ============================================================
-        # SMTP 설정 가이드 (secrets.toml 설정)
-        # ============================================================
-        with st.expander("🔐 SMTP 설정 가이드", expanded=False):
-            st.markdown("""
-**secrets.toml 파일 설정**
-
-자동 로그인을 위해 아래 내용을 설정하세요:
-
-```toml
-SMTP_ID = "email@company.com"
-SMTP_PW = "app_password"
-```
-
-📁 **파일 위치:** `.streamlit/secrets.toml`
-
----
-
-**🔄 로드 우선순위:**
-1. 🍪 브라우저 쿠키 (90일 유지)
-2. 🔐 secrets.toml 파일
-3. ✏️ 수동 입력
-            """)
         
         # 푸터 전 여백
         st.markdown("<div style='flex-grow: 1; min-height: 20px;'></div>", unsafe_allow_html=True)
@@ -4366,6 +4434,12 @@ def main():
         show_guide = render_local_guide_dialog()
         show_guide()
         st.session_state.show_local_guide = False
+    
+    # 자동로그인 설정 가이드 다이얼로그
+    if st.session_state.get('show_auto_login_guide', False):
+        show_auto_login = render_auto_login_guide_dialog()
+        show_auto_login()
+        st.session_state.show_auto_login_guide = False
     
     render_smtp_sidebar()
     
