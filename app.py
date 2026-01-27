@@ -153,20 +153,7 @@ CUSTOM_CSS = """
         padding: var(--space-md) !important;
     }
     
-    /* 상단 영역 - 프로그레스 (컴팩트) */
-    .sidebar-top-section {
-        padding-bottom: var(--space-sm);
-        margin-bottom: var(--space-md);
-        border-bottom: 1px solid var(--glass-border);
-    }
-    
-    /* 하단 영역 - 설정 (여유있게) */
-    .sidebar-bottom-section {
-        display: flex;
-        flex-direction: column;
-        gap: var(--space-sm);
-    }
-    
+    /* 사이드바 요소 간격 */
     [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
         gap: var(--space-sm) !important;
     }
@@ -1750,9 +1737,6 @@ def render_smtp_sidebar():
         current_page = st.session_state.get('current_page', '📧 메일 발송')
         
         if current_page == "📧 메일 발송":
-            # 상단 영역 (프로그레스 + 네비) - 컴팩트 컨테이너
-            st.markdown('<div class="sidebar-top-section">', unsafe_allow_html=True)
-            
             current_step = st.session_state.current_step
             total_steps = len(STEPS)
             
@@ -1762,12 +1746,8 @@ def render_smtp_sidebar():
             # 이전/다음 텍스트 버튼
             render_step_nav_buttons(current_step, total_steps)
             
-            st.markdown('</div>', unsafe_allow_html=True)
-        
-        # ============================================================
-        # 하단 영역 (SMTP 설정 등) - 여유있는 간격
-        # ============================================================
-        st.markdown('<div class="sidebar-bottom-section">', unsafe_allow_html=True)
+            # 구분선
+            st.markdown('<hr style="margin: 12px 0; border: none; border-top: 1px solid rgba(128,128,128,0.15);">', unsafe_allow_html=True)
         
         if st.session_state.smtp_config:
             # 연결됨 - 녹색 LED
@@ -1927,8 +1907,6 @@ SMTP_PW = "app_password"
             st.link_button("📦 ZIP 다운로드", 
                           "https://github.com/yurielk82/mm-project/archive/refs/heads/main.zip",
                           use_container_width=True)
-        
-        st.markdown('</div>', unsafe_allow_html=True)  # sidebar-bottom-section 닫기
         
         st.markdown("""
         <div class="sidebar-footer">
