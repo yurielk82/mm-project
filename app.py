@@ -65,268 +65,379 @@ DEFAULT_BATCH_DELAY = 30
 
 
 # ============================================================================
-# CUSTOM CSS - SaaS-Level UI with Theme Variables (Light/Dark Mode)
+# CUSTOM CSS - SaaS-Level Enterprise UI (Light/Dark Mode Responsive)
 # ============================================================================
 
 CUSTOM_CSS = """
 <style>
     /* ============================================
-       SaaS-Level Enterprise UI
-       반응형 테마 대응 (Light/Dark Mode)
+       🎨 SaaS Enterprise Dashboard CSS
+       Streamlit 테마 변수 기반 완전 반응형
+       Light/Dark 모드 자동 대응
        ============================================ */
     
-    /* CSS 변수 정의 - Streamlit 테마 변수 활용 */
+    /* -------------------------------------------
+       CSS 변수: Streamlit 테마 자동 상속
+       ------------------------------------------- */
     :root {
-        --card-bg: var(--secondary-background-color);
-        --card-border: rgba(128, 128, 128, 0.2);
-        --text-primary: var(--text-color);
-        --text-secondary: rgba(128, 128, 128, 0.8);
-        --accent-color: #4a9eff;
-        --success-color: #10b981;
-        --warning-color: #f59e0b;
-        --error-color: #ef4444;
-        --shadow-light: rgba(0, 0, 0, 0.05);
-        --shadow-medium: rgba(0, 0, 0, 0.1);
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.18);
+        --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+        --accent: #4a9eff;
+        --accent-hover: #357abd;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --error: #ef4444;
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
     }
     
-    /* 전체 레이아웃 */
+    /* Dark 모드 감지 및 변수 오버라이드 */
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --glass-bg: rgba(30, 41, 59, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+    }
+    
+    /* Streamlit Dark 테마 클래스 대응 */
+    [data-testid="stAppViewContainer"][data-theme="dark"],
+    .stApp[data-theme="dark"] {
+        --glass-bg: rgba(30, 41, 59, 0.8);
+        --glass-border: rgba(255, 255, 255, 0.1);
+    }
+    
+    /* -------------------------------------------
+       메인 컨테이너 레이아웃
+       ------------------------------------------- */
     .main .block-container {
-        padding-top: 1rem;
-        padding-bottom: 1rem;
+        padding: 1.5rem 2rem;
         max-width: 1200px;
     }
     
-    /* ============================================
-       사이드바 스타일
-       ============================================ */
+    /* -------------------------------------------
+       🔧 사이드바 스타일
+       ------------------------------------------- */
     [data-testid="stSidebar"] {
-        background: var(--secondary-background-color);
+        background: var(--secondary-background-color) !important;
     }
     
-    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
-        text-align: center;
+    [data-testid="stSidebar"] > div:first-child {
+        padding-top: 1rem;
     }
     
-    /* SMTP 상태 LED 인디케이터 */
-    .smtp-status-led {
+    /* 사이드바 내 요소 정렬 */
+    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] {
+        text-align: left;
+    }
+    
+    /* -------------------------------------------
+       💡 SMTP LED 상태 인디케이터
+       ------------------------------------------- */
+    .smtp-led-badge {
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-size: 0.8rem;
+        padding: 8px 16px;
+        border-radius: 24px;
+        font-size: 0.82rem;
         font-weight: 500;
-        background: var(--card-bg);
-        border: 1px solid var(--card-border);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        box-shadow: var(--glass-shadow);
+        transition: all 0.3s ease;
     }
-    .smtp-status-led .led {
-        width: 8px;
-        height: 8px;
+    
+    .smtp-led-badge .led-dot {
+        width: 10px;
+        height: 10px;
         border-radius: 50%;
-        animation: pulse 2s infinite;
-    }
-    .smtp-status-led.connected .led {
-        background: var(--success-color);
-        box-shadow: 0 0 8px var(--success-color);
-    }
-    .smtp-status-led.disconnected .led {
-        background: var(--warning-color);
-        box-shadow: 0 0 8px var(--warning-color);
-    }
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
+        animation: led-pulse 2s ease-in-out infinite;
     }
     
-    /* ============================================
-       메트릭 카드 스타일 - 테마 반응형
-       ============================================ */
+    .smtp-led-badge.connected .led-dot {
+        background: var(--success);
+        box-shadow: 0 0 12px var(--success), 0 0 4px var(--success);
+    }
+    
+    .smtp-led-badge.disconnected .led-dot {
+        background: var(--warning);
+        box-shadow: 0 0 12px var(--warning), 0 0 4px var(--warning);
+    }
+    
+    @keyframes led-pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.6; transform: scale(0.95); }
+    }
+    
+    /* -------------------------------------------
+       📊 메트릭 카드 (Glassmorphism)
+       ------------------------------------------- */
     [data-testid="stMetric"] {
-        background: var(--card-bg);
-        padding: 1rem;
-        border-radius: 12px;
-        border: 1px solid var(--card-border);
-        box-shadow: 0 2px 8px var(--shadow-light);
-        transition: all 0.2s ease;
-    }
-    [data-testid="stMetric"]:hover {
-        box-shadow: 0 4px 16px var(--shadow-medium);
-        transform: translateY(-2px);
-    }
-    [data-testid="stMetric"] [data-testid="stMetricValue"] {
-        font-size: 1.6rem !important;
-        font-weight: 700 !important;
-        color: var(--text-primary) !important;
-    }
-    [data-testid="stMetric"] [data-testid="stMetricLabel"] {
-        font-size: 0.8rem !important;
-        color: var(--text-secondary) !important;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        background: var(--glass-bg) !important;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        padding: 1.2rem 1rem;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--glass-border) !important;
+        box-shadow: var(--glass-shadow);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
     
-    /* ============================================
-       버튼 스타일 - 모던 트랜지션
-       ============================================ */
-    .stButton > button {
-        border-radius: 10px;
-        font-weight: 500;
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        border: 1px solid var(--card-border);
-        background: var(--card-bg);
-        color: var(--text-primary);
+    [data-testid="stMetric"]:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
     }
+    
+    [data-testid="stMetric"] [data-testid="stMetricValue"] {
+        font-size: 1.8rem !important;
+        font-weight: 700 !important;
+        letter-spacing: -0.5px;
+    }
+    
+    [data-testid="stMetric"] [data-testid="stMetricLabel"] {
+        font-size: 0.78rem !important;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        opacity: 0.7;
+    }
+    
+    /* -------------------------------------------
+       🔘 버튼 스타일 (모던 트랜지션)
+       ------------------------------------------- */
+    .stButton > button {
+        border-radius: var(--radius-sm) !important;
+        font-weight: 500;
+        padding: 0.5rem 1rem;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid var(--glass-border);
+    }
+    
     .stButton > button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px var(--shadow-medium);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
     }
+    
     .stButton > button:active {
         transform: translateY(0);
     }
-    .stButton > button[kind="primary"] {
-        background: linear-gradient(135deg, var(--accent-color) 0%, #357abd 100%);
-        border: none;
-        color: white;
-    }
-    .stButton > button[kind="primary"]:hover {
-        background: linear-gradient(135deg, #357abd 0%, var(--accent-color) 100%);
+    
+    /* Primary 버튼 그라디언트 */
+    .stButton > button[kind="primary"],
+    .stButton > button[data-baseweb="button"][kind="primary"] {
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%) !important;
+        border: none !important;
+        color: white !important;
     }
     
-    /* ============================================
-       파일 업로드 영역 - Drag & Drop 스타일
-       ============================================ */
+    .stButton > button[kind="primary"]:hover {
+        background: linear-gradient(135deg, var(--accent-hover) 0%, var(--accent) 100%) !important;
+    }
+    
+    /* -------------------------------------------
+       📁 파일 업로드 (Drag & Drop)
+       ------------------------------------------- */
     [data-testid="stFileUploader"] {
-        border: 2px dashed var(--card-border);
-        border-radius: 12px;
-        padding: 1rem;
-        background: var(--card-bg);
+        border: 2px dashed rgba(74, 158, 255, 0.4) !important;
+        border-radius: var(--radius-md);
+        padding: 1.5rem;
+        background: var(--glass-bg);
         transition: all 0.3s ease;
     }
+    
     [data-testid="stFileUploader"]:hover {
-        border-color: var(--accent-color);
-        background: rgba(74, 158, 255, 0.05);
+        border-color: var(--accent) !important;
+        background: rgba(74, 158, 255, 0.08);
+        box-shadow: 0 0 20px rgba(74, 158, 255, 0.15);
     }
+    
     [data-testid="stFileUploader"] section {
-        padding: 1.5rem;
+        padding: 1rem;
     }
     
-    /* ============================================
-       컨테이너/카드 스타일
-       ============================================ */
+    /* -------------------------------------------
+       📦 카드/컨테이너 스타일
+       ------------------------------------------- */
     [data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"] {
-        border-radius: 12px;
-        border: 1px solid var(--card-border);
-        box-shadow: 0 2px 8px var(--shadow-light);
-        background: var(--card-bg);
+        border-radius: var(--radius-md) !important;
+        border: 1px solid var(--glass-border) !important;
+        box-shadow: var(--glass-shadow);
+        background: var(--glass-bg);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
     }
     
-    /* ============================================
-       데이터프레임/테이블 스타일
-       ============================================ */
+    /* -------------------------------------------
+       📋 데이터프레임/테이블
+       ------------------------------------------- */
     .stDataFrame {
-        border-radius: 12px;
+        border-radius: var(--radius-md) !important;
         overflow: hidden;
-        border: 1px solid var(--card-border);
-        box-shadow: 0 2px 8px var(--shadow-light);
+        border: 1px solid var(--glass-border) !important;
+        box-shadow: var(--glass-shadow);
     }
     
-    /* ============================================
-       Expander 스타일
-       ============================================ */
+    /* 테이블 헤더 강조 */
+    .stDataFrame thead th {
+        background: rgba(74, 158, 255, 0.1) !important;
+        font-weight: 600;
+    }
+    
+    /* -------------------------------------------
+       📂 Expander 스타일
+       ------------------------------------------- */
     .streamlit-expanderHeader {
         font-weight: 600;
-        background: var(--card-bg);
-        border-radius: 10px;
+        border-radius: var(--radius-sm);
         transition: all 0.2s ease;
     }
+    
     .streamlit-expanderHeader:hover {
-        background: rgba(74, 158, 255, 0.1);
+        background: rgba(74, 158, 255, 0.08);
     }
     
-    /* ============================================
-       알림 메시지 스타일
-       ============================================ */
+    /* -------------------------------------------
+       ⚠️ 알림 메시지
+       ------------------------------------------- */
     .stAlert {
-        border-radius: 10px;
-        border-left-width: 4px;
+        border-radius: var(--radius-sm) !important;
+        border-left-width: 4px !important;
+        backdrop-filter: blur(8px);
     }
     
-    /* ============================================
-       프로그레스 바
-       ============================================ */
+    /* -------------------------------------------
+       📈 프로그레스 바
+       ------------------------------------------- */
     .stProgress > div > div {
-        background: linear-gradient(90deg, var(--accent-color) 0%, #357abd 100%);
+        background: linear-gradient(90deg, var(--accent) 0%, var(--accent-hover) 100%);
         border-radius: 10px;
     }
     
-    /* ============================================
-       인풋 필드 스타일
-       ============================================ */
+    /* -------------------------------------------
+       ✏️ 입력 필드
+       ------------------------------------------- */
     .stTextInput > div > div > input,
     .stSelectbox > div > div,
-    .stMultiSelect > div > div {
-        border-radius: 10px;
-        border: 1px solid var(--card-border);
+    .stMultiSelect > div > div,
+    .stTextArea > div > div > textarea {
+        border-radius: var(--radius-sm) !important;
+        border: 1px solid var(--glass-border) !important;
         transition: all 0.2s ease;
     }
-    .stTextInput > div > div > input:focus {
-        border-color: var(--accent-color);
-        box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.2);
+    
+    .stTextInput > div > div > input:focus,
+    .stTextArea > div > div > textarea:focus {
+        border-color: var(--accent) !important;
+        box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2) !important;
     }
     
-    /* ============================================
-       실시간 로그 박스
-       ============================================ */
+    /* -------------------------------------------
+       📜 실시간 로그 컨테이너
+       ------------------------------------------- */
     .log-container {
-        background: var(--card-bg);
-        border: 1px solid var(--card-border);
-        border-radius: 10px;
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-sm);
         padding: 1rem;
         max-height: 300px;
         overflow-y: auto;
-        font-family: 'Consolas', 'Monaco', monospace;
-        font-size: 0.85rem;
+        font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+        font-size: 0.82rem;
     }
+    
     .log-entry {
-        padding: 4px 8px;
+        padding: 6px 10px;
         border-radius: 4px;
         margin-bottom: 4px;
     }
-    .log-success { background: rgba(16, 185, 129, 0.1); color: var(--success-color); }
-    .log-error { background: rgba(239, 68, 68, 0.1); color: var(--error-color); }
-    .log-info { background: rgba(74, 158, 255, 0.1); color: var(--accent-color); }
     
-    /* ============================================
-       사이드바 푸터
-       ============================================ */
+    .log-success { background: rgba(16, 185, 129, 0.12); color: var(--success); }
+    .log-error { background: rgba(239, 68, 68, 0.12); color: var(--error); }
+    .log-info { background: rgba(74, 158, 255, 0.12); color: var(--accent); }
+    
+    /* -------------------------------------------
+       🏷️ 미니 상태 배너
+       ------------------------------------------- */
+    .status-banner {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    
+    .status-banner.success {
+        background: rgba(16, 185, 129, 0.15);
+        color: var(--success);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    
+    .status-banner.warning {
+        background: rgba(245, 158, 11, 0.15);
+        color: var(--warning);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    
+    .status-banner.error {
+        background: rgba(239, 68, 68, 0.15);
+        color: var(--error);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    
+    /* -------------------------------------------
+       🔽 사이드바 푸터
+       ------------------------------------------- */
     .sidebar-footer {
         text-align: center;
         padding: 1rem 0;
+        margin-top: 1.5rem;
         font-size: 0.7rem;
-        color: var(--text-secondary);
-        border-top: 1px solid var(--card-border);
-        margin-top: 1rem;
+        opacity: 0.6;
+        border-top: 1px solid var(--glass-border);
     }
     
-    /* ============================================
-       미니멀 배너 (SMTP 경고용)
-       ============================================ */
-    .mini-banner {
-        padding: 8px 12px;
-        border-radius: 8px;
-        font-size: 0.75rem;
-        text-align: center;
-        margin-bottom: 0.5rem;
+    /* -------------------------------------------
+       📱 탭 스타일
+       ------------------------------------------- */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background: var(--glass-bg);
+        border-radius: var(--radius-md);
+        padding: 4px;
     }
-    .mini-banner.warning {
-        background: rgba(245, 158, 11, 0.15);
-        color: var(--warning-color);
-        border: 1px solid rgba(245, 158, 11, 0.3);
+    
+    .stTabs [data-baseweb="tab"] {
+        border-radius: var(--radius-sm);
+        font-weight: 500;
+        transition: all 0.2s ease;
     }
-    .mini-banner.success {
-        background: rgba(16, 185, 129, 0.15);
-        color: var(--success-color);
-        border: 1px solid rgba(16, 185, 129, 0.3);
+    
+    .stTabs [aria-selected="true"] {
+        background: var(--accent) !important;
+        color: white !important;
+    }
+    
+    /* -------------------------------------------
+       🎯 스텝 인디케이터 강화
+       ------------------------------------------- */
+    .step-indicator-container {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 1.5rem;
+    }
+    
+    /* -------------------------------------------
+       ✨ 호버 효과 전역
+       ------------------------------------------- */
+    * {
+        transition: color 0.2s ease;
     }
 </style>
 """
@@ -838,50 +949,78 @@ def render_email_content(group_key, group_data, display_cols, amount_cols, templ
 # ============================================================================
 
 def render_header():
-    """헤더 - 깔끔한 브랜딩"""
-    col1, col2 = st.columns([6, 1])
-    with col1:
-        st.markdown(f"""
-        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 0.5rem;">
-            <span style="font-size: 2rem;">📨</span>
-            <div>
-                <h1 style="margin: 0; font-size: 1.8rem; color: #1e3c72;">{APP_TITLE}</h1>
-                <p style="margin: 0; color: #6c757d; font-size: 0.9rem;">{APP_SUBTITLE}</p>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    with col2:
-        st.markdown(f"""
-        <div style="text-align: right; padding-top: 0.5rem;">
-            <span style="background: #e9ecef; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; color: #6c757d;">
-                v{VERSION}
-            </span>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    st.divider()
+    """헤더 - SaaS Enterprise Dashboard 스타일 (사용되지 않음 - 사이드바로 이동)"""
+    # 메인 영역 상단 여백만 추가 (헤더는 사이드바로 통합)
+    pass
 
 
 def render_step_indicator():
-    """스텝 진행 상태 표시 (Streamlit 네이티브)"""
+    """스텝 진행 상태 표시 - SaaS 스타일 (시각적 강화)"""
     current = st.session_state.current_step
     
-    # 스텝 컬럼 생성
-    cols = st.columns(len(STEPS))
+    # 상단 여백
+    st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
     
+    # 스텝 진행 바 (HTML/CSS)
+    steps_html = '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; gap: 4px;">'
+    
+    for i, step_name in enumerate(STEPS, 1):
+        if i < current:
+            # 완료된 스텝
+            bg = "linear-gradient(135deg, #10b981 0%, #059669 100%)"
+            color = "white"
+            icon = "✓"
+            opacity = "1"
+        elif i == current:
+            # 현재 스텝
+            bg = "linear-gradient(135deg, #4a9eff 0%, #357abd 100%)"
+            color = "white"
+            icon = str(i)
+            opacity = "1"
+        else:
+            # 대기 스텝
+            bg = "rgba(128, 128, 128, 0.2)"
+            color = "inherit"
+            icon = str(i)
+            opacity = "0.5"
+        
+        steps_html += f'''
+        <div style="flex: 1; text-align: center; opacity: {opacity};">
+            <div style="
+                width: 36px;
+                height: 36px;
+                margin: 0 auto 6px auto;
+                border-radius: 50%;
+                background: {bg};
+                color: {color};
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: 600;
+                font-size: 0.85rem;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            ">{icon}</div>
+            <div style="font-size: 0.75rem; font-weight: {'600' if i == current else '400'};">{step_name}</div>
+        </div>
+        '''
+        
+        # 스텝 사이 연결선 (마지막 제외)
+        if i < len(STEPS):
+            line_color = "#10b981" if i < current else "rgba(128,128,128,0.3)"
+            steps_html += f'<div style="flex: 0.3; height: 2px; background: {line_color}; margin-bottom: 20px;"></div>'
+    
+    steps_html += '</div>'
+    st.markdown(steps_html, unsafe_allow_html=True)
+    
+    # 클릭 가능한 버튼 (숨김 처리, 실제 클릭용)
+    cols = st.columns(len(STEPS))
     for i, (col, step_name) in enumerate(zip(cols, STEPS), 1):
         with col:
             if i < current:
-                # 완료된 스텝 - 클릭하면 이동
-                if st.button(f"✓ {step_name}", key=f"step_{i}", use_container_width=True):
+                # 완료된 스텝만 클릭 가능
+                if st.button(f"← {step_name}으로", key=f"step_nav_{i}", use_container_width=True):
                     st.session_state.current_step = i
                     st.rerun()
-            elif i == current:
-                # 현재 스텝
-                st.button(f"● {step_name}", key=f"step_{i}", type="primary", disabled=True, use_container_width=True)
-            else:
-                # 대기 스텝
-                st.button(f"{i}. {step_name}", key=f"step_{i}", disabled=True, use_container_width=True)
     
     st.divider()
 
@@ -1160,133 +1299,152 @@ streamlit run app.py""", language="bash")
 
 
 def render_smtp_sidebar():
-    """사이드바 - SaaS 수준 UI, Light/Dark 테마 대응"""
+    """사이드바 - SaaS Enterprise Dashboard UI"""
     with st.sidebar:
         
         # ============================================================
-        # TOP: 브랜드 + SMTP 상태 LED
+        # TOP: 브랜드 헤더 + 버전 배지
         # ============================================================
-        st.markdown("### 📧 CSO 메일머지")
-        st.caption(f"v{VERSION}")
+        st.markdown(f"""
+        <div style="text-align: center; padding: 0.5rem 0 1rem 0;">
+            <span style="font-size: 1.5rem;">📧</span>
+            <h2 style="margin: 0.3rem 0 0 0; font-size: 1.3rem; font-weight: 700;">CSO 메일머지</h2>
+            <span style="
+                display: inline-block;
+                margin-top: 0.3rem;
+                padding: 2px 10px;
+                font-size: 0.7rem;
+                border-radius: 12px;
+                background: rgba(74, 158, 255, 0.15);
+                color: var(--accent, #4a9eff);
+                font-weight: 500;
+            ">v{VERSION}</span>
+        </div>
+        """, unsafe_allow_html=True)
         
-        # SMTP 상태 LED 스타일 인디케이터
+        # ============================================================
+        # SMTP 상태 LED 인디케이터 (상단 고정)
+        # ============================================================
         if st.session_state.smtp_config:
             st.markdown("""
-            <div class="smtp-status-led connected">
-                <span class="led"></span>
+            <div class="smtp-led-badge connected" style="width: 100%; justify-content: center; margin-bottom: 0.8rem;">
+                <span class="led-dot"></span>
                 <span>SMTP 연결됨</span>
             </div>
             """, unsafe_allow_html=True)
         else:
             st.markdown("""
-            <div class="mini-banner warning">
-                ⚠️ SMTP 연결이 필요합니다
+            <div class="status-banner warning" style="width: 100%; justify-content: center; display: flex; margin-bottom: 0.8rem;">
+                ⚠️ SMTP 연결 필요
             </div>
             """, unsafe_allow_html=True)
         
         st.divider()
         
         # ============================================================
-        # MIDDLE: 메트릭 카드 (데이터/발송)
+        # 작업 현황 메트릭 카드
         # ============================================================
+        st.markdown("##### 📊 작업 현황")
+        
         data_count = len(st.session_state.df) if st.session_state.df is not None else 0
         
         col1, col2 = st.columns(2)
         with col1:
-            st.metric("데이터", f"{data_count:,}")
+            st.metric("📄 데이터", f"{data_count:,}행" if data_count > 0 else "—")
         
         with col2:
             if st.session_state.grouped_data:
                 valid = sum(1 for g in st.session_state.grouped_data.values() 
                            if g['recipient_email'] and validate_email(g['recipient_email']))
                 total = len(st.session_state.grouped_data)
-                success_rate = f"{(valid/total*100):.0f}%" if total > 0 else "0%"
-                st.metric("발송", f"{valid}/{total}")
+                st.metric("📬 발송", f"{valid}/{total}")
             else:
-                st.metric("발송", "0/0")
+                st.metric("📬 발송", "—")
         
-        # 초기화 버튼
+        # ============================================================
+        # 초기화 버튼 (확인 절차 포함)
+        # ============================================================
         if 'confirm_reset' not in st.session_state:
             st.session_state.confirm_reset = False
         
         if not st.session_state.confirm_reset:
             if st.button("↻ 처음부터", use_container_width=True, 
-                        help="모든 데이터를 초기화합니다"):
+                        help="모든 데이터와 설정을 초기화합니다"):
                 st.session_state.confirm_reset = True
                 st.rerun()
         else:
-            st.warning("정말 초기화하시겠습니까?")
+            st.error("⚠️ 정말 초기화하시겠습니까?", icon="🔄")
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("확인", use_container_width=True, type="primary"):
+                if st.button("✓ 확인", use_container_width=True, type="primary"):
                     st.session_state.confirm_reset = False
                     reset_workflow()
                     st.rerun()
             with col2:
-                if st.button("취소", use_container_width=True):
+                if st.button("✗ 취소", use_container_width=True):
                     st.session_state.confirm_reset = False
                     st.rerun()
         
         st.divider()
         
         # ============================================================
-        # SMTP 계정 설정 영역
+        # SMTP 계정 설정 (자동 열림 if 미연결)
         # ============================================================
         smtp_connected = st.session_state.smtp_config is not None
-        smtp_expanded = not smtp_connected
         
-        with st.expander("⚙️ SMTP 계정", expanded=smtp_expanded):
-            # Cookie에서 자격증명 로드 (기본 동작)
+        with st.expander("⚙️ SMTP 설정", expanded=not smtp_connected):
+            # 자동 로드: Cookie 우선 > Secrets
             smtp_defaults = get_smtp_config()
             from_cookie = smtp_defaults.get('from_cookie', False)
             from_secrets = smtp_defaults.get('from_secrets', False)
             
-            # 로드 소스 표시 (미니멀)
+            # 로드 소스 표시 (미니멀 배너)
             if from_cookie:
-                st.markdown('<div class="mini-banner success">🍪 저장된 설정 로드됨</div>', 
-                           unsafe_allow_html=True)
+                st.markdown('<div class="status-banner success" style="width:100%; justify-content:center; display:flex; margin-bottom:0.5rem;">🍪 저장된 설정 로드됨</div>', unsafe_allow_html=True)
             elif from_secrets:
-                st.markdown('<div class="mini-banner success">🔐 관리자 설정 적용됨</div>', 
-                           unsafe_allow_html=True)
+                st.markdown('<div class="status-banner success" style="width:100%; justify-content:center; display:flex; margin-bottom:0.5rem;">🔐 관리자 설정 적용</div>', unsafe_allow_html=True)
             
+            # 메일 서비스 선택
             provider_list = list(SMTP_PROVIDERS.keys())
-            default_provider_idx = 0
-            if smtp_defaults['provider'] in provider_list:
-                default_provider_idx = provider_list.index(smtp_defaults['provider'])
+            default_provider_idx = provider_list.index(smtp_defaults['provider']) if smtp_defaults['provider'] in provider_list else 0
             
             provider = st.selectbox(
                 "메일 서비스", 
                 provider_list, 
                 index=default_provider_idx, 
-                key="smtp_provider"
+                key="smtp_provider",
+                help="사용 중인 메일 서비스를 선택하세요"
             )
             
+            # 서버/포트 설정
             if provider == "직접 입력":
-                smtp_server = st.text_input("SMTP 서버", key="smtp_server_input")
+                smtp_server = st.text_input("SMTP 서버", key="smtp_server_input", placeholder="smtp.example.com")
                 smtp_port = st.number_input("포트", value=587, key="smtp_port_input")
             else:
                 smtp_server = SMTP_PROVIDERS[provider]["server"]
                 smtp_port = SMTP_PROVIDERS[provider]["port"]
-                st.caption(f"서버: `{smtp_server}:{smtp_port}`")
+                st.caption(f"📡 `{smtp_server}:{smtp_port}`")
             
+            # 자격증명 입력
             smtp_username = st.text_input(
-                "이메일", 
+                "이메일 주소", 
                 value=smtp_defaults['username'],
                 key="smtp_user",
-                placeholder="email@company.com"
+                placeholder="your-email@company.com"
             )
             
             smtp_password = st.text_input(
-                "비밀번호", 
+                "앱 비밀번호", 
                 type="password",
                 value=smtp_defaults['password'],
-                key="smtp_pass"
+                key="smtp_pass",
+                help="2단계 인증 사용 시 앱 비밀번호 필요"
             )
             
             # 연결 테스트 버튼
             if st.button("🔌 연결 테스트", use_container_width=True, type="primary"):
-                final_username = smtp_username if smtp_username else smtp_defaults['username']
-                final_password = smtp_password if smtp_password else smtp_defaults['password']
+                final_username = smtp_username or smtp_defaults['username']
+                final_password = smtp_password or smtp_defaults['password']
                 
                 if final_username and final_password:
                     config = {
@@ -1299,44 +1457,49 @@ def render_smtp_sidebar():
                     with st.spinner("연결 중..."):
                         server, error = create_smtp_connection(config)
                         if server:
-                            st.success("✓ 연결 성공!")
+                            st.success("✅ 연결 성공!")
                             server.quit()
                             st.session_state.smtp_config = config
                             # 쿠키에 자동 저장 (90일)
                             save_to_session(provider, final_username, final_password, save_cookie=True)
+                            time.sleep(0.5)
                             st.rerun()
                         else:
                             st.error(f"{error}")
                 else:
-                    st.warning("입력값 확인 필요")
-            
-
+                    st.warning("이메일과 비밀번호를 입력하세요")
         
-        # 설정 가이드
+        # ============================================================
+        # 도움말 (접이식)
+        # ============================================================
         with st.expander("📖 도움말", expanded=False):
             st.markdown("""
-**secrets.toml 설정**
+**secrets.toml 설정** (자동 로드용)
 ```toml
 SMTP_ID = "email@company.com"
 SMTP_PW = "app_password"
 ```
 📁 위치: `.streamlit/secrets.toml`
+
+**로드 우선순위:**
+1. 🍪 브라우저 쿠키 (90일)
+2. 🔐 secrets.toml 파일
+3. ✏️ 수동 입력
             """)
         
         st.divider()
         
         # ============================================================
-        # FOOTER: 로컬 실행 + 저작권
+        # FOOTER: 로컬 실행 가이드 + 저작권
         # ============================================================
         if st.button("💻 로컬 실행 가이드", use_container_width=True, 
-                    help="회사 네트워크에서 직접 실행"):
+                    help="하이웍스 IP 제한 시 회사 PC에서 직접 실행"):
             st.session_state.show_local_guide = True
             st.rerun()
         
-        # 푸터 (테마 반응형)
         st.markdown("""
         <div class="sidebar-footer">
-            Designed & Developed by Kwon dae-hwan<br>
+            <strong>Designed by Kwon Dae-hwan</strong><br>
             © 2026 KUP Sales Management
         </div>
         """, unsafe_allow_html=True)
