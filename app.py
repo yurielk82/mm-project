@@ -995,9 +995,12 @@ def clear_cookie_credentials():
 
 
 def get_smtp_config() -> dict:
-    """SMTP 설정 로드 (Cookie 우선 > Session > 빈 값)
+    """SMTP 설정 로드 (Cookie 우선 > Secrets > Session)
     
-    Note: Secrets는 버튼 클릭 시에만 로드함
+    자동 로드 순서:
+    1. Session State (이미 로드된 값)
+    2. Cookie (브라우저 저장)
+    3. Secrets (secrets.toml)
     """
     config = {
         'username': '',
@@ -1016,7 +1019,7 @@ def get_smtp_config() -> dict:
         config['from_secrets'] = st.session_state.get('loaded_from_secrets', False)
         return config
     
-    # 2. Cookie에서 로드 (기본 동작)
+    # 2. Cookie에서 로드 (우선)
     cookie_config = load_from_cookie()
     if cookie_config.get('from_cookie') and cookie_config.get('username'):
         config.update(cookie_config)
@@ -1025,6 +1028,17 @@ def get_smtp_config() -> dict:
         st.session_state.saved_smtp_pass = config['password']
         st.session_state.saved_smtp_provider = config['provider']
         st.session_state.loaded_from_cookie = True
+        return config
+    
+    # 3. Cookie 없으면 Secrets에서 자동 로드
+    secrets_config = load_from_secrets()
+    if secrets_config.get('from_secrets') and secrets_config.get('username'):
+        config.update(secrets_config)
+        # 세션에도 저장
+        st.session_state.saved_smtp_user = config['username']
+        st.session_state.saved_smtp_pass = config['password']
+        st.session_state.saved_smtp_provider = config['provider']
+        st.session_state.loaded_from_secrets = True
     
     return config
 
@@ -1296,29 +1310,12 @@ def render_smtp_sidebar():
                 else:
                     st.warning("입력값 확인 필요")
             
-            # 하단 버튼 영역
-            col1, col2 = st.columns(2)
-            with col1:
-                # Secrets 로드 버튼 (하단)
-                if has_secrets_config() and not from_secrets:
-                    if st.button("🔐 Secrets", use_container_width=True,
-                                help="secrets.toml 설정 로드"):
-                        secrets_config = load_from_secrets()
-                        if secrets_config.get('from_secrets'):
-                            st.session_state.saved_smtp_user = secrets_config['username']
-                            st.session_state.saved_smtp_pass = secrets_config['password']
-                            st.session_state.saved_smtp_provider = secrets_config['provider']
-                            st.session_state.loaded_from_secrets = True
-                            st.session_state.loaded_from_cookie = False
-                            st.rerun()
-            
-            with col2:
-                # 저장된 정보 삭제 버튼
-                if from_cookie or st.session_state.get('saved_smtp_user'):
-                    if st.button("🗑️ 삭제", use_container_width=True,
-                                help="저장된 SMTP 정보를 삭제합니다"):
-                        clear_session_credentials()
-                        st.rerun()
+            # 저장된 정보 삭제 버튼
+            if from_cookie or from_secrets or st.session_state.get('saved_smtp_user'):
+                if st.button("🗑️ 저장 정보 삭제", use_container_width=True,
+                            help="브라우저에 저장된 SMTP 정보를 삭제합니다"):
+                    clear_session_credentials()
+                    st.rerun()
         
         # 설정 가이드
         with st.expander("📖 도움말", expanded=False):
