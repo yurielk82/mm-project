@@ -1659,34 +1659,107 @@ streamlit run app.py""", language="bash")
     return show_guide
 
 
+def render_circular_progress(current_step: int, total_steps: int):
+    """원형 프로그레스 인디케이터 (SVG 기반)"""
+    progress = (current_step / total_steps) * 100
+    # SVG 계산
+    size = 140
+    stroke_width = 10
+    radius = (size - stroke_width) / 2
+    circumference = 2 * 3.14159 * radius
+    stroke_dashoffset = circumference - (progress / 100) * circumference
+    
+    current_step_name = STEPS[current_step - 1] if current_step <= len(STEPS) else ""
+    
+    return f"""
+    <div style="display: flex; flex-direction: column; align-items: center; padding: 1rem 0;">
+        <!-- 원형 프로그레스 -->
+        <div style="position: relative; width: {size}px; height: {size}px;">
+            <!-- 글로우 배경 -->
+            <div style="
+                position: absolute;
+                inset: 10px;
+                border-radius: 50%;
+                background: radial-gradient(circle, rgba(0, 212, 255, 0.15) 0%, transparent 70%);
+                filter: blur(10px);
+            "></div>
+            
+            <svg width="{size}" height="{size}" style="transform: rotate(-90deg);">
+                <!-- 배경 원 -->
+                <circle
+                    cx="{size/2}" cy="{size/2}" r="{radius}"
+                    fill="none"
+                    stroke="rgba(128, 128, 128, 0.15)"
+                    stroke-width="{stroke_width}"
+                />
+                <!-- 프로그레스 원 -->
+                <circle
+                    cx="{size/2}" cy="{size/2}" r="{radius}"
+                    fill="none"
+                    stroke="url(#progressGradient)"
+                    stroke-width="{stroke_width}"
+                    stroke-linecap="round"
+                    stroke-dasharray="{circumference}"
+                    stroke-dashoffset="{stroke_dashoffset}"
+                    style="transition: stroke-dashoffset 0.5s ease-out; filter: drop-shadow(0 0 6px rgba(0, 212, 255, 0.6));"
+                />
+                <defs>
+                    <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#00d4ff"/>
+                        <stop offset="100%" stop-color="#7c3aed"/>
+                    </linearGradient>
+                </defs>
+            </svg>
+            
+            <!-- 중앙 텍스트 -->
+            <div style="
+                position: absolute;
+                inset: 0;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+            ">
+                <div style="display: flex; align-items: baseline; gap: 2px;">
+                    <span style="font-size: 2rem; font-weight: 700; color: var(--text-color);">{current_step}</span>
+                    <span style="font-size: 1rem; color: rgba(128,128,128,0.6);">/ {total_steps}</span>
+                </div>
+                <span style="font-size: 0.85rem; color: #00d4ff; font-weight: 600;">{int(progress)}%</span>
+            </div>
+        </div>
+        
+        <!-- 현재 단계 제목 -->
+        <div style="text-align: center; margin-top: 0.75rem;">
+            <div style="font-size: 0.95rem; font-weight: 600; color: #00d4ff;">{current_step_name}</div>
+            <div style="font-size: 0.7rem; color: rgba(128,128,128,0.7); margin-top: 2px;">진행 중...</div>
+        </div>
+    </div>
+    """
+
+
 def render_smtp_sidebar():
     """사이드바 - Theme-Adaptive & Responsive UI"""
     with st.sidebar:
         
         # ============================================================
-        # TOP: 브랜드 헤더 + 버전 배지 (테마 적응형)
+        # 🔝 최상단: 원형 프로그레스 인디케이터
         # ============================================================
-        st.markdown(f"""
-        <div style="text-align: center; padding: 0.5rem 0 1rem 0;">
-            <span style="font-size: 1.5rem;">📧</span>
-            <h2 style="margin: 0.3rem 0 0 0; font-size: 1.3rem; font-weight: 700; color: var(--text-color);">CSO 메일머지</h2>
-            <span class="status-badge info" style="margin-top: 0.3rem;">v{VERSION}</span>
-        </div>
-        """, unsafe_allow_html=True)
+        current_step = st.session_state.current_step
+        st.markdown(render_circular_progress(current_step, len(STEPS)), unsafe_allow_html=True)
         
         # ============================================================
         # SMTP 상태 LED 인디케이터 (글로우 효과)
         # ============================================================
         if st.session_state.smtp_config:
             st.markdown("""
-            <div class="led-indicator connected" style="width: 100%; justify-content: center; margin-bottom: 0.8rem;">
+            <div class="led-indicator connected" style="width: 100%; justify-content: center; margin-bottom: 0.5rem;">
                 <span class="led-dot"></span>
                 <span>SMTP 연결됨</span>
             </div>
             """, unsafe_allow_html=True)
         else:
             st.markdown("""
-            <div class="led-indicator disconnected" style="width: 100%; justify-content: center; margin-bottom: 0.8rem;">
+            <div class="led-indicator disconnected" style="width: 100%; justify-content: center; margin-bottom: 0.5rem;">
                 <span class="led-dot"></span>
                 <span>SMTP 연결 필요</span>
             </div>
