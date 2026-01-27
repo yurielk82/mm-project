@@ -1753,7 +1753,30 @@ def render_smtp_sidebar():
         
         if current_page == "📧 메일 발송":
             current_step = st.session_state.current_step
-            st.markdown(render_circular_progress(current_step, len(STEPS)), unsafe_allow_html=True)
+            total_steps = len(STEPS)
+            st.markdown(render_circular_progress(current_step, total_steps), unsafe_allow_html=True)
+            
+            # ============================================================
+            # 이전 / 다음 단계 버튼 (Streamlit 기본 스타일)
+            # ============================================================
+            col_prev, col_next = st.columns(2)
+            
+            with col_prev:
+                if st.button("← 이전", 
+                            use_container_width=True, 
+                            disabled=(current_step <= 1),
+                            key="sidebar_prev"):
+                    st.session_state.current_step = current_step - 1
+                    st.rerun()
+            
+            with col_next:
+                if st.button("다음 →", 
+                            type="primary", 
+                            use_container_width=True, 
+                            disabled=(current_step >= total_steps),
+                            key="sidebar_next"):
+                    st.session_state.current_step = current_step + 1
+                    st.rerun()
         
         # ============================================================
         # SMTP 상태 LED 인디케이터 (HTML 기반)
