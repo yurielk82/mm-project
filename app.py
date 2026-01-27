@@ -2635,14 +2635,23 @@ def render_smtp_sidebar():
             render_step_nav_buttons(current_step, total_steps)
         
         # ============================================================
+        # 🔲 대형 여백 + 구분선 (프로그레스와 SMTP 섹션 분리)
+        # ============================================================
+        st.markdown("""
+        <div class="sidebar-large-spacer">
+            <div class="sidebar-section-divider" style="width: 80%;"></div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # ============================================================
         # SMTP 상태 LED 인디케이터
         # ============================================================
         if st.session_state.smtp_config:
-            st.markdown("""<div class="led-indicator connected" style="width:100%; justify-content:center; margin:16px 0 12px 0;">
+            st.markdown("""<div class="led-indicator connected" style="width:100%; justify-content:center; margin:8px 0 12px 0;">
                 <span class="led-dot"></span><span>SMTP 연결됨</span>
             </div>""", unsafe_allow_html=True)
         else:
-            st.markdown("""<div class="led-indicator disconnected" style="width:100%; justify-content:center; margin:16px 0 12px 0;">
+            st.markdown("""<div class="led-indicator disconnected" style="width:100%; justify-content:center; margin:8px 0 12px 0;">
                 <span class="led-dot"></span><span>SMTP 연결 필요</span>
             </div>""", unsafe_allow_html=True)
         
@@ -2740,14 +2749,8 @@ def render_smtp_sidebar():
                 else:
                     st.warning("이메일과 비밀번호를 입력하세요")
         
-        # ============================================================
-        # 🔲 대형 여백 + 구분선 (SMTP 섹션과 메뉴 분리)
-        # ============================================================
-        st.markdown("""
-        <div class="sidebar-large-spacer">
-            <div class="sidebar-section-divider" style="width: 80%;"></div>
-        </div>
-        """, unsafe_allow_html=True)
+        # 메뉴 간 간격
+        st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
         
         # ============================================================
         # 메뉴 (페이지 네비게이션)
