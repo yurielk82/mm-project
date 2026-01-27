@@ -3035,15 +3035,28 @@ def render_step2():
             saved_display = saved_config.get('display_cols', [])
             saved_excluded = saved_config.get('excluded_cols', [])
             
-            # 이메일 표시 컬럼: 저장된 설정이 있으면 복원, 없으면 모든 컬럼
+            # ✅ 핵심 수정: 현재 파일 컬럼과 저장된 설정의 컬럼 매칭 확인
+            # 저장된 display + excluded가 현재 컬럼의 대부분을 커버하는지 확인
+            all_saved_cols = set(saved_display + saved_excluded)
+            current_cols_set = set(columns)
+            
+            # 저장된 설정에 없는 새 컬럼들 (새 파일에만 있는 컬럼)
+            new_cols_in_file = [c for c in columns if c not in all_saved_cols]
+            
+            # 이메일 표시 컬럼: 저장된 설정이 있으면 복원 + 새 컬럼 추가
             if saved_display:
-                st.session_state.display_cols = [c for c in saved_display if c in columns]
+                restored_display = [c for c in saved_display if c in columns]
+                # 새 파일에만 있는 컬럼은 표시 컬럼에 추가 (원본 순서 유지)
+                for c in columns:
+                    if c in new_cols_in_file and c not in restored_display:
+                        restored_display.append(c)
+                st.session_state.display_cols = restored_display
                 missing_cols.extend([c for c in saved_display if c not in columns])
             else:
                 # 기본값: 모든 컬럼 (원본 순서)
                 st.session_state.display_cols = columns.copy()
             
-            # 제외된 컬럼 복원
+            # 제외된 컬럼 복원 (현재 파일에 존재하는 것만)
             st.session_state.excluded_cols = [c for c in saved_excluded if c in columns]
             
             # 형식 설정 복원 (이메일 표시와 독립적)
@@ -3061,6 +3074,8 @@ def render_step2():
             
             if missing_cols:
                 st.warning(f"⚠️ 기존 설정 중 일부 컬럼이 현재 파일에 없어 제외되었습니다: {', '.join(missing_cols)}")
+            elif new_cols_in_file:
+                st.info(f"ℹ️ 새 컬럼 {len(new_cols_in_file)}개가 표시 목록에 추가되었습니다: {', '.join(new_cols_in_file[:5])}{'...' if len(new_cols_in_file) > 5 else ''}")
             else:
                 st.toast("💾 이전 컬럼 설정을 불러왔습니다", icon="✅")
         else:
