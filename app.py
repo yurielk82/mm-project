@@ -1012,6 +1012,27 @@ CUSTOM_CSS = """
         transform: translateX(4px) !important;
     }
     
+    /* LED 인디케이터와 Expander 사이 간격 */
+    [data-testid="stSidebar"] .led-indicator {
+        margin: 16px 0 !important;
+    }
+    
+    /* Expander 간 간격 통일 */
+    [data-testid="stSidebar"] [data-testid="stExpander"] {
+        margin-bottom: 8px !important;
+    }
+    
+    /* 사이드바 푸터 스타일 */
+    .sidebar-footer {
+        text-align: center;
+        padding: 16px 0;
+        margin-top: auto;
+        font-size: 0.7rem;
+        opacity: 0.6;
+        border-top: 1px solid rgba(128, 128, 128, 0.15);
+        color: var(--st-text);
+    }
+    
 </style>
 """
 
@@ -1958,23 +1979,146 @@ def render_circular_progress(current_step: int, total_steps: int):
 '''
 
 
+def can_go_next_step(current_step: int) -> Tuple[bool, str]:
+    """다음 단계로 이동 가능한지 검증하고 사유 반환"""
+    
+    if current_step == 1:
+        # Step 1: 파일 업로드 완료 여부
+        if st.session_state.df is None:
+            return False, "먼저 파일을 업로드하세요"
+        return True, ""
+    
+    elif current_step == 2:
+        # Step 2: 표시 컬럼 선택 여부
+        display_cols = st.session_state.get('display_cols', [])
+        if not display_cols:
+            return False, "표시할 컬럼을 1개 이상 선택하세요"
+        return True, ""
+    
+    elif current_step == 3:
+        # Step 3: 유효한 발송 대상 여부
+        grouped = st.session_state.get('grouped_data', {})
+        valid = sum(1 for g in grouped.values() if g.get('recipient_email') and validate_email(g.get('recipient_email', '')))
+        if valid == 0:
+            return False, "발송 가능한 대상이 없습니다"
+        return True, ""
+    
+    elif current_step == 4:
+        # Step 4: 항상 이동 가능
+        return True, ""
+    
+    return False, "마지막 단계입니다"
+
+
+def execute_step_transition(current_step: int, direction: str = "next") -> bool:
+    """스텝 전환 시 필요한 로직 실행 (본문 버튼과 동일한 로직)
+    
+    Args:
+        current_step: 현재 스텝 번호
+        direction: "next" 또는 "prev"
+    
+    Returns:
+        True if transition successful, False otherwise
+    """
+    
+    if direction == "prev":
+        # 이전 단계는 단순 이동
+        if current_step > 1:
+            st.session_state.current_step = current_step - 1
+            return True
+        return False
+    
+    # 다음 단계 로직
+    can_go, error_msg = can_go_next_step(current_step)
+    if not can_go:
+        st.toast(error_msg, icon="⚠️")
+        return False
+    
+    if current_step == 1:
+        # Step 1 → 2: 단순 이동 (데이터는 이미 로드됨)
+        st.session_state.current_step = 2
+        return True
+    
+    elif current_step == 2:
+        # Step 2 → 3: 데이터 처리 로직 실행
+        df = st.session_state.df
+        df_email = st.session_state.df_email
+        use_separate = st.session_state.use_separate_email_sheet
+        
+        # 설정값 가져오기
+        sheet_name = st.session_state.get('selected_data_sheet', 'default')
+        group_key_col = st.session_state.get('group_key_col')
+        display_cols = st.session_state.get('display_cols', [])
+        amount_cols = st.session_state.get('amount_cols', [])
+        percent_cols = st.session_state.get('percent_cols', [])
+        date_cols = st.session_state.get('date_cols', [])
+        id_cols = st.session_state.get('id_cols', [])
+        use_wildcard = st.session_state.get('use_wildcard_grouping', True)
+        conflict_resolution = st.session_state.get('conflict_resolution', 'first')
+        
+        if not group_key_col:
+            st.toast("그룹화 기준 컬럼을 선택하세요", icon="⚠️")
+            return False
+        
+        # 컬럼 설정 저장
+        save_column_settings(sheet_name)
+        
+        # 데이터 처리
+        df_work = df.copy()
+        
+        if use_separate and df_email is not None:
+            df_work = merge_email_data(
+                df_work, df_email,
+                st.session_state.get('join_col_data'),
+                st.session_state.get('join_col_email'),
+                st.session_state.get('email_col')
+            )
+        
+        df_cleaned = clean_dataframe(df_work, amount_cols, percent_cols, date_cols, id_cols)
+        st.session_state.df = df_cleaned
+        
+        grouped, conflicts = group_data_with_wildcard(
+            df_cleaned, group_key_col, st.session_state.get('email_col'),
+            amount_cols, percent_cols, display_cols, conflict_resolution,
+            use_wildcard, st.session_state.get('wildcard_suffixes', [' 합계']),
+            st.session_state.get('calculate_totals_auto', False)
+        )
+        
+        st.session_state.grouped_data = grouped
+        st.session_state.email_conflicts = conflicts
+        st.session_state.current_step = 3
+        return True
+    
+    elif current_step == 3:
+        # Step 3 → 4: 단순 이동
+        st.session_state.current_step = 4
+        return True
+    
+    elif current_step == 4:
+        # Step 4 → 5: 단순 이동
+        st.session_state.current_step = 5
+        return True
+    
+    return False
+
+
 def render_step_nav_buttons(current_step: int, total_steps: int):
-    """이전단계/다음단계 텍스트 버튼 (테두리 없음, 컴팩트)"""
+    """이전단계/다음단계 텍스트 버튼 (본문 버튼과 동일한 로직 실행)"""
     prev_disabled = current_step <= 1
     next_disabled = current_step >= total_steps
     
-    # 버튼 2개를 바로 columns로 배치 (HTML div 래퍼 제거)
+    # 버튼 2개를 바로 columns로 배치
     col1, col2 = st.columns(2)
     
     with col1:
         if st.button("‹ 이전", key="nav_prev", disabled=prev_disabled, use_container_width=True):
-            st.session_state.current_step = current_step - 1
-            st.rerun()
+            if execute_step_transition(current_step, "prev"):
+                st.rerun()
     
     with col2:
         if st.button("다음 ›", key="nav_next", disabled=next_disabled, use_container_width=True):
-            st.session_state.current_step = current_step + 1
-            st.rerun()
+            if execute_step_transition(current_step, "next"):
+                st.rerun()
 
 
 def render_smtp_sidebar():
@@ -2120,11 +2264,8 @@ SMTP_PW = "app_password"
 3. ✏️ 수동 입력
             """)
         
-        # 여백으로 섹션 구분 (divider 대신)
-        st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
-        
         # ============================================================
-        # 메뉴 (페이지 네비게이션) - expander
+        # 메뉴 (페이지 네비게이션) - 도움말 바로 아래
         # ============================================================
         current_page = st.session_state.get('current_page', '📧 메일 발송')
         
@@ -2142,7 +2283,7 @@ SMTP_PW = "app_password"
                 st.rerun()
         
         # ============================================================
-        # 로컬 실행 가이드 - expander
+        # 로컬 실행 가이드 - 메뉴 바로 아래
         # ============================================================
         with st.expander("💻 로컬 실행 가이드", expanded=False):
             if st.button("📖 가이드 보기", use_container_width=True, key="local_guide_btn"):
@@ -2152,6 +2293,9 @@ SMTP_PW = "app_password"
             st.link_button("📦 ZIP 다운로드", 
                           "https://github.com/yurielk82/mm-project/archive/refs/heads/main.zip",
                           use_container_width=True)
+        
+        # 푸터 전 여백
+        st.markdown("<div style='flex-grow: 1; min-height: 20px;'></div>", unsafe_allow_html=True)
         
         st.markdown("""
         <div class="sidebar-footer">
