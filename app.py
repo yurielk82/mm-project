@@ -2703,6 +2703,10 @@ def render_smtp_sidebar():
         # 가이드 (모든 가이드를 팝업으로)
         # ============================================================
         with st.expander("📖 가이드", expanded=False):
+            st.link_button("📦 로컬 실행 파일 다운로드", 
+                          "https://github.com/yurielk82/mm-project/archive/refs/heads/main.zip",
+                          use_container_width=True)
+            
             if st.button("💻 로컬 실행 가이드", use_container_width=True, key="local_guide_btn"):
                 st.session_state.show_local_guide = True
                 st.rerun()
@@ -2710,10 +2714,6 @@ def render_smtp_sidebar():
             if st.button("🔐 자동로그인 설정", use_container_width=True, key="auto_login_guide_btn"):
                 st.session_state.show_auto_login_guide = True
                 st.rerun()
-            
-            st.link_button("📦 로컬 실행 ZIP 다운", 
-                          "https://github.com/yurielk82/mm-project/archive/refs/heads/main.zip",
-                          use_container_width=True)
         
         # 푸터 전 여백
         st.markdown("<div style='flex-grow: 1; min-height: 20px;'></div>", unsafe_allow_html=True)
