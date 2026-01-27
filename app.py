@@ -2081,8 +2081,36 @@ SMTP_PW = "app_password"
         """, unsafe_allow_html=True)
 
 
+def scroll_to_top():
+    """페이지 최상단으로 스크롤"""
+    st.markdown("""
+    <style>
+        /* 스크롤 최상단 이동 트릭 */
+        .scroll-to-top {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 0;
+            height: 0;
+        }
+    </style>
+    <div class="scroll-to-top" id="top"></div>
+    <script>
+        // Streamlit iframe 내에서 스크롤
+        var mainContent = window.parent.document.querySelector('section.main');
+        if (mainContent) {
+            mainContent.scrollTop = 0;
+        }
+        window.scrollTo(0, 0);
+    </script>
+    """, unsafe_allow_html=True)
+
+
 def render_page_header(step: int, title: str, description: str):
-    """SaaS급 페이지 헤더 - 스텝 인디케이터 포함"""
+    """SaaS급 페이지 헤더 - 깔끔한 디자인"""
+    # 페이지 최상단으로 스크롤
+    scroll_to_top()
+    
     st.markdown(f"""
     <div style="
         background: linear-gradient(135deg, var(--primary-color) 0%, #7c3aed 100%);
@@ -2123,15 +2151,6 @@ def render_page_header(step: int, title: str, description: str):
                 <div style="font-size: 2rem; font-weight: 700; line-height: 1;">{step}</div>
                 <div style="font-size: 0.7rem; opacity: 0.8;">of {len(STEPS)}</div>
             </div>
-        </div>
-        
-        <!-- 스텝 프로그레스 바 -->
-        <div style="
-            margin-top: 20px;
-            display: flex;
-            gap: 8px;
-        ">
-            {"".join([f'<div style="flex:1; height:4px; border-radius:2px; background:{"rgba(255,255,255,0.9)" if i < step else "rgba(255,255,255,0.3)"};"></div>' for i in range(1, len(STEPS)+1)])}
         </div>
     </div>
     """, unsafe_allow_html=True)
