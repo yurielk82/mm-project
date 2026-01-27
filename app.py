@@ -104,14 +104,6 @@ CUSTOM_CSS = """
         --color-info: #3b82f6;
         --color-info-soft: rgba(59, 130, 246, 0.12);
         
-        /* 🔘 버튼 색상 (브랜드 컬러) */
-        --btn-prev-bg: #E0E0E0;
-        --btn-prev-text: #333333;
-        --btn-prev-hover: #BDBDBD;
-        --btn-next-bg: #1E88E5;
-        --btn-next-text: #FFFFFF;
-        --btn-next-hover: #1565C0;
-        
         /* 반응형 간격 */
         --space-xs: 0.25rem;
         --space-sm: 0.5rem;
@@ -484,228 +476,6 @@ CUSTOM_CSS = """
         background: transparent !important;
         border: 1px solid var(--st-primary) !important;
         color: var(--st-primary) !important;
-    }
-    
-    /* ============================================
-       🔀 스텝 네비게이션 버튼 (Capsule 스타일)
-       다크: Neon Glow / 라이트: Soft Shadow
-       ============================================ */
-    .step-nav-container {
-        display: flex;
-        gap: 10px;
-        justify-content: center;
-        margin: 0.75rem 0;
-        padding: 0 0.5rem;
-    }
-    
-    .step-nav-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        padding: 8px 18px;
-        border-radius: 50px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        border: none;
-        outline: none;
-        text-decoration: none;
-        user-select: none;
-        min-width: 80px;
-    }
-    
-    /* 이전 버튼 - 은은한 회색 */
-    .step-nav-btn.prev {
-        background: rgba(128, 128, 128, 0.12);
-        color: var(--st-text);
-        border: 1px solid rgba(128, 128, 128, 0.25);
-    }
-    
-    .step-nav-btn.prev:hover:not(:disabled) {
-        background: rgba(128, 128, 128, 0.2);
-        border-color: rgba(128, 128, 128, 0.4);
-        transform: translateY(-2px);
-    }
-    
-    .step-nav-btn.prev:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-        transform: none;
-    }
-    
-    /* 다음 버튼 - 강조색 (네온 블루) */
-    .step-nav-btn.next {
-        background: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%);
-        color: #ffffff;
-        border: 1px solid rgba(0, 212, 255, 0.5);
-    }
-    
-    .step-nav-btn.next:hover:not(:disabled) {
-        transform: translateY(-2px);
-        filter: brightness(1.1);
-    }
-    
-    .step-nav-btn.next:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-        transform: none;
-        filter: grayscale(0.5);
-    }
-    
-    .step-nav-btn:active:not(:disabled) {
-        transform: translateY(0) scale(0.98);
-    }
-    
-    /* 다크 모드 - Neon Glow */
-    @media (prefers-color-scheme: dark) {
-        .step-nav-btn.prev:hover:not(:disabled) {
-            box-shadow: 
-                0 4px 15px rgba(128, 128, 128, 0.2),
-                0 0 20px rgba(128, 128, 128, 0.1);
-        }
-        
-        .step-nav-btn.next {
-            box-shadow: 
-                0 0 10px rgba(0, 212, 255, 0.3),
-                0 0 20px rgba(0, 212, 255, 0.1);
-        }
-        
-        .step-nav-btn.next:hover:not(:disabled) {
-            box-shadow: 
-                0 0 15px rgba(0, 212, 255, 0.5),
-                0 0 30px rgba(0, 212, 255, 0.2),
-                0 4px 20px rgba(124, 58, 237, 0.3);
-        }
-    }
-    
-    /* 라이트 모드 - Soft Shadow */
-    @media (prefers-color-scheme: light) {
-        .step-nav-btn.prev {
-            background: rgba(128, 128, 128, 0.08);
-            border-color: rgba(128, 128, 128, 0.2);
-        }
-        
-        .step-nav-btn.prev:hover:not(:disabled) {
-            box-shadow: 
-                0 4px 12px rgba(0, 0, 0, 0.1),
-                0 2px 6px rgba(0, 0, 0, 0.05);
-        }
-        
-        .step-nav-btn.next {
-            box-shadow: 
-                0 2px 8px rgba(0, 212, 255, 0.25),
-                0 4px 12px rgba(124, 58, 237, 0.15);
-        }
-        
-        .step-nav-btn.next:hover:not(:disabled) {
-            box-shadow: 
-                0 4px 16px rgba(0, 212, 255, 0.35),
-                0 6px 20px rgba(124, 58, 237, 0.2);
-        }
-    }
-    
-    /* Streamlit 다크 테마 감지 (fallback) */
-    [data-testid="stSidebar"][data-theme="dark"] .step-nav-btn.next,
-    .stApp[data-theme="dark"] .step-nav-btn.next {
-        box-shadow: 
-            0 0 10px rgba(0, 212, 255, 0.3),
-            0 0 20px rgba(0, 212, 255, 0.1);
-    }
-    
-    /* ============================================
-       🔀 사이드바 네비게이션 버튼 (< > 스타일)
-       CSS Injection - 최고 우선순위 강제 적용
-       이전: 연한 회색 #E0E0E0 / 다음: 파란색 #1E88E5
-       ============================================ */
-    
-    /* 모든 사이드바 버튼 기본 스타일 */
-    [data-testid="stSidebar"] .stButton > button,
-    [data-testid="stSidebar"] .stButton button,
-    [data-testid="stSidebar"] button.st-emotion-cache-1vbkxwb,
-    [data-testid="stSidebar"] button[kind="secondary"],
-    [data-testid="stSidebar"] button[kind="primary"] {
-        border-radius: 50px !important;
-        padding: 8px 16px !important;
-        font-size: 1rem !important;
-        font-weight: 700 !important;
-        transition: all 0.25s ease !important;
-        min-height: 36px !important;
-        cursor: pointer !important;
-    }
-    
-    /* ========== 이전 버튼 (〈) - 연한 회색 ========== */
-    [data-testid="stSidebar"] .stButton > button:not([data-testid="baseButton-primary"]),
-    [data-testid="stSidebar"] button[kind="secondary"],
-    [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-secondary"] {
-        background: #E0E0E0 !important;
-        background-color: #E0E0E0 !important;
-        border: 1px solid #BDBDBD !important;
-        border-color: #BDBDBD !important;
-        color: #333333 !important;
-    }
-    
-    [data-testid="stSidebar"] .stButton > button:not([data-testid="baseButton-primary"]):hover:not(:disabled),
-    [data-testid="stSidebar"] button[kind="secondary"]:hover:not(:disabled) {
-        background: #BDBDBD !important;
-        background-color: #BDBDBD !important;
-        border-color: #9E9E9E !important;
-        transform: translateY(-2px) !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-    }
-    
-    /* ========== 다음 버튼 (〉) - 파란색 #1E88E5 ========== */
-    [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"],
-    [data-testid="stSidebar"] button[kind="primary"],
-    [data-testid="stSidebar"] .stButton button[data-testid="baseButton-primary"] {
-        background: #1E88E5 !important;
-        background-color: #1E88E5 !important;
-        border: 1px solid #1565C0 !important;
-        border-color: #1565C0 !important;
-        color: #FFFFFF !important;
-    }
-    
-    [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"]:hover:not(:disabled),
-    [data-testid="stSidebar"] button[kind="primary"]:hover:not(:disabled) {
-        background: #1565C0 !important;
-        background-color: #1565C0 !important;
-        border-color: #0D47A1 !important;
-        transform: translateY(-2px) !important;
-        box-shadow: 0 4px 16px rgba(30, 136, 229, 0.4) !important;
-    }
-    
-    /* ========== 비활성화 상태 ========== */
-    [data-testid="stSidebar"] .stButton > button:disabled,
-    [data-testid="stSidebar"] button:disabled {
-        opacity: 0.5 !important;
-        cursor: not-allowed !important;
-        transform: none !important;
-        box-shadow: none !important;
-    }
-    
-    /* ========== 다크 모드 보정 ========== */
-    @media (prefers-color-scheme: dark) {
-        /* 이전 버튼 - 다크모드에서 약간 더 어둡게 */
-        [data-testid="stSidebar"] .stButton > button:not([data-testid="baseButton-primary"]) {
-            background: #424242 !important;
-            background-color: #424242 !important;
-            border-color: #616161 !important;
-            color: #E0E0E0 !important;
-        }
-        
-        [data-testid="stSidebar"] .stButton > button:not([data-testid="baseButton-primary"]):hover:not(:disabled) {
-            background: #616161 !important;
-            background-color: #616161 !important;
-            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1) !important;
-        }
-        
-        /* 다음 버튼 - 다크모드에서 글로우 효과 */
-        [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"]:hover:not(:disabled) {
-            box-shadow: 
-                0 0 10px rgba(30, 136, 229, 0.5),
-                0 4px 20px rgba(30, 136, 229, 0.3) !important;
-        }
     }
     
     /* ============================================
@@ -1977,62 +1747,13 @@ def render_smtp_sidebar():
     with st.sidebar:
         
         # ============================================================
-        # 📍 페이지 네비게이션 (메일 발송 / 발송 이력)
-        # ============================================================
-        st.markdown("##### 📌 메뉴")
-        
-        # 페이지 선택 라디오 버튼
-        page_options = ["📧 메일 발송", "📜 발송 이력"]
-        selected_page = st.radio(
-            "페이지 선택",
-            page_options,
-            index=0 if st.session_state.get('current_page', '📧 메일 발송') == '📧 메일 발송' else 1,
-            key="page_selector",
-            label_visibility="collapsed",
-            horizontal=True
-        )
-        
-        # 페이지 상태 저장
-        st.session_state.current_page = selected_page
-        
-        st.divider()
-        
-        # ============================================================
         # 🔝 원형 프로그레스 인디케이터 (메일 발송 페이지에서만 표시)
         # ============================================================
-        if selected_page == "📧 메일 발송":
+        current_page = st.session_state.get('current_page', '📧 메일 발송')
+        
+        if current_page == "📧 메일 발송":
             current_step = st.session_state.current_step
             st.markdown(render_circular_progress(current_step, len(STEPS)), unsafe_allow_html=True)
-            
-            # ============================================================
-            # 🔀 이전/다음 네비게이션 버튼 (< > 스타일, 작은 Capsule)
-            # ============================================================
-            total_steps = len(STEPS)
-            prev_disabled = current_step <= 1
-            next_disabled = current_step >= total_steps
-            
-            col_prev, col_next = st.columns(2)
-            
-            with col_prev:
-                if st.button("〈", 
-                            key="nav_prev_btn",
-                            use_container_width=True,
-                            disabled=prev_disabled,
-                            help="이전 단계로 이동"):
-                    if current_step > 1:
-                        st.session_state.current_step = current_step - 1
-                        st.rerun()
-            
-            with col_next:
-                if st.button("〉", 
-                            key="nav_next_btn",
-                            use_container_width=True,
-                            disabled=next_disabled,
-                            type="primary",
-                            help="다음 단계로 이동"):
-                    if current_step < total_steps:
-                        st.session_state.current_step = current_step + 1
-                        st.rerun()
         
         # ============================================================
         # SMTP 상태 LED 인디케이터 (HTML 기반)
@@ -2080,15 +1801,9 @@ def render_smtp_sidebar():
         st.divider()
         
         # ============================================================
-        # SMTP 계정 설정 (자동 열림 if 미연결 또는 버튼 클릭)
+        # SMTP 계정 설정 (항상 닫힌 상태로 시작)
         # ============================================================
-        smtp_connected = st.session_state.smtp_config is not None
-        show_smtp = st.session_state.get('show_smtp_settings', False) or not smtp_connected
-        
-        with st.expander("⚙️ SMTP 설정", expanded=show_smtp):
-            # 버튼 클릭 상태 초기화
-            if st.session_state.get('show_smtp_settings', False):
-                st.session_state.show_smtp_settings = False
+        with st.expander("⚙️ SMTP 설정", expanded=False):
             # 자동 로드: Cookie 우선 > Secrets
             smtp_defaults = get_smtp_config()
             from_cookie = smtp_defaults.get('from_cookie', False)
@@ -2196,12 +1911,39 @@ SMTP_PW = "app_password"
         st.divider()
         
         # ============================================================
-        # FOOTER: 로컬 실행 가이드 + 저작권
+        # FOOTER: 로컬 실행 가이드
         # ============================================================
-        if st.button("💻 로컬 실행 가이드", use_container_width=True, 
-                    help="하이웍스 IP 제한 시 회사 PC에서 직접 실행"):
-            st.session_state.show_local_guide = True
-            st.rerun()
+        with st.expander("💻 로컬 실행 가이드", expanded=False):
+            st.markdown("""
+**하이웍스 IP 제한 시 회사 PC에서 직접 실행하세요.**
+
+```bash
+# 1. 프로젝트 다운로드
+git clone https://github.com/yurielk82/mm-project.git
+cd mm-project
+
+# 2. 패키지 설치
+pip install -r requirements.txt
+
+# 3. 앱 실행
+streamlit run app.py
+```
+            """)
+        
+        # ============================================================
+        # 📌 페이지 네비게이션 (메일 발송 / 발송 이력)
+        # ============================================================
+        with st.expander("📧 메일 발송", expanded=st.session_state.get('current_page', '📧 메일 발송') == '📧 메일 발송'):
+            if st.button("📧 메일 발송으로 이동", use_container_width=True, key="goto_mail"):
+                st.session_state.current_page = '📧 메일 발송'
+                st.rerun()
+            st.caption("엑셀 데이터 기반 메일머지 발송")
+        
+        with st.expander("📜 발송 이력", expanded=st.session_state.get('current_page', '📧 메일 발송') == '📜 발송 이력'):
+            if st.button("📜 발송 이력으로 이동", use_container_width=True, key="goto_history"):
+                st.session_state.current_page = '📜 발송 이력'
+                st.rerun()
+            st.caption("과거 발송 기록 조회 및 검색")
         
         st.markdown("""
         <div class="sidebar-footer">
