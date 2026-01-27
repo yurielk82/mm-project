@@ -186,48 +186,45 @@ CUSTOM_CSS = """
     }
     
     /* ============================================
-       🔧 사이드바 - 황금 비율 SaaS UI
-       적당한 여백이 주는 고급스러움
+       🔧 사이드바 - 8px Grid SaaS UI
+       상용 SaaS 기준: 8px 단위 간격
        ============================================ */
     [data-testid="stSidebar"] {
         background: var(--st-secondary-bg) !important;
     }
     
     [data-testid="stSidebar"] > div:first-child {
-        padding: 1rem 1rem !important;
+        padding: 12px 16px !important;
     }
     
-    /* 사이드바 요소 간 표준 간격 (황금 비율) */
+    /* 사이드바 요소 간 간격 - 8px 단위 */
     [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
-        gap: 0.6rem !important;
+        gap: 4px !important;
     }
     
-    /* 이전/다음 버튼 영역 - 적절한 여백 */
+    /* 이전/다음 버튼 영역 */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
-        margin-top: 0 !important;
-        margin-bottom: 0 !important;
-        padding: 0.3rem 0 !important;
+        margin: 0 !important;
+        padding: 4px 0 !important;
     }
     
-    /* 사이드바 버튼 - SaaS급 높이 */
+    /* 사이드바 버튼 - 32px 높이 (SaaS 표준) */
     [data-testid="stSidebar"] .stButton > button {
-        min-height: 36px !important;
-        line-height: 1.3 !important;
+        min-height: 32px !important;
+        padding: 4px 12px !important;
     }
     
-    /* Expander - 적절한 패딩 */
+    /* Expander - 컴팩트 */
     [data-testid="stSidebar"] [data-testid="stExpander"] {
-        margin-top: 0.3rem !important;
-        margin-bottom: 0.3rem !important;
+        margin: 2px 0 !important;
     }
     [data-testid="stSidebar"] [data-testid="stExpander"] summary {
-        padding: 0.5rem 0.6rem !important;
+        padding: 8px 12px !important;
     }
     
-    /* Divider - 시각적 구분 */
+    /* Divider */
     [data-testid="stSidebar"] hr {
-        margin: 0.5rem 0 !important;
-        opacity: 0.4;
+        margin: 8px 0 !important;
     }
     
     /* 사이드바 텍스트 - 테마 색상 상속 + 가독성 확보 */
@@ -1752,7 +1749,7 @@ def render_circular_progress(current_step: int, total_steps: int):
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 0.5rem 0;
+    padding: 8px 0 4px 0;
 }}
 .progress-circle {{
     position: relative;
@@ -1791,17 +1788,17 @@ def render_circular_progress(current_step: int, total_steps: int):
 }}
 .progress-label {{
     text-align: center;
-    margin-top: 0.5rem;
+    margin-top: 6px;
 }}
 .progress-step-name {{
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     font-weight: 600;
     color: #00d4ff;
 }}
 .progress-status {{
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     color: rgba(128,128,128,0.7);
-    margin-top: 2px;
+    margin-top: 1px;
     margin-top: 2px;
 }}
 </style>
@@ -1843,25 +1840,23 @@ def render_step_nav_buttons(current_step: int, total_steps: int):
     # 컴팩트 네비게이션 버튼 CSS
     st.markdown("""
     <style>
-    /* 네비게이션 버튼 - 황금 비율 여백 */
+    /* 네비게이션 버튼 - 8px 그리드 */
     .step-nav-container .stButton > button {
         background: transparent !important;
         border: none !important;
         box-shadow: none !important;
-        padding: 6px 10px !important;
-        min-height: 32px !important;
-        line-height: 1.3 !important;
-        font-size: 0.75rem !important;
+        padding: 4px 8px !important;
+        min-height: 28px !important;
+        line-height: 1.2 !important;
+        font-size: 0.72rem !important;
         font-weight: 500 !important;
-        transition: all 0.2s ease !important;
     }
     /* 이전 버튼 */
     .step-nav-container .nav-prev .stButton > button {
-        color: rgba(128,128,128,0.7) !important;
+        color: rgba(128,128,128,0.65) !important;
     }
     .step-nav-container .nav-prev .stButton > button:hover:not(:disabled) {
         color: #fff !important;
-        background: rgba(128,128,128,0.1) !important;
     }
     /* 다음 버튼 */
     .step-nav-container .nav-next .stButton > button {
@@ -1870,11 +1865,10 @@ def render_step_nav_buttons(current_step: int, total_steps: int):
     }
     .step-nav-container .nav-next .stButton > button:hover:not(:disabled) {
         color: #42A5F5 !important;
-        background: rgba(30,136,229,0.1) !important;
     }
     /* 비활성화 */
     .step-nav-container .stButton > button:disabled {
-        opacity: 0.35 !important;
+        opacity: 0.3 !important;
     }
     </style>
     """, unsafe_allow_html=True)
