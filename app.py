@@ -2144,13 +2144,15 @@ def render_smtp_sidebar():
         # SMTP 상태 LED 인디케이터
         # ============================================================
         if st.session_state.smtp_config:
-            st.markdown("""<div class="led-indicator connected" style="width:100%; justify-content:center; margin:8px 0;">
+            st.markdown("""<div class="led-indicator connected" style="width:100%; justify-content:center; margin:16px 0 20px 0;">
                 <span class="led-dot"></span><span>SMTP 연결됨</span>
             </div>""", unsafe_allow_html=True)
         else:
-            st.markdown("""<div class="led-indicator disconnected" style="width:100%; justify-content:center; margin:8px 0;">
+            st.markdown("""<div class="led-indicator disconnected" style="width:100%; justify-content:center; margin:16px 0 20px 0;">
                 <span class="led-dot"></span><span>SMTP 연결 필요</span>
             </div>""", unsafe_allow_html=True)
+        
+        st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
         
         # ============================================================
         # SMTP 계정 설정
