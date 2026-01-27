@@ -2751,7 +2751,7 @@ def render_smtp_sidebar():
         # 가이드 (모든 가이드를 팝업으로)
         # ============================================================
         with st.expander("📖 가이드", expanded=False):
-            st.link_button("📦 로컬 실행 파일 다운로드", 
+            st.link_button("📦 로컬 실행 파일 다운", 
                           "https://github.com/yurielk82/mm-project/archive/refs/heads/main.zip",
                           use_container_width=True)
             
