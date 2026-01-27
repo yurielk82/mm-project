@@ -2063,55 +2063,96 @@ SMTP_PW = "app_password"
 
 
 def render_page_header(step: int, title: str, description: str):
-    """SaaS급 페이지 헤더 - 깔끔한 디자인"""
+    """SaaS급 페이지 헤더 - Light/Dark 모드 적응형"""
     
-    # 페이지 전환 시 자동 스크롤 최상단
-    st.markdown("""
-    <script>
-        // 페이지 최상단으로 스크롤
-        window.parent.document.querySelector('section.main').scrollTo(0, 0);
-    </script>
-    """, unsafe_allow_html=True)
+    # 페이지 전환 시 자동 스크롤 최상단 (JavaScript 실행)
+    import streamlit.components.v1 as components
+    components.html("""
+        <script>
+            // 부모 프레임(Streamlit)의 main 영역을 최상단으로 스크롤
+            window.parent.document.querySelector('section.main').scrollTo({top: 0, behavior: 'instant'});
+        </script>
+    """, height=0)
     
+    # Light/Dark 테마 적응형 헤더 (CSS 변수 사용)
     st.markdown(f"""
-    <div style="
-        background: linear-gradient(135deg, var(--primary-color) 0%, #7c3aed 100%);
-        border-radius: 16px;
-        padding: 24px 32px;
-        margin-bottom: 24px;
-        color: white;
-        position: relative;
-        overflow: hidden;
-    ">
-        <div style="
+    <style>
+        .page-header {{
+            background: var(--secondary-background-color);
+            border: 1px solid rgba(128, 128, 128, 0.15);
+            border-radius: 16px;
+            padding: 24px 32px;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+        }}
+        .page-header::before {{
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color) 0%, #7c3aed 100%);
+        }}
+        .page-header .decorative-circle {{
             position: absolute;
             top: -20px;
             right: -20px;
             width: 120px;
             height: 120px;
-            background: rgba(255,255,255,0.1);
+            background: rgba(128, 128, 128, 0.06);
             border-radius: 50%;
-        "></div>
+        }}
+        .page-header .step-info {{
+            font-size: 0.8rem;
+            color: var(--primary-color);
+            font-weight: 600;
+            margin-bottom: 6px;
+            letter-spacing: 0.5px;
+        }}
+        .page-header .title {{
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-color);
+        }}
+        .page-header .description {{
+            margin: 8px 0 0 0;
+            font-size: 0.9rem;
+            color: var(--text-color);
+            opacity: 0.7;
+        }}
+        .page-header .step-badge {{
+            background: rgba(128, 128, 128, 0.1);
+            border: 1px solid rgba(128, 128, 128, 0.15);
+            border-radius: 12px;
+            padding: 12px 20px;
+            text-align: center;
+        }}
+        .page-header .step-number {{
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1;
+            color: var(--primary-color);
+        }}
+        .page-header .step-total {{
+            font-size: 0.7rem;
+            color: var(--text-color);
+            opacity: 0.6;
+        }}
+    </style>
+    <div class="page-header">
+        <div class="decorative-circle"></div>
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
-                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 4px;">
-                    STEP {step} / {len(STEPS)}
-                </div>
-                <h2 style="margin: 0; font-size: 1.5rem; font-weight: 700; color: white;">
-                    {title}
-                </h2>
-                <p style="margin: 8px 0 0 0; opacity: 0.85; font-size: 0.9rem; color: white;">
-                    {description}
-                </p>
+                <div class="step-info">STEP {step} / {len(STEPS)}</div>
+                <h2 class="title">{title}</h2>
+                <p class="description">{description}</p>
             </div>
-            <div style="
-                background: rgba(255,255,255,0.2);
-                border-radius: 12px;
-                padding: 12px 20px;
-                text-align: center;
-            ">
-                <div style="font-size: 2rem; font-weight: 700; line-height: 1;">{step}</div>
-                <div style="font-size: 0.7rem; opacity: 0.8;">of {len(STEPS)}</div>
+            <div class="step-badge">
+                <div class="step-number">{step}</div>
+                <div class="step-total">of {len(STEPS)}</div>
             </div>
         </div>
     </div>
