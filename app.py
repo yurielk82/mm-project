@@ -92,15 +92,40 @@ def apply_saas_style():
            Light/Dark 모드 완벽 대응
            ============================================ */
         
-        /* Material Icons 아이콘 숨기기 (Expander 텍스트 깨짐 방지) */
+        /* ============================================
+           🔧 extra-streamlit-components Material Icons 숨기기
+           CookieManager 등이 사용하는 아이콘 텍스트 제거
+           ============================================ */
+        
+        /* Material Icons 폰트 적용 */
         .material-icons {
             font-family: 'Material Icons' !important;
-            font-size: 24px !important;
+            font-size: 0 !important;
+            visibility: hidden !important;
         }
         
-        /* Streamlit Expander 내 Material Icons 숨기기 */
-        [data-testid="stExpander"] summary span.material-icons,
-        [data-testid="stExpander"] .material-icons {
+        /* stx 컴포넌트의 아이콘 텍스트 완전 숨기기 */
+        [class*="keyboard_double"],
+        [class*="arrow_right"],
+        [class*="arrow_left"],
+        span:has(> .material-icons) {
+            display: none !important;
+        }
+        
+        /* iframe 내부 Material Icons도 숨기기 */
+        iframe[title*="extra"] {
+            display: none !important;
+        }
+        
+        /* Expander summary 내 불필요한 텍스트 숨기기 */
+        [data-testid="stExpander"] summary > div > div:first-child {
+            display: flex !important;
+            align-items: center !important;
+        }
+        
+        /* _arrow 텍스트가 포함된 요소 숨기기 */
+        [data-testid="stMarkdown"] p:empty,
+        [data-testid="stMarkdown"]:has(> div:empty) {
             display: none !important;
         }
         
@@ -1217,9 +1242,12 @@ def render_step_indicator():
 
 
 def get_cookie_manager():
-    """쿠키 매니저 - 세션별 싱글톤 (캐싱 경고 해결)"""
+    """쿠키 매니저 - 세션별 싱글톤 (Material Icons 텍스트 숨김)"""
     if 'cookie_manager' not in st.session_state:
+        # CookieManager 초기화 시 Material Icons 텍스트가 렌더링되므로 숨김 처리
+        st.markdown('<div style="display:none !important; height:0; overflow:hidden;">', unsafe_allow_html=True)
         st.session_state.cookie_manager = stx.CookieManager(key="smtp_cookie_manager")
+        st.markdown('</div>', unsafe_allow_html=True)
     return st.session_state.cookie_manager
 
 
