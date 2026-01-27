@@ -633,16 +633,23 @@ CUSTOM_CSS = """
         transform: translateY(-1px);
     }
     
-    /* 사이드바 - 다음 버튼 > 스타일 (Primary/강조색) */
-    [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"] {
+    /* 사이드바 - 다음 버튼 > 스타일 (Primary/강조색 - 네온 블루) */
+    [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"],
+    [data-testid="stSidebar"] .stButton > button[kind="primary"],
+    [data-testid="stSidebar"] button[data-testid="baseButton-primary"] {
         background: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%) !important;
+        background-color: #00d4ff !important;
         border: 1.5px solid rgba(0, 212, 255, 0.6) !important;
+        border-color: rgba(0, 212, 255, 0.6) !important;
         color: #ffffff !important;
     }
     
-    [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"]:hover:not(:disabled) {
+    [data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"]:hover:not(:disabled),
+    [data-testid="stSidebar"] .stButton > button[kind="primary"]:hover:not(:disabled),
+    [data-testid="stSidebar"] button[data-testid="baseButton-primary"]:hover:not(:disabled) {
         filter: brightness(1.1);
         transform: translateY(-1px);
+        background: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%) !important;
     }
     
     /* 다크 모드 - 네온 글로우 */
