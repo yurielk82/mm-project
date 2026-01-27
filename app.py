@@ -1153,6 +1153,7 @@ def init_session_state():
         'sent_groups': set(),  # 이미 발송 완료된 그룹
         # UI 상태
         'show_smtp_settings': False,  # SMTP 설정 패널 열기
+        'current_page': '📧 메일 발송',  # 현재 페이지 (메일 발송 / 발송 이력)
     }
     
     for key, value in defaults.items():
@@ -1976,41 +1977,62 @@ def render_smtp_sidebar():
     with st.sidebar:
         
         # ============================================================
-        # 🔝 최상단: 원형 프로그레스 인디케이터
+        # 📍 페이지 네비게이션 (메일 발송 / 발송 이력)
         # ============================================================
-        current_step = st.session_state.current_step
-        st.markdown(render_circular_progress(current_step, len(STEPS)), unsafe_allow_html=True)
+        st.markdown("##### 📌 메뉴")
+        
+        # 페이지 선택 라디오 버튼
+        page_options = ["📧 메일 발송", "📜 발송 이력"]
+        selected_page = st.radio(
+            "페이지 선택",
+            page_options,
+            index=0 if st.session_state.get('current_page', '📧 메일 발송') == '📧 메일 발송' else 1,
+            key="page_selector",
+            label_visibility="collapsed",
+            horizontal=True
+        )
+        
+        # 페이지 상태 저장
+        st.session_state.current_page = selected_page
+        
+        st.divider()
         
         # ============================================================
-        # 🔀 이전/다음 네비게이션 버튼 (< > 스타일, 작은 Capsule)
-        # SMTP 연결 버튼 위에 배치
+        # 🔝 원형 프로그레스 인디케이터 (메일 발송 페이지에서만 표시)
         # ============================================================
-        total_steps = len(STEPS)
-        prev_disabled = current_step <= 1
-        next_disabled = current_step >= total_steps
-        
-        col_prev, col_next = st.columns(2)
-        
-        with col_prev:
-            if st.button("〈", 
-                        key="nav_prev_btn",
-                        use_container_width=True,
-                        disabled=prev_disabled,
-                        help="이전 단계로 이동"):
-                if current_step > 1:
-                    st.session_state.current_step = current_step - 1
-                    st.rerun()
-        
-        with col_next:
-            if st.button("〉", 
-                        key="nav_next_btn",
-                        use_container_width=True,
-                        disabled=next_disabled,
-                        type="primary",
-                        help="다음 단계로 이동"):
-                if current_step < total_steps:
-                    st.session_state.current_step = current_step + 1
-                    st.rerun()
+        if selected_page == "📧 메일 발송":
+            current_step = st.session_state.current_step
+            st.markdown(render_circular_progress(current_step, len(STEPS)), unsafe_allow_html=True)
+            
+            # ============================================================
+            # 🔀 이전/다음 네비게이션 버튼 (< > 스타일, 작은 Capsule)
+            # ============================================================
+            total_steps = len(STEPS)
+            prev_disabled = current_step <= 1
+            next_disabled = current_step >= total_steps
+            
+            col_prev, col_next = st.columns(2)
+            
+            with col_prev:
+                if st.button("〈", 
+                            key="nav_prev_btn",
+                            use_container_width=True,
+                            disabled=prev_disabled,
+                            help="이전 단계로 이동"):
+                    if current_step > 1:
+                        st.session_state.current_step = current_step - 1
+                        st.rerun()
+            
+            with col_next:
+                if st.button("〉", 
+                            key="nav_next_btn",
+                            use_container_width=True,
+                            disabled=next_disabled,
+                            type="primary",
+                            help="다음 단계로 이동"):
+                    if current_step < total_steps:
+                        st.session_state.current_step = current_step + 1
+                        st.rerun()
         
         # ============================================================
         # SMTP 상태 LED 인디케이터 (HTML 기반)
@@ -3590,10 +3612,13 @@ def main():
     except:
         pass
     
-    # 메인 영역: 탭 구조 (메일 발송 / 발송 이력)
-    tab1, tab2 = st.tabs(["📧 메일 발송", "📊 발송 이력"])
+    # ============================================================
+    # 메인 영역: 페이지 라우팅 (사이드바 메뉴 기반)
+    # ============================================================
+    current_page = st.session_state.get('current_page', '📧 메일 발송')
     
-    with tab1:
+    if current_page == "📧 메일 발송":
+        # ========== 메일 발송 페이지 ==========
         render_step_indicator()
         
         # 현재 단계 렌더링
@@ -3609,7 +3634,9 @@ def main():
         elif step == 5:
             render_step5()
     
-    with tab2:
+    elif current_page == "📜 발송 이력":
+        # ========== 발송 이력 페이지 ==========
+        st.markdown("## 📜 발송 이력")
         render_history_tab()
 
 
