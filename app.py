@@ -2559,6 +2559,67 @@ def render_smtp_sidebar():
     with st.sidebar:
         
         # ============================================================
+        # 🎨 사이드바 레이아웃 안정화 CSS
+        # - SMTP/메뉴 섹션 간 대형 여백 + 구분선
+        # - 메뉴 간 일정한 간격 (gap)
+        # - 호버 시 크기 흔들림 방지
+        # ============================================================
+        st.markdown("""
+        <style>
+            /* 사이드바 전체 레이아웃 */
+            [data-testid="stSidebar"] > div:first-child {
+                padding-top: 1rem;
+            }
+            
+            /* 사이드바 버튼 안정화 - 호버/클릭 시 크기 고정 */
+            [data-testid="stSidebar"] button {
+                box-sizing: border-box !important;
+                min-height: 38px !important;
+                padding: 8px 16px !important;
+                margin: 4px 0 !important;
+                border: 2px solid transparent !important;
+                transition: background-color 0.15s ease, box-shadow 0.15s ease !important;
+            }
+            
+            [data-testid="stSidebar"] button:hover {
+                border: 2px solid transparent !important;
+                box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3) !important;
+            }
+            
+            [data-testid="stSidebar"] button:active {
+                border: 2px solid transparent !important;
+                transform: none !important;
+            }
+            
+            /* Expander 내부 버튼들 간격 통일 */
+            [data-testid="stSidebar"] [data-testid="stExpander"] > div > div {
+                display: flex;
+                flex-direction: column;
+                gap: 6px !important;
+            }
+            
+            /* 섹션 구분선 스타일 */
+            .sidebar-section-divider {
+                height: 1px;
+                background: linear-gradient(90deg, 
+                    transparent 0%, 
+                    rgba(128, 128, 128, 0.3) 20%, 
+                    rgba(128, 128, 128, 0.3) 80%, 
+                    transparent 100%);
+                margin: 0;
+            }
+            
+            /* 대형 여백 영역 */
+            .sidebar-large-spacer {
+                height: 60px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        # ============================================================
         # 🔝 원형 프로그레스 인디케이터 (메일 발송 페이지에서만 표시)
         # ============================================================
         current_page = st.session_state.get('current_page', '📧 메일 발송')
@@ -2577,15 +2638,13 @@ def render_smtp_sidebar():
         # SMTP 상태 LED 인디케이터
         # ============================================================
         if st.session_state.smtp_config:
-            st.markdown("""<div class="led-indicator connected" style="width:100%; justify-content:center; margin:16px 0 20px 0;">
+            st.markdown("""<div class="led-indicator connected" style="width:100%; justify-content:center; margin:16px 0 12px 0;">
                 <span class="led-dot"></span><span>SMTP 연결됨</span>
             </div>""", unsafe_allow_html=True)
         else:
-            st.markdown("""<div class="led-indicator disconnected" style="width:100%; justify-content:center; margin:16px 0 20px 0;">
+            st.markdown("""<div class="led-indicator disconnected" style="width:100%; justify-content:center; margin:16px 0 12px 0;">
                 <span class="led-dot"></span><span>SMTP 연결 필요</span>
             </div>""", unsafe_allow_html=True)
-        
-        st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
         
         # ============================================================
         # SMTP 계정 설정
@@ -2682,6 +2741,15 @@ def render_smtp_sidebar():
                     st.warning("이메일과 비밀번호를 입력하세요")
         
         # ============================================================
+        # 🔲 대형 여백 + 구분선 (SMTP 섹션과 메뉴 분리)
+        # ============================================================
+        st.markdown("""
+        <div class="sidebar-large-spacer">
+            <div class="sidebar-section-divider" style="width: 80%;"></div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # ============================================================
         # 메뉴 (페이지 네비게이션)
         # ============================================================
         current_page = st.session_state.get('current_page', '📧 메일 발송')
@@ -2698,6 +2766,9 @@ def render_smtp_sidebar():
                         key="goto_history"):
                 st.session_state.current_page = '📜 발송 이력'
                 st.rerun()
+        
+        # 메뉴 간 간격
+        st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
         
         # ============================================================
         # 가이드 (모든 가이드를 팝업으로)
