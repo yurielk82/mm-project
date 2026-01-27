@@ -2931,40 +2931,44 @@ def render_step1():
 
 
 def render_step2():
-    """Step 2: 컬럼 설정 - 이메일 표시/형식 설정 분리 + 중복 선택 허용"""
+    """Step 2: 컬럼 설정 - 깜박임 없는 드래그 앤 드롭 UI
+    
+    핵심 원칙:
+    1. 드래그 중 rerun 방지 - sort_items 결과는 session_state에만 저장
+    2. JSON 저장은 move_step() 호출 시에만 수행
+    3. CSS로 레이아웃 시프트 방지
+    """
     
     # 페이지 헤더
     render_page_header(2, "컬럼 설정", "이메일 본문에 표시할 컬럼과 데이터 형식을 설정하세요")
     
     # ============================================================
     # 🎯 드래그 앤 드롭 칩 레이아웃 안정화 CSS (Step 2 전용)
-    # - box-sizing: border-box로 크기 고정
-    # - 테두리 두께 변화 없이 box-shadow로 활성 상태 표시
-    # - 모든 칩 높이/패딩 고정으로 출렁임 방지
     # ============================================================
     st.markdown("""
     <style>
-        /* Step 2 드래그 앤 드롭 영역 안정화 */
-        .stContainer > div {
-            min-height: auto !important;
-        }
+        /* ============================================
+           드래그 앤 드롭 안정화 CSS
+           - 고정 크기로 레이아웃 시프트 방지
+           - 테두리 두께 변화 없음 (box-shadow로 피드백)
+           ============================================ */
         
-        /* sortable 컨테이너 고정 높이 */
+        /* 컨테이너 최소 높이 고정 */
         .element-container:has([data-testid="stCustomComponentV1"]) {
-            min-height: 70px !important;
+            min-height: 80px !important;
         }
         
-        /* 칩 아이템 크기 고정 - 클릭/드래그 시 레이아웃 변화 없음 */
-        div[data-testid="stCustomComponentV1"] > div > div > div {
-            box-sizing: border-box !important;
+        /* sortable 컨테이너 */
+        div[data-testid="stCustomComponentV1"] {
+            min-height: 60px !important;
         }
         
-        /* sortable 아이템 전역 안정화 */
+        /* 모든 칩 아이템 - 고정 크기, box-sizing */
         .sortable-item {
             box-sizing: border-box !important;
+            height: 36px !important;
             min-height: 36px !important;
             max-height: 36px !important;
-            height: 36px !important;
             padding: 8px 14px !important;
             margin: 4px !important;
             border: 2px solid transparent !important;
@@ -2977,38 +2981,41 @@ def render_step2():
             white-space: nowrap !important;
             cursor: grab !important;
             user-select: none !important;
-            transition: box-shadow 0.15s ease, background-color 0.15s ease, transform 0.1s ease !important;
+            /* 부드러운 전환 - transform 제외하여 드래그 중 깜박임 방지 */
+            transition: box-shadow 0.15s ease, background-color 0.15s ease !important;
         }
         
         /* 호버 - 테두리 두께 유지, 그림자로 피드백 */
         .sortable-item:hover {
             border: 2px solid transparent !important;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25), 0 2px 8px rgba(0,0,0,0.1) !important;
-            background-color: rgba(59, 130, 246, 0.08) !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
+            background-color: rgba(59, 130, 246, 0.05) !important;
         }
         
-        /* 드래그 중 - 테두리 두께 유지, 강한 그림자 + 약간 확대 */
+        /* 드래그 중 - 그림자 강화, transform 제거 (깜박임 방지) */
         .sortable-item:active,
-        .sortable-item.dragging {
+        .sortable-item.dragging,
+        .sortable-item.sortable-chosen,
+        .sortable-item.sortable-ghost {
             border: 2px solid transparent !important;
-            box-shadow: 0 0 0 3px #3b82f6, 0 8px 20px rgba(0,0,0,0.2) !important;
+            box-shadow: 0 0 0 3px #3b82f6, 0 4px 12px rgba(0,0,0,0.15) !important;
             cursor: grabbing !important;
-            transform: scale(1.02) !important;
+            opacity: 0.9 !important;
         }
         
-        /* 컨테이너 드롭 영역 */
-        .sortable-container {
+        /* 고스트(플레이스홀더) - 원본 레이아웃 유지 */
+        .sortable-ghost {
+            opacity: 0.4 !important;
+            background: rgba(59, 130, 246, 0.1) !important;
+        }
+        
+        /* 드롭 영역 컨테이너 */
+        .sortable-container,
+        [data-testid="stCustomComponentV1"] > div > div {
             min-height: 50px !important;
             padding: 8px !important;
-            border: 2px dashed rgba(128, 128, 128, 0.2) !important;
             border-radius: 12px !important;
             box-sizing: border-box !important;
-            transition: border-color 0.2s ease, background-color 0.2s ease !important;
-        }
-        
-        .sortable-container:hover {
-            border-color: rgba(59, 130, 246, 0.4) !important;
-            background: rgba(59, 130, 246, 0.02) !important;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -3024,48 +3031,28 @@ def render_step2():
     sheet_name = st.session_state.get('selected_data_sheet', 'default')
     
     # ============================================================
-    # JSON 설정 파일에서 이전 설정 로드 (최초 1회)
-    # - 이메일 표시 컬럼: 항상 현재 파일의 모든 컬럼 (기본값)
-    # - 형식 설정(금액/퍼센트/날짜/ID): 컬럼 이름 매칭으로 자동 복원
+    # 초기 설정 로드 (최초 1회만)
+    # - 이메일 표시: 모든 컬럼
+    # - 형식 설정: 컬럼명 매칭으로 복원
     # ============================================================
     if 'step2_config_loaded' not in st.session_state:
         saved_config = load_column_config_from_json()
         
-        # ✅ 이메일 표시 컬럼: 항상 현재 파일의 모든 컬럼으로 시작
+        # 이메일 표시 컬럼: 항상 현재 파일의 모든 컬럼
         st.session_state.display_cols = columns.copy()
         st.session_state.excluded_cols = []
         
-        # ✅ 형식 설정: 저장된 컬럼 이름과 매칭되는 것만 복원
+        # 형식 설정: 저장된 컬럼명과 매칭
         if saved_config:
             matched_formats = []
             
-            # 금액 컬럼 매칭
-            saved_amount = saved_config.get('amount_cols', [])
-            matched_amount = [c for c in saved_amount if c in columns]
-            st.session_state.amount_cols = matched_amount
-            if matched_amount:
-                matched_formats.append(f"금액 {len(matched_amount)}개")
-            
-            # 퍼센트 컬럼 매칭
-            saved_percent = saved_config.get('percent_cols', [])
-            matched_percent = [c for c in saved_percent if c in columns]
-            st.session_state.percent_cols = matched_percent
-            if matched_percent:
-                matched_formats.append(f"퍼센트 {len(matched_percent)}개")
-            
-            # 날짜 컬럼 매칭
-            saved_date = saved_config.get('date_cols', [])
-            matched_date = [c for c in saved_date if c in columns]
-            st.session_state.date_cols = matched_date
-            if matched_date:
-                matched_formats.append(f"날짜 {len(matched_date)}개")
-            
-            # ID 컬럼 매칭
-            saved_id = saved_config.get('id_cols', [])
-            matched_id = [c for c in saved_id if c in columns]
-            st.session_state.id_cols = matched_id
-            if matched_id:
-                matched_formats.append(f"ID {len(matched_id)}개")
+            for fmt_key, fmt_name in [('amount_cols', '금액'), ('percent_cols', '퍼센트'), 
+                                       ('date_cols', '날짜'), ('id_cols', 'ID')]:
+                saved_list = saved_config.get(fmt_key, [])
+                matched = [c for c in saved_list if c in columns]
+                st.session_state[fmt_key] = matched
+                if matched:
+                    matched_formats.append(f"{fmt_name} {len(matched)}개")
             
             if matched_formats:
                 st.toast(f"💾 형식 설정 복원: {', '.join(matched_formats)}", icon="✅")
@@ -3182,7 +3169,7 @@ def render_step2():
                 st.success(f"예상 그룹 수: **{len(base_keys)}개**", icon="📊")
     
     # ============================================================
-    # 📧 영역 1: 이메일 본문에 표시될 컬럼 (드래그로 순서 조정)
+    # 📧 영역 1: 이메일 본문에 표시될 컬럼
     # ============================================================
     st.markdown("""
     <div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); 
@@ -3194,25 +3181,30 @@ def render_step2():
     """, unsafe_allow_html=True)
     
     with st.container(border=True):
-        # 현재 표시 컬럼과 제외 컬럼
+        # 세션에서 현재 상태 가져오기 (드래그 결과 유지)
         display_cols = st.session_state.get('display_cols', columns.copy())
         excluded_cols = st.session_state.get('excluded_cols', [])
         
-        # 드래그 앤 드롭 UI
+        # 드래그 앤 드롭 UI (key로 상태 안정화)
         dnd_display_items = [
-            {"header": "📧 이메일에 표시할 컬럼 (순서대로)", "items": display_cols},
-            {"header": "🚫 제외할 컬럼", "items": excluded_cols},
+            {"header": "📧 이메일에 표시 (순서대로)", "items": list(display_cols)},
+            {"header": "🚫 제외", "items": list(excluded_cols)},
         ]
         
-        sorted_display = sort_items(dnd_display_items, multi_containers=True, direction="horizontal")
+        # sort_items 호출 - key 추가로 상태 유지
+        sorted_display = sort_items(
+            dnd_display_items, 
+            multi_containers=True, 
+            direction="horizontal",
+            key="dnd_display_cols"
+        )
         
-        # 결과 파싱
+        # 결과를 세션에 저장 (rerun 호출 없이)
         if sorted_display:
             for container in sorted_display:
                 header = container.get('header', '')
                 items = container.get('items', [])
-                
-                if '표시할 컬럼' in header:
+                if '표시' in header and '제외' not in header:
                     display_cols = items
                     st.session_state.display_cols = items
                     st.session_state.display_cols_order = items
@@ -3220,56 +3212,63 @@ def render_step2():
                     excluded_cols = items
                     st.session_state.excluded_cols = items
         
-        # 표시 컬럼 요약
-        if display_cols:
-            st.success(f"📧 **{len(display_cols)}개 컬럼**이 이메일 본문에 표시됩니다 (왼쪽→오른쪽 순서)", icon="✅")
-        else:
-            st.warning("최소 1개 이상의 컬럼을 표시 영역에 배치하세요", icon="⚠️")
+        # 표시 컬럼 요약 (간단하게)
+        col_info1, col_info2 = st.columns(2)
+        with col_info1:
+            if display_cols:
+                st.caption(f"✅ 표시: **{len(display_cols)}개** 컬럼")
+            else:
+                st.caption("⚠️ 표시할 컬럼 없음")
+        with col_info2:
+            if excluded_cols:
+                st.caption(f"🚫 제외: {len(excluded_cols)}개")
     
-    st.markdown("<div style='height: 16px'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height: 12px'></div>", unsafe_allow_html=True)
     
     # ============================================================
-    # 🏷️ 영역 2: 컬럼 형식 설정 (이메일 표시와 독립적, 중복 선택 가능)
+    # 🏷️ 영역 2: 컬럼 형식 설정
     # ============================================================
     st.markdown("""
     <div style="background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); 
                 padding: 12px 16px; border-radius: 8px; margin-bottom: 8px;
                 border-left: 4px solid #f57c00;">
         <strong style="color: #e65100;">🏷️ 영역 2: 컬럼 형식 설정</strong>
-        <br><small style="color: #f57c00;">위 '표시 컬럼'과 별개로 형식을 지정 | 같은 컬럼을 중복 선택 가능</small>
+        <br><small style="color: #f57c00;">표시 컬럼과 별개로 형식 지정 | 중복 선택 가능</small>
     </div>
     """, unsafe_allow_html=True)
     
     with st.container(border=True):
-        st.caption("💡 **중복 선택 가능**: '처방액' 컬럼이 이메일 표시에도 있고, 금액 형식으로도 설정될 수 있습니다.")
-        
-        # 현재 형식 설정 가져오기
+        # 세션에서 현재 형식 설정 가져오기
         amount_cols = st.session_state.get('amount_cols', [])
         percent_cols = st.session_state.get('percent_cols', [])
         date_cols = st.session_state.get('date_cols', [])
         id_cols = st.session_state.get('id_cols', [])
         
-        # 형식 미지정 컬럼 (아직 어떤 형식에도 없는 컬럼)
+        # 형식 미지정 컬럼
         all_formatted = set(amount_cols + percent_cols + date_cols + id_cols)
         unformatted_cols = [c for c in columns if c not in all_formatted]
         
-        # 드래그 앤 드롭 UI - 형식 설정
+        # 드래그 앤 드롭 UI - 형식 설정 (key로 상태 안정화)
         dnd_format_items = [
-            {"header": "📦 형식 미지정", "items": unformatted_cols},
-            {"header": "💰 금액 (천단위 쉼표)", "items": amount_cols},
-            {"header": "📊 퍼센트 (%)", "items": percent_cols},
-            {"header": "📅 날짜", "items": date_cols},
-            {"header": "🔢 ID (.0 제거)", "items": id_cols},
+            {"header": "📦 미지정", "items": list(unformatted_cols)},
+            {"header": "💰 금액", "items": list(amount_cols)},
+            {"header": "📊 퍼센트", "items": list(percent_cols)},
+            {"header": "📅 날짜", "items": list(date_cols)},
+            {"header": "🔢 ID", "items": list(id_cols)},
         ]
         
-        sorted_format = sort_items(dnd_format_items, multi_containers=True, direction="horizontal")
+        sorted_format = sort_items(
+            dnd_format_items, 
+            multi_containers=True, 
+            direction="horizontal",
+            key="dnd_format_cols"
+        )
         
-        # 결과 파싱
+        # 결과를 세션에 저장 (rerun 호출 없이)
         if sorted_format:
             for container in sorted_format:
                 header = container.get('header', '')
                 items = container.get('items', [])
-                
                 if '금액' in header:
                     amount_cols = items
                     st.session_state.amount_cols = items
@@ -3283,19 +3282,15 @@ def render_step2():
                     id_cols = items
                     st.session_state.id_cols = items
         
-        # 형식 설정 요약
-        format_summary = []
-        if amount_cols:
-            format_summary.append(f"💰 금액: {len(amount_cols)}개")
-        if percent_cols:
-            format_summary.append(f"📊 퍼센트: {len(percent_cols)}개")
-        if date_cols:
-            format_summary.append(f"📅 날짜: {len(date_cols)}개")
-        if id_cols:
-            format_summary.append(f"🔢 ID: {len(id_cols)}개")
+        # 형식 설정 요약 (간단하게 한 줄)
+        format_parts = []
+        if amount_cols: format_parts.append(f"💰{len(amount_cols)}")
+        if percent_cols: format_parts.append(f"📊{len(percent_cols)}")
+        if date_cols: format_parts.append(f"📅{len(date_cols)}")
+        if id_cols: format_parts.append(f"🔢{len(id_cols)}")
         
-        if format_summary:
-            st.info(" | ".join(format_summary), icon="🏷️")
+        if format_parts:
+            st.caption(f"형식 지정: {' | '.join(format_parts)}")
         
         # NaN/0 처리 옵션
         st.markdown("---")
@@ -3304,97 +3299,129 @@ def render_step2():
             options=["빈칸으로 표시", "0으로 표시"],
             index=0 if st.session_state.get('zero_as_blank', True) else 1,
             horizontal=True,
-            help="금액 컬럼에서 NaN이나 0 값을 어떻게 표시할지 선택"
+            help="금액 컬럼에서 NaN이나 0 값을 어떻게 표시할지 선택",
+            key="zero_option_radio"
         )
         st.session_state.zero_as_blank = (zero_option == "빈칸으로 표시")
     
-    # 설정 초기화 버튼
-    col_reset1, col_reset2 = st.columns([3, 1])
-    with col_reset2:
-        if st.button("🔄 설정 초기화", use_container_width=True, key="step2_reset"):
-            # 모든 컬럼을 표시로, 형식은 초기화
-            st.session_state.display_cols = columns.copy()
-            st.session_state.excluded_cols = []
-            st.session_state.amount_cols = []
-            st.session_state.percent_cols = []
-            st.session_state.date_cols = []
-            st.session_state.id_cols = []
-            st.session_state.step2_config_loaded = False
-            
-            # JSON 파일도 초기화
-            save_column_config_to_json({})
-            st.toast("설정이 초기화되었습니다", icon="🔄")
-            st.rerun()
-    
-    # 충돌 해결
+    # 충돌 해결 + 설정 초기화 (한 줄에)
     with st.container(border=True):
-        st.markdown("##### 이메일 충돌 처리")
-        st.caption("한 그룹에 여러 이메일이 있을 때 처리 방법")
+        col_conf1, col_conf2 = st.columns([3, 1])
         
-        saved_resolution = st.session_state.get('conflict_resolution', 'first')
-        options = ['first', 'most_common', 'skip']
-        conflict_resolution = st.radio(
-            "충돌 해결 방식",
-            options,
-            index=options.index(saved_resolution) if saved_resolution in options else 0,
-            format_func=lambda x: {'first': '첫 번째 이메일 사용', 'most_common': '가장 많이 등장한 이메일', 'skip': '해당 그룹 건너뛰기'}[x],
-            horizontal=True,
-            label_visibility="collapsed"
-        )
-        st.session_state.conflict_resolution = conflict_resolution
+        with col_conf1:
+            st.markdown("##### 이메일 충돌 처리")
+            saved_resolution = st.session_state.get('conflict_resolution', 'first')
+            options = ['first', 'most_common', 'skip']
+            conflict_resolution = st.radio(
+                "충돌 해결",
+                options,
+                index=options.index(saved_resolution) if saved_resolution in options else 0,
+                format_func=lambda x: {'first': '첫 번째 이메일', 'most_common': '가장 많이 등장', 'skip': '건너뛰기'}[x],
+                horizontal=True,
+                label_visibility="collapsed",
+                key="conflict_resolution_radio"
+            )
+            st.session_state.conflict_resolution = conflict_resolution
+        
+        with col_conf2:
+            st.markdown("##### ")  # 높이 맞춤
+            if st.button("🔄 초기화", use_container_width=True, key="step2_reset"):
+                # 세션 상태 초기화
+                st.session_state.display_cols = columns.copy()
+                st.session_state.excluded_cols = []
+                st.session_state.amount_cols = []
+                st.session_state.percent_cols = []
+                st.session_state.date_cols = []
+                st.session_state.id_cols = []
+                st.session_state.step2_config_loaded = False
+                # JSON 파일도 초기화
+                save_column_config_to_json({})
+                st.toast("설정이 초기화되었습니다", icon="🔄")
+                st.rerun()
     
-    # 네비게이션 버튼
-    st.markdown("<div style='height: 24px'></div>", unsafe_allow_html=True)
+    # ============================================================
+    # 네비게이션 버튼 - move_step() 호출 시에만 JSON 저장
+    # ============================================================
+    st.markdown("<div style='height: 20px'></div>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
+    
     with col1:
         if st.button("← 이전", use_container_width=True, key="step2_prev"):
-            # 이전으로 가기 전에도 설정 저장
-            move_step(1, save_config=True)
+            # 이전으로 가기 전에 설정 저장 후 이동
+            _save_step2_config_and_move(1, columns, df, df_email, use_separate, sheet_name)
+    
     with col3:
-        if st.button("다음 단계 →", type="primary", use_container_width=True, key="step2_next"):
+        # 다음 버튼 활성화 조건
+        can_proceed = len(display_cols) > 0
+        
+        if st.button("다음 단계 →", type="primary", use_container_width=True, 
+                    key="step2_next", disabled=not can_proceed):
             if not display_cols:
                 st.error("표시할 컬럼을 1개 이상 배치하세요", icon="❌")
             else:
-                # JSON 파일에 현재 설정 저장 (다음 접속 시 복원용)
-                config_to_save = {
-                    'display_cols': display_cols,
-                    'excluded_cols': excluded_cols,
-                    'amount_cols': amount_cols,
-                    'percent_cols': percent_cols,
-                    'date_cols': date_cols,
-                    'id_cols': id_cols,
-                    'saved_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                }
-                save_column_config_to_json(config_to_save)
-                
-                # 세션 캐시에도 저장
-                save_column_settings(sheet_name)
-                add_log(f"Step 2 설정 저장: 표시 {len(display_cols)}개, 형식 {len(amount_cols)+len(percent_cols)+len(date_cols)+len(id_cols)}개")
-                
-                with st.spinner("데이터 처리 중..."):
-                    df_work = df.copy()
-                    
-                    if use_separate and df_email is not None:
-                        df_work = merge_email_data(df_work, df_email,
-                            st.session_state.join_col_data,
-                            st.session_state.join_col_email,
-                            st.session_state.email_col)
-                    
-                    df_cleaned = clean_dataframe(df_work, amount_cols, percent_cols, date_cols, id_cols)
-                    st.session_state.df = df_cleaned
-                    
-                    grouped, conflicts = group_data_with_wildcard(
-                        df_cleaned, group_key_col, st.session_state.email_col,
-                        amount_cols, percent_cols, display_cols, conflict_resolution,
-                        use_wildcard, st.session_state.wildcard_suffixes,
-                        st.session_state.calculate_totals_auto)
-                    
-                    st.session_state.grouped_data = grouped
-                    st.session_state.email_conflicts = conflicts
-                    add_log(f"데이터 그룹화 완료: {len(grouped)}개 그룹")
-                
-                st.session_state.current_step = 3
-                st.rerun()
+                _save_step2_config_and_move(3, columns, df, df_email, use_separate, sheet_name,
+                                           process_data=True, group_key_col=group_key_col,
+                                           use_wildcard=use_wildcard, conflict_resolution=conflict_resolution)
+
+
+def _save_step2_config_and_move(target_step: int, columns: list, df, df_email, 
+                                 use_separate: bool, sheet_name: str,
+                                 process_data: bool = False, group_key_col: str = None,
+                                 use_wildcard: bool = False, conflict_resolution: str = 'first'):
+    """Step 2 설정 저장 후 스텝 이동 (내부 헬퍼 함수)
+    
+    - JSON 저장은 이 함수에서만 수행 (드래그 중에는 저장 안 함)
+    - 데이터 처리가 필요한 경우 process_data=True
+    """
+    # 현재 세션에서 최종 상태 가져오기
+    display_cols = st.session_state.get('display_cols', columns.copy())
+    excluded_cols = st.session_state.get('excluded_cols', [])
+    amount_cols = st.session_state.get('amount_cols', [])
+    percent_cols = st.session_state.get('percent_cols', [])
+    date_cols = st.session_state.get('date_cols', [])
+    id_cols = st.session_state.get('id_cols', [])
+    
+    # JSON 파일에 설정 저장 (형식 설정만 - 컬럼명 매칭용)
+    config_to_save = {
+        'amount_cols': amount_cols,
+        'percent_cols': percent_cols,
+        'date_cols': date_cols,
+        'id_cols': id_cols,
+        'saved_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    }
+    save_column_config_to_json(config_to_save)
+    
+    # 세션 캐시에도 저장
+    save_column_settings(sheet_name)
+    add_log(f"Step 2 설정 저장: 표시 {len(display_cols)}개, 형식 {len(amount_cols)+len(percent_cols)+len(date_cols)+len(id_cols)}개")
+    
+    # 데이터 처리 (다음 단계로 갈 때만)
+    if process_data and target_step == 3:
+        with st.spinner("데이터 처리 중..."):
+            df_work = df.copy()
+            
+            if use_separate and df_email is not None:
+                df_work = merge_email_data(df_work, df_email,
+                    st.session_state.join_col_data,
+                    st.session_state.join_col_email,
+                    st.session_state.email_col)
+            
+            df_cleaned = clean_dataframe(df_work, amount_cols, percent_cols, date_cols, id_cols)
+            st.session_state.df = df_cleaned
+            
+            grouped, conflicts = group_data_with_wildcard(
+                df_cleaned, group_key_col, st.session_state.email_col,
+                amount_cols, percent_cols, display_cols, conflict_resolution,
+                use_wildcard, st.session_state.wildcard_suffixes,
+                st.session_state.calculate_totals_auto)
+            
+            st.session_state.grouped_data = grouped
+            st.session_state.email_conflicts = conflicts
+            add_log(f"데이터 그룹화 완료: {len(grouped)}개 그룹")
+    
+    # 스텝 이동
+    st.session_state.current_step = target_step
+    st.rerun()
 
 
 def render_step3():
