@@ -25,7 +25,10 @@ import io
 from jinja2 import Template
 import re
 import base64
+import json
+import os
 import extra_streamlit_components as stx
+from streamlit_sortables import sort_items
 
 # 로컬 모듈
 from style import (
@@ -1132,6 +1135,69 @@ def load_column_settings(sheet_name: str) -> bool:
                 st.session_state[key] = value
         return True
     return False
+
+
+# ============================================================================
+# 컬럼 설정 JSON 파일 관리 (Drag & Drop 설정 영속성)
+# ============================================================================
+
+CONFIG_COLUMNS_PATH = os.path.join(os.path.dirname(__file__), 'config_columns.json')
+
+
+def load_column_config_from_json() -> dict:
+    """JSON 파일에서 컬럼 설정 로드"""
+    try:
+        if os.path.exists(CONFIG_COLUMNS_PATH):
+            with open(CONFIG_COLUMNS_PATH, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except Exception as e:
+        st.warning(f"설정 파일 로드 오류: {e}")
+    return {}
+
+
+def save_column_config_to_json(config: dict):
+    """JSON 파일에 컬럼 설정 저장"""
+    try:
+        with open(CONFIG_COLUMNS_PATH, 'w', encoding='utf-8') as f:
+            json.dump(config, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        st.error(f"설정 파일 저장 오류: {e}")
+
+
+def apply_saved_config_to_columns(saved_config: dict, available_columns: list) -> Tuple[dict, list]:
+    """
+    저장된 설정을 현재 엑셀 컬럼에 적용
+    존재하지 않는 컬럼은 제외하고 알림 목록 반환
+    """
+    result = {
+        'display_cols': [],
+        'amount_cols': [],
+        'percent_cols': [],
+        'date_cols': [],
+        'id_cols': [],
+        'available': []  # 아직 배치되지 않은 컬럼
+    }
+    missing_cols = []
+    
+    # 각 카테고리에서 존재하는 컬럼만 유지
+    for key in ['display_cols', 'amount_cols', 'percent_cols', 'date_cols', 'id_cols']:
+        saved_list = saved_config.get(key, [])
+        for col in saved_list:
+            if col in available_columns:
+                result[key].append(col)
+            else:
+                if col not in missing_cols:
+                    missing_cols.append(col)
+    
+    # 배치된 컬럼 목록
+    placed_cols = set()
+    for key in ['display_cols', 'amount_cols', 'percent_cols', 'date_cols', 'id_cols']:
+        placed_cols.update(result[key])
+    
+    # 아직 배치되지 않은 컬럼
+    result['available'] = [c for c in available_columns if c not in placed_cols]
+    
+    return result, missing_cols
 
 
 def reset_workflow():
@@ -2590,10 +2656,10 @@ def render_step1():
 
 
 def render_step2():
-    """Step 2: 컬럼 설정 - 기억 기능 및 중복 방지"""
+    """Step 2: 컬럼 설정 - 드래그 앤 드롭 + JSON 설정 저장"""
     
     # 페이지 헤더
-    render_page_header(2, "컬럼 설정", "그룹화 기준과 데이터 타입을 설정하세요")
+    render_page_header(2, "컬럼 설정", "컬럼을 드래그하여 각 카테고리에 배치하세요")
     
     df = st.session_state.df
     if df is None:
@@ -2603,15 +2669,40 @@ def render_step2():
     columns = df.columns.tolist()
     df_email = st.session_state.df_email
     use_separate = st.session_state.use_separate_email_sheet
-    
-    # 시트 이름으로 이전 설정 로드 시도
     sheet_name = st.session_state.get('selected_data_sheet', 'default')
-    if 'column_settings_loaded' not in st.session_state:
-        if load_column_settings(sheet_name):
-            st.toast(f"'{sheet_name}' 시트의 이전 설정을 불러왔습니다", icon="💾")
-        st.session_state.column_settings_loaded = True
     
-    # 데이터 병합 설정
+    # ============================================================
+    # JSON 설정 파일에서 이전 설정 로드 (최초 1회)
+    # ============================================================
+    if 'dnd_config_loaded' not in st.session_state:
+        saved_config = load_column_config_from_json()
+        if saved_config:
+            applied, missing = apply_saved_config_to_columns(saved_config, columns)
+            
+            # 세션 상태에 적용
+            st.session_state.dnd_display_cols = applied['display_cols']
+            st.session_state.dnd_amount_cols = applied['amount_cols']
+            st.session_state.dnd_percent_cols = applied['percent_cols']
+            st.session_state.dnd_date_cols = applied['date_cols']
+            st.session_state.dnd_id_cols = applied['id_cols']
+            st.session_state.dnd_available_cols = applied['available']
+            
+            if missing:
+                st.warning(f"⚠️ 기존 설정 중 일부 컬럼이 현재 파일에 없어 제외되었습니다: {', '.join(missing)}")
+            else:
+                st.toast("💾 이전 컬럼 설정을 불러왔습니다", icon="✅")
+        else:
+            # 새로운 설정 - 모든 컬럼을 available에
+            st.session_state.dnd_display_cols = []
+            st.session_state.dnd_amount_cols = []
+            st.session_state.dnd_percent_cols = []
+            st.session_state.dnd_date_cols = []
+            st.session_state.dnd_id_cols = []
+            st.session_state.dnd_available_cols = columns.copy()
+        
+        st.session_state.dnd_config_loaded = True
+    
+    # 데이터 병합 설정 (별도 이메일 시트 사용 시)
     if use_separate and df_email is not None:
         with st.container(border=True):
             st.markdown("##### 데이터 병합 설정")
@@ -2716,94 +2807,113 @@ def render_step2():
                 st.success(f"예상 그룹 수: **{len(base_keys)}개**", icon="📊")
     
     # ============================================================
-    # 1️⃣ 이메일 표시 컬럼 (먼저 선택)
+    # 🎯 드래그 앤 드롭 컬럼 설정 (streamlit-sortables)
     # ============================================================
     with st.container(border=True):
-        st.markdown("##### 📧 이메일 표시 컬럼")
-        st.caption("이메일 본문 테이블에 표시할 컬럼을 선택하세요")
+        st.markdown("##### 🎯 컬럼 배치 (드래그 앤 드롭)")
+        st.caption("왼쪽 '사용 가능' 컬럼을 오른쪽 카테고리로 드래그하여 배치하세요. 순서 변경도 드래그로 가능합니다.")
         
-        # 최초 로드 시 모든 컬럼 선택 (그룹키 제외)
-        saved_display = st.session_state.get('display_cols', [])
-        if not saved_display:
-            default_display = [c for c in columns if c != group_key_col]
+        # 현재 세션 상태에서 컬럼 목록 가져오기
+        available_cols = st.session_state.get('dnd_available_cols', columns.copy())
+        display_cols = st.session_state.get('dnd_display_cols', [])
+        amount_cols = st.session_state.get('dnd_amount_cols', [])
+        percent_cols = st.session_state.get('dnd_percent_cols', [])
+        date_cols = st.session_state.get('dnd_date_cols', [])
+        id_cols = st.session_state.get('dnd_id_cols', [])
+        
+        # 드래그 앤 드롭 UI를 위한 아이템 구성
+        dnd_items = [
+            {"header": "📦 사용 가능", "items": available_cols},
+            {"header": "📧 이메일 표시", "items": display_cols},
+            {"header": "💰 금액", "items": amount_cols},
+            {"header": "📊 퍼센트", "items": percent_cols},
+            {"header": "📅 날짜", "items": date_cols},
+            {"header": "🔢 ID", "items": id_cols},
+        ]
+        
+        # 드래그 앤 드롭 컴포넌트
+        sorted_items = sort_items(dnd_items, multi_containers=True, direction="horizontal")
+        
+        # 결과 파싱 및 세션 상태 업데이트
+        if sorted_items:
+            new_available = []
+            new_display = []
+            new_amount = []
+            new_percent = []
+            new_date = []
+            new_id = []
+            
+            for container in sorted_items:
+                header = container.get('header', '')
+                items = container.get('items', [])
+                
+                if '사용 가능' in header:
+                    new_available = items
+                elif '이메일 표시' in header:
+                    new_display = items
+                elif '금액' in header:
+                    new_amount = items
+                elif '퍼센트' in header:
+                    new_percent = items
+                elif '날짜' in header:
+                    new_date = items
+                elif 'ID' in header:
+                    new_id = items
+            
+            # 세션 상태 업데이트
+            st.session_state.dnd_available_cols = new_available
+            st.session_state.dnd_display_cols = new_display
+            st.session_state.dnd_amount_cols = new_amount
+            st.session_state.dnd_percent_cols = new_percent
+            st.session_state.dnd_date_cols = new_date
+            st.session_state.dnd_id_cols = new_id
+            
+            # 기존 세션 상태 변수와 동기화 (3, 4, 5단계 호환)
+            st.session_state.display_cols = new_display
+            st.session_state.display_cols_order = new_display
+            st.session_state.amount_cols = new_amount
+            st.session_state.percent_cols = new_percent
+            st.session_state.date_cols = new_date
+            st.session_state.id_cols = new_id
+            
+            # JSON 파일에 즉시 저장
+            config_to_save = {
+                'display_cols': new_display,
+                'amount_cols': new_amount,
+                'percent_cols': new_percent,
+                'date_cols': new_date,
+                'id_cols': new_id,
+            }
+            save_column_config_to_json(config_to_save)
+            
+            # 현재 배치된 컬럼 변수 업데이트
+            display_cols = new_display
+            amount_cols = new_amount
+            percent_cols = new_percent
+            date_cols = new_date
+            id_cols = new_id
+        
+        # 배치 요약
+        st.markdown("---")
+        summary_parts = []
+        if display_cols:
+            summary_parts.append(f"📧 이메일 표시: {len(display_cols)}개")
+        if amount_cols:
+            summary_parts.append(f"💰 금액: {len(amount_cols)}개")
+        if percent_cols:
+            summary_parts.append(f"📊 퍼센트: {len(percent_cols)}개")
+        if date_cols:
+            summary_parts.append(f"📅 날짜: {len(date_cols)}개")
+        if id_cols:
+            summary_parts.append(f"🔢 ID: {len(id_cols)}개")
+        
+        if summary_parts:
+            st.success(" | ".join(summary_parts), icon="✅")
         else:
-            default_display = [c for c in saved_display if c in columns]
-        
-        display_cols = st.multiselect(
-            "표시할 컬럼 선택", 
-            columns, 
-            default=default_display,
-            label_visibility="collapsed",
-            help="이메일에 포함될 테이블의 컬럼을 선택하세요"
-        )
-        st.session_state.display_cols = display_cols
-        
-        # 컬럼 순서 조절 (선택된 컬럼이 2개 이상일 때)
-        if display_cols and len(display_cols) > 1:
-            with st.expander("🔀 컬럼 순서 조절", expanded=False):
-                # 현재 순서 또는 기본 순서
-                current_order = st.session_state.get('display_cols_order', [])
-                ordered_cols = [c for c in current_order if c in display_cols]
-                ordered_cols += [c for c in display_cols if c not in ordered_cols]
-                
-                # 순서 조절 UI
-                new_order = []
-                cols_per_row = 4
-                for i in range(0, len(ordered_cols), cols_per_row):
-                    row_cols = st.columns(cols_per_row)
-                    for j, col in enumerate(row_cols):
-                        idx = i + j
-                        if idx < len(ordered_cols):
-                            with col:
-                                available = [c for c in ordered_cols if c not in new_order]
-                                if available:
-                                    selected = st.selectbox(
-                                        f"{idx+1}번째",
-                                        available,
-                                        index=available.index(ordered_cols[idx]) if ordered_cols[idx] in available else 0,
-                                        key=f"col_order_{idx}"
-                                    )
-                                    new_order.append(selected)
-                
-                if new_order:
-                    display_cols = new_order
-                    st.session_state.display_cols_order = display_cols
-                    st.session_state.display_cols = display_cols
-    
-    # ============================================================
-    # 2️⃣ 컬럼 타입 설정 (이미 선택된 타입은 다른 옵션에서 제외)
-    # ============================================================
-    with st.container(border=True):
-        st.markdown("##### 🏷️ 컬럼 타입 설정")
-        st.caption("자동 포맷팅을 적용할 컬럼을 선택하세요 (선택된 컬럼은 다른 타입에서 자동 제외)")
-        
-        # 이전 저장된 값
-        saved_amount = st.session_state.get('amount_cols', [])
-        saved_percent = st.session_state.get('percent_cols', [])
-        saved_date = st.session_state.get('date_cols', [])
-        saved_id = st.session_state.get('id_cols', [])
-        
-        # 기본 후보 (자동 감지)
-        amount_candidates = [c for c in columns if any(k in c for k in ['금액', '처방', '수수료'])]
-        percent_candidates = [c for c in columns if any(k in c for k in ['%', '율', '퍼센트', 'percent', 'rate'])]
-        date_candidates = [c for c in columns if '월' in c or 'date' in c.lower()]
-        id_candidates = [c for c in columns if '코드' in c or '번호' in c]
-        
-        # 현재 선택된 모든 타입 컬럼 추적
-        all_typed_cols = []
-        
-        # 💰 금액 컬럼
-        amount_default = [c for c in saved_amount if c in columns] or [c for c in amount_candidates if c in columns]
-        amount_cols = st.multiselect(
-            "💰 금액 컬럼",
-            [c for c in columns if c not in all_typed_cols],
-            default=[c for c in amount_default if c not in all_typed_cols],
-            help="천단위 쉼표 적용 (예: 1,250,000)"
-        )
-        st.session_state.amount_cols = amount_cols
-        all_typed_cols.extend(amount_cols)
+            st.info("컬럼을 드래그하여 카테고리에 배치하세요", icon="👆")
         
         # NaN/0 처리 옵션
+        st.markdown("---")
         zero_option = st.radio(
             "NaN/0 값 처리",
             options=["빈칸으로 표시", "0으로 표시"],
@@ -2812,51 +2922,24 @@ def render_step2():
             help="금액 컬럼에서 NaN이나 0 값을 어떻게 표시할지 선택"
         )
         st.session_state.zero_as_blank = (zero_option == "빈칸으로 표시")
-        
-        # 📊 퍼센트 컬럼
-        percent_default = [c for c in saved_percent if c in columns and c not in all_typed_cols] or [c for c in percent_candidates if c in columns and c not in all_typed_cols]
-        percent_cols = st.multiselect(
-            "📊 퍼센트 컬럼",
-            [c for c in columns if c not in all_typed_cols],
-            default=[c for c in percent_default if c not in all_typed_cols],
-            help="% 기호 적용 (예: 15.0%)"
-        )
-        st.session_state.percent_cols = percent_cols
-        all_typed_cols.extend(percent_cols)
-        
-        # 📅 날짜 컬럼
-        date_default = [c for c in saved_date if c in columns and c not in all_typed_cols] or [c for c in date_candidates if c in columns and c not in all_typed_cols]
-        date_cols = st.multiselect(
-            "📅 날짜 컬럼",
-            [c for c in columns if c not in all_typed_cols],
-            default=[c for c in date_default if c not in all_typed_cols],
-            help="YYYY-MM-DD 형식으로 통일"
-        )
-        st.session_state.date_cols = date_cols
-        all_typed_cols.extend(date_cols)
-        
-        # 🔢 ID 컬럼
-        id_default = [c for c in saved_id if c in columns and c not in all_typed_cols] or [c for c in id_candidates if c in columns and c not in all_typed_cols]
-        id_cols = st.multiselect(
-            "🔢 ID 컬럼",
-            [c for c in columns if c not in all_typed_cols],
-            default=[c for c in id_default if c not in all_typed_cols],
-            help="숫자 끝 .0 제거"
-        )
-        st.session_state.id_cols = id_cols
-        
-        # 선택된 타입 요약
-        if amount_cols or percent_cols or date_cols or id_cols:
-            type_summary = []
-            if amount_cols:
-                type_summary.append(f"💰 금액: {len(amount_cols)}개")
-            if percent_cols:
-                type_summary.append(f"📊 퍼센트: {len(percent_cols)}개")
-            if date_cols:
-                type_summary.append(f"📅 날짜: {len(date_cols)}개")
-            if id_cols:
-                type_summary.append(f"🔢 ID: {len(id_cols)}개")
-            st.info(" | ".join(type_summary))
+    
+    # 설정 초기화 버튼
+    col_reset1, col_reset2 = st.columns([3, 1])
+    with col_reset2:
+        if st.button("🔄 설정 초기화", use_container_width=True):
+            # 모든 컬럼을 available로 복원
+            st.session_state.dnd_available_cols = columns.copy()
+            st.session_state.dnd_display_cols = []
+            st.session_state.dnd_amount_cols = []
+            st.session_state.dnd_percent_cols = []
+            st.session_state.dnd_date_cols = []
+            st.session_state.dnd_id_cols = []
+            st.session_state.dnd_config_loaded = False
+            
+            # JSON 파일도 초기화
+            save_column_config_to_json({})
+            st.toast("설정이 초기화되었습니다", icon="🔄")
+            st.rerun()
     
     # 충돌 해결
     with st.container(border=True):
