@@ -5,7 +5,7 @@
 Gmail/Outlook 호환 Inline CSS 스타일 및 Jinja2 HTML 템플릿을 제공합니다.
 
 Author: Senior Solution Architect (20 Years Experience)
-Version: 1.0.0
+Version: 1.1.0  # Updated: extra_html_before_table 파라미터 추가
 ================================================================================
 """
 

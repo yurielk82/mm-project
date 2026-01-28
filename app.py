@@ -4172,19 +4172,20 @@ def render_step4():
                             pass
                 
                 if tax_amount > 0:
+                    # 노란색 배경 + 금액 white-space: nowrap
                     tax_invoice_html = f'''
-                    <div style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); 
+                    <div style="background: linear-gradient(135deg, #fff9c4 0%, #fff59d 100%); 
                                 padding: 16px 20px; border-radius: 10px; margin: 16px 0;
-                                border-left: 4px solid #4caf50;">
-                        <strong style="color: #2e7d32; font-size: 1.1em;">🧾 세금계산서 발행 정보</strong>
-                        <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                border-left: 4px solid #ffc107; border: 1px solid #ffca28;">
+                        <strong style="color: #856404; font-size: 1.1em;">🧾 세금계산서 발행 정보</strong>
+                        <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                             <div>
-                                <span style="color: #555;">CSO관리업체명:</span>
+                                <span style="color: #665c00;">CSO관리업체명:</span>
                                 <strong style="color: #333; margin-left: 8px;">{sample_key}</strong>
                             </div>
-                            <div>
-                                <span style="color: #555;">발행 금액:</span>
-                                <strong style="color: #2e7d32; font-size: 1.2em; margin-left: 8px;">₩{tax_amount:,.0f}</strong>
+                            <div style="white-space: nowrap;">
+                                <span style="color: #665c00;">발행 금액:</span>
+                                <strong style="color: #856404; font-size: 1.3em; margin-left: 8px; white-space: nowrap;">₩{tax_amount:,.0f}</strong>
                             </div>
                         </div>
                     </div>
