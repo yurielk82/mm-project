@@ -3038,79 +3038,33 @@ def render_step2():
     render_page_header(2, "컬럼 설정", "이메일 본문에 표시할 컬럼과 데이터 형식을 설정하세요")
     
     # ============================================================
-    # 🎯 드래그 앤 드롭 칩 레이아웃 안정화 CSS (Step 2 전용)
+    # 🎯 드래그 앤 드롭 칩 레이아웃 CSS (Step 2 전용)
+    # - 최소한의 스타일만 적용하여 호환성 확보
     # ============================================================
     st.markdown("""
     <style>
-        /* ============================================
-           드래그 앤 드롭 안정화 CSS
-           - 고정 크기로 레이아웃 시프트 방지
-           - 테두리 두께 변화 없음 (box-shadow로 피드백)
-           ============================================ */
-        
-        /* 컨테이너 최소 높이 고정 */
-        .element-container:has([data-testid="stCustomComponentV1"]) {
-            min-height: 80px !important;
-        }
-        
-        /* sortable 컨테이너 */
+        /* sortable 컨테이너 - 기본 표시 보장 */
         div[data-testid="stCustomComponentV1"] {
-            min-height: 60px !important;
+            min-height: 60px;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
         }
         
-        /* 모든 칩 아이템 - 고정 크기, box-sizing */
+        /* 칩 아이템 기본 스타일 */
         .sortable-item {
-            box-sizing: border-box !important;
-            height: 36px !important;
-            min-height: 36px !important;
-            max-height: 36px !important;
-            padding: 8px 14px !important;
-            margin: 4px !important;
-            border: 2px solid transparent !important;
-            border-radius: 20px !important;
-            font-size: 0.85rem !important;
-            font-weight: 500 !important;
-            line-height: 18px !important;
-            display: inline-flex !important;
-            align-items: center !important;
-            white-space: nowrap !important;
-            cursor: grab !important;
-            user-select: none !important;
-            /* 부드러운 전환 - transform 제외하여 드래그 중 깜박임 방지 */
-            transition: box-shadow 0.15s ease, background-color 0.15s ease !important;
+            display: inline-block;
+            padding: 6px 12px;
+            margin: 4px;
+            border-radius: 16px;
+            font-size: 0.85rem;
+            cursor: grab;
+            background-color: #e3f2fd;
+            border: 1px solid #90caf9;
         }
         
-        /* 호버 - 테두리 두께 유지, 그림자로 피드백 */
         .sortable-item:hover {
-            border: 2px solid transparent !important;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
-            background-color: rgba(59, 130, 246, 0.05) !important;
-        }
-        
-        /* 드래그 중 - 그림자 강화, transform 제거 (깜박임 방지) */
-        .sortable-item:active,
-        .sortable-item.dragging,
-        .sortable-item.sortable-chosen,
-        .sortable-item.sortable-ghost {
-            border: 2px solid transparent !important;
-            box-shadow: 0 0 0 3px #3b82f6, 0 4px 12px rgba(0,0,0,0.15) !important;
-            cursor: grabbing !important;
-            opacity: 0.9 !important;
-        }
-        
-        /* 고스트(플레이스홀더) - 원본 레이아웃 유지 */
-        .sortable-ghost {
-            opacity: 0.4 !important;
-            background: rgba(59, 130, 246, 0.1) !important;
-        }
-        
-        /* 드롭 영역 컨테이너 */
-        .sortable-container,
-        [data-testid="stCustomComponentV1"] > div > div {
-            min-height: 50px !important;
-            padding: 8px !important;
-            border-radius: 12px !important;
-            box-sizing: border-box !important;
+            background-color: #bbdefb;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -3453,80 +3407,81 @@ def render_step2():
             area1_display.extend(new_cols)
             st.session_state.display_cols = area1_display.copy()
         
-        # 드래그 앤 드롭 UI - 영역 1 전용 key
-        dnd_area1_items = [
-            {"header": "📧 이메일에 표시 (순서대로)", "items": area1_display},
-            {"header": "🚫 제외", "items": area1_excluded},
-        ]
+        # ============================================================
+        # 드래그 앤 드롭 UI vs 멀티셀렉트 UI 선택
+        # ============================================================
+        use_dnd = st.checkbox("🔀 드래그 앤 드롭 UI 사용", value=False, 
+                              help="체크 해제 시 기본 멀티셀렉트 UI를 사용합니다")
         
-        # ★ 디버깅 모드: 문제 파악용 (임시)
-        with st.expander("🔍 DEBUG: 컬럼 상태 확인", expanded=False):
-            st.write(f"**입력 데이터:**")
-            st.write(f"- columns (전체): {len(columns)}개 → {columns[:5]}...")
-            st.write(f"- area1_display: {len(area1_display)}개 → {area1_display[:3] if area1_display else '없음'}...")
-            st.write(f"- area1_excluded: {len(area1_excluded)}개")
-        
-        # sort_items 호출 - 영역 1 전용 key
-        try:
-            sorted_area1 = sort_items(
-                dnd_area1_items, 
-                multi_containers=True, 
-                direction="horizontal",
-                key="step2_area1_display_dnd"  # 고유 key로 영역 1 식별
-            )
-        except Exception as e:
-            st.error(f"sort_items 오류: {e}")
-            sorted_area1 = None
-        
-        # ★ 디버깅: sort_items 반환값 확인
-        with st.expander("🔍 DEBUG: sort_items 반환값", expanded=False):
-            st.write(f"**sorted_area1 타입:** {type(sorted_area1)}")
-            st.write(f"**sorted_area1 값:** {sorted_area1}")
-        
-        # ▼▼▼ 결과를 세션에 저장 (영역 1 전용) ▼▼▼
-        new_display = area1_display  # 기본값으로 초기화
-        new_excluded = area1_excluded
-        
-        if sorted_area1:
-            # sorted_area1이 리스트인 경우 (multi_containers=True)
-            if isinstance(sorted_area1, list):
+        if use_dnd:
+            # 드래그 앤 드롭 UI
+            dnd_area1_items = [
+                {"header": "📧 이메일에 표시 (순서대로)", "items": area1_display},
+                {"header": "🚫 제외", "items": area1_excluded},
+            ]
+            
+            try:
+                sorted_area1 = sort_items(
+                    dnd_area1_items, 
+                    multi_containers=True, 
+                    direction="horizontal",
+                    key="step2_area1_display_dnd"
+                )
+            except Exception as e:
+                st.error(f"sort_items 오류: {e}")
+                sorted_area1 = None
+            
+            # 결과 처리
+            new_display = area1_display
+            new_excluded = area1_excluded
+            
+            if sorted_area1 and isinstance(sorted_area1, list):
                 for container in sorted_area1:
                     if isinstance(container, dict):
                         header = container.get('header', '')
                         items = container.get('items', [])
                         
                         if '표시' in header and '제외' not in header:
-                            if items:  # items가 있을 때만 업데이트
+                            if items:
                                 new_display = list(items)
                         elif '제외' in header:
                             new_excluded = list(items) if items else []
-            # sorted_area1이 단일 리스트인 경우 (multi_containers=False 또는 버전 차이)
-            elif isinstance(sorted_area1[0], str) if sorted_area1 else False:
-                new_display = list(sorted_area1)
+            
+            if not new_display:
+                new_display = [c for c in columns if c not in new_excluded] if new_excluded else columns.copy()
         
-        # ★ 최종 안전장치: new_display가 비어있으면 columns로 복원
-        if not new_display:
-            new_display = [c for c in columns if c not in new_excluded] if new_excluded else columns.copy()
+        else:
+            # 멀티셀렉트 UI (폴백)
+            st.caption("📝 표시할 컬럼을 선택하세요 (선택 순서대로 이메일에 표시)")
+            
+            new_display = st.multiselect(
+                "이메일에 표시할 컬럼",
+                options=columns,
+                default=area1_display if area1_display else columns,
+                key="step2_area1_multiselect",
+                help="선택한 순서대로 이메일 표에 표시됩니다"
+            )
+            
+            new_excluded = [c for c in columns if c not in new_display]
+            
+            if not new_display:
+                st.warning("⚠️ 최소 1개 이상의 컬럼을 선택해야 합니다")
+                new_display = columns.copy()
+                new_excluded = []
         
-        # ★ 디버깅: 최종 결과 확인
-        with st.expander("🔍 DEBUG: 최종 결과", expanded=False):
-            st.write(f"**new_display:** {len(new_display)}개 → {new_display[:3] if new_display else '없음'}...")
-            st.write(f"**new_excluded:** {len(new_excluded)}개")
-        
-        # 세션 상태 업데이트 (영역 1 전용 배열)
+        # 세션 상태 업데이트
         st.session_state.display_cols = new_display
         st.session_state.display_cols_order = new_display
         st.session_state.excluded_cols = new_excluded
         
-        # 로컬 변수도 업데이트 (요약 표시용)
         area1_display = new_display
         area1_excluded = new_excluded
         
-        # 표시 컬럼 요약 (영역 1 결과)
+        # 표시 컬럼 요약
         col_info1, col_info2 = st.columns(2)
         with col_info1:
             if area1_display:
-                st.caption(f"✅ 표시: **{len(area1_display)}개** 컬럼")
+                st.success(f"✅ 표시: **{len(area1_display)}개** 컬럼")
             else:
                 st.warning("⚠️ 표시할 컬럼이 없습니다!")
         with col_info2:
@@ -3549,100 +3504,84 @@ def render_step2():
     
     with st.container(border=True):
         # ▼▼▼ 영역 2 전용 배열 (형식 설정용) ▼▼▼
-        # 영역 2는 columns(전체 컬럼)를 기준으로 형식 설정
         area2_amount = list(st.session_state.get('amount_cols', []))
         area2_percent = list(st.session_state.get('percent_cols', []))
         area2_date = list(st.session_state.get('date_cols', []))
         area2_id = list(st.session_state.get('id_cols', []))
         
-        # 형식 미지정 컬럼 (영역 2 전용 - 전체 컬럼 기준)
-        area2_formatted = set(area2_amount + area2_percent + area2_date + area2_id)
-        area2_unformatted = [c for c in columns if c not in area2_formatted]
+        # 멀티셀렉트 UI로 형식 설정
+        col_fmt1, col_fmt2 = st.columns(2)
         
-        # 드래그 앤 드롭 UI - 영역 2 전용 key
-        dnd_area2_items = [
-            {"header": "📦 미지정", "items": area2_unformatted},
-            {"header": "💰 금액", "items": area2_amount},
-            {"header": "📊 퍼센트", "items": area2_percent},
-            {"header": "📅 날짜", "items": area2_date},
-            {"header": "🔢 ID", "items": area2_id},
-        ]
-        
-        # sort_items 호출 - 영역 2 전용 key
-        try:
-            sorted_area2 = sort_items(
-                dnd_area2_items, 
-                multi_containers=True, 
-                direction="horizontal",
-                key="step2_area2_format_dnd"  # 고유 key로 영역 2 식별
-            )
-        except Exception as e:
-            st.error(f"sort_items 오류 (영역2): {e}")
-            sorted_area2 = None
-        
-        # ▼▼▼ 결과를 세션에 저장 (영역 2 전용) ▼▼▼
-        new_amount = area2_amount  # 기본값으로 초기화
-        new_percent = area2_percent
-        new_date = area2_date
-        new_id = area2_id
-        
-        if sorted_area2 and isinstance(sorted_area2, list):
-            for container in sorted_area2:
-                if isinstance(container, dict):
-                    header = container.get('header', '')
-                    items = container.get('items', [])
-                    
-                    if '금액' in header:
-                        new_amount = list(items) if items else []
-                    elif '퍼센트' in header:
-                        new_percent = list(items) if items else []
-                    elif '날짜' in header:
-                        new_date = list(items) if items else []
-                    elif 'ID' in header:
-                        new_id = list(items) if items else []
-            
-            # 변경 감지 (이전 상태와 비교)
-            prev_amount = st.session_state.get('amount_cols', [])
-            prev_percent = st.session_state.get('percent_cols', [])
-            prev_date = st.session_state.get('date_cols', [])
-            prev_id = st.session_state.get('id_cols', [])
-            
-            format_changed = (
-                new_amount != prev_amount or
-                new_percent != prev_percent or
-                new_date != prev_date or
-                new_id != prev_id
+        with col_fmt1:
+            new_amount = st.multiselect(
+                "💰 금액 형식 (₩1,234,567)",
+                options=columns,
+                default=area2_amount,
+                key="step2_amount_cols",
+                help="선택된 컬럼은 통화 형식으로 표시됩니다"
             )
             
-            # 세션 상태 업데이트 (영역 2 전용 배열)
-            st.session_state.amount_cols = new_amount
-            st.session_state.percent_cols = new_percent
-            st.session_state.date_cols = new_date
-            st.session_state.id_cols = new_id
-            
-            # 변경 시 JSON에 자동 저장 (소스 수정 후에도 유지되도록)
-            if format_changed and (new_amount or new_percent or new_date or new_id):
-                auto_save_config = {
-                    'amount_cols': new_amount,
-                    'percent_cols': new_percent,
-                    'date_cols': new_date,
-                    'id_cols': new_id,
-                    'saved_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                }
-                save_column_config_to_json(auto_save_config)
-            
-            # 로컬 변수도 업데이트 (요약 표시용)
-            area2_amount = new_amount
-            area2_percent = new_percent
-            area2_date = new_date
-            area2_id = new_id
+            new_percent = st.multiselect(
+                "📊 퍼센트 형식 (12.5%)",
+                options=columns,
+                default=area2_percent,
+                key="step2_percent_cols",
+                help="선택된 컬럼은 퍼센트 형식으로 표시됩니다"
+            )
         
-        # 형식 설정 요약 (영역 2 결과)
+        with col_fmt2:
+            new_date = st.multiselect(
+                "📅 날짜 형식 (2025-01-28)",
+                options=columns,
+                default=area2_date,
+                key="step2_date_cols",
+                help="선택된 컬럼은 날짜 형식으로 표시됩니다"
+            )
+            
+            new_id = st.multiselect(
+                "🔢 ID 형식 (텍스트 유지)",
+                options=columns,
+                default=area2_id,
+                key="step2_id_cols",
+                help="선택된 컬럼은 숫자가 아닌 텍스트로 유지됩니다"
+            )
+        
+        # 변경 감지 및 저장
+        prev_amount = st.session_state.get('amount_cols', [])
+        prev_percent = st.session_state.get('percent_cols', [])
+        prev_date = st.session_state.get('date_cols', [])
+        prev_id = st.session_state.get('id_cols', [])
+        
+        format_changed = (
+            new_amount != prev_amount or
+            new_percent != prev_percent or
+            new_date != prev_date or
+            new_id != prev_id
+        )
+        
+        # 세션 상태 업데이트
+        st.session_state.amount_cols = new_amount
+        st.session_state.percent_cols = new_percent
+        st.session_state.date_cols = new_date
+        st.session_state.id_cols = new_id
+        
+        # 변경 시 JSON에 자동 저장
+        if format_changed and (new_amount or new_percent or new_date or new_id):
+            auto_save_config = {
+                'amount_cols': new_amount,
+                'percent_cols': new_percent,
+                'date_cols': new_date,
+                'id_cols': new_id,
+                'saved_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+            save_column_config_to_json(auto_save_config)
+        
+        # 형식 설정 요약
         format_summary = []
-        if area2_amount: format_summary.append(f"💰 금액: {len(area2_amount)}개")
-        if area2_percent: format_summary.append(f"📊 퍼센트: {len(area2_percent)}개")
-        if area2_date: format_summary.append(f"📅 날짜: {len(area2_date)}개")
-        if area2_id: format_summary.append(f"🔢 ID: {len(area2_id)}개")
+        if new_amount: format_summary.append(f"💰 금액: {len(new_amount)}개")
+        if new_percent: format_summary.append(f"📊 퍼센트: {len(new_percent)}개")
+        if new_date: format_summary.append(f"📅 날짜: {len(new_date)}개")
+        if new_id: format_summary.append(f"🔢 ID: {len(new_id)}개")
         
         if format_summary:
             st.info(f"형식 지정: {' | '.join(format_summary)}")
