@@ -3302,6 +3302,87 @@ def render_step2():
             )
             st.session_state.tax_amount_col = tax_amount_col
             st.caption(f"ℹ️ 선택된 컬럼: **{tax_amount_col}**의 합계 행 값이 발행 금액으로 표시됩니다")
+            
+            # ============================================================
+            # 🧾 세금계산서 발행 정보 미리보기 (Step 2 내에서 즉시 표시)
+            # ============================================================
+            st.markdown("<div style='height: 8px'></div>", unsafe_allow_html=True)
+            
+            # 그룹 컬럼 탐지
+            group_col = st.session_state.get('group_key_col')
+            if not group_col:
+                group_candidates = [c for c in columns if 'CSO' in c or '관리업체' in c]
+                group_col = group_candidates[0] if group_candidates else columns[0]
+            
+            # 현재 데이터에서 합계 행 추출하여 미리보기 생성
+            if df is not None and tax_amount_col in df.columns and group_col in df.columns:
+                # 합계 행 찾기 (그룹명 + ' 합계' 패턴)
+                tax_preview_data = []
+                total_amount = 0
+                
+                # 유니크 그룹 추출 (합계 행 제외)
+                unique_groups = df[group_col].dropna().unique()
+                base_groups = [g for g in unique_groups 
+                              if not str(g).endswith(' 합계') 
+                              and str(g).lower() not in ['nan', 'none', '']]
+                
+                for group_name in base_groups:
+                    # 해당 그룹의 합계 행 찾기
+                    sum_row_name = f"{group_name} 합계"
+                    sum_rows = df[df[group_col] == sum_row_name]
+                    
+                    if len(sum_rows) > 0:
+                        # 합계 행에서 금액 추출
+                        try:
+                            amt_val = sum_rows[tax_amount_col].iloc[0]
+                            if pd.notna(amt_val):
+                                amt_str = str(amt_val).replace(',', '').replace('원', '').strip()
+                                if amt_str and amt_str not in ['', '-', 'nan', 'None']:
+                                    amount = float(amt_str)
+                                    if amount > 0:
+                                        tax_preview_data.append({
+                                            'CSO관리업체명': group_name,
+                                            '발행 금액': amount
+                                        })
+                                        total_amount += amount
+                        except (ValueError, TypeError, IndexError):
+                            pass
+                
+                # 미리보기 표시
+                if tax_preview_data:
+                    st.markdown("""
+                    <div style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); 
+                                padding: 12px 16px; border-radius: 8px; margin-top: 8px;
+                                border-left: 4px solid #4caf50;">
+                        <strong style="color: #2e7d32;">📋 미리보기</strong>
+                        <span style="color: #666; font-size: 0.85em; margin-left: 8px;">
+                            (3단계에서 상세 확인 가능)
+                        </span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # 요약 표시 (최대 5개)
+                    preview_count = min(5, len(tax_preview_data))
+                    preview_df = pd.DataFrame(tax_preview_data[:preview_count])
+                    
+                    col_preview, col_summary = st.columns([3, 1])
+                    with col_preview:
+                        st.dataframe(
+                            preview_df,
+                            use_container_width=True,
+                            hide_index=True,
+                            column_config={
+                                "CSO관리업체명": st.column_config.TextColumn("CSO관리업체명", width="medium"),
+                                "발행 금액": st.column_config.NumberColumn("발행 금액", format="₩%,.0f", width="small")
+                            },
+                            height=min(120, 35 + preview_count * 35)
+                        )
+                    with col_summary:
+                        st.metric("총 발행 금액", f"₩{total_amount:,.0f}")
+                        if len(tax_preview_data) > 5:
+                            st.caption(f"외 {len(tax_preview_data) - 5}개 업체")
+                else:
+                    st.info("합계 행에서 발행 금액을 찾을 수 없습니다. 컬럼을 확인해 주세요.", icon="ℹ️")
     
     # ============================================================
     # 이메일 컬럼 자동 감지 (별도 시트 미사용 시)
