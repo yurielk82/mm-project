@@ -3026,127 +3026,41 @@ def render_step1():
 
 
 def render_step2():
-    """Step 2: 컬럼 설정 - 깜박임 없는 드래그 앤 드롭 UI
+    """Step 2: 그룹화 및 데이터 설정
     
-    핵심 원칙:
-    1. 드래그 중 rerun 방지 - sort_items 결과는 session_state에만 저장
-    2. JSON 저장은 move_step() 호출 시에만 수행
-    3. CSS로 레이아웃 시프트 방지
+    간소화 원칙:
+    1. 컬럼 선택/순서 없음 - 엑셀 원본 그대로 사용
+    2. NaN/빈값 자동 제거 (강제)
+    3. 숫자 0은 빈칸 처리 (강제)
     """
     
     # 페이지 헤더
-    render_page_header(2, "컬럼 설정", "이메일 본문에 표시할 컬럼과 데이터 형식을 설정하세요")
-    
-    # ============================================================
-    # 🎯 드래그 앤 드롭 칩 레이아웃 CSS (Step 2 전용)
-    # - 최소한의 스타일만 적용하여 호환성 확보
-    # ============================================================
-    st.markdown("""
-    <style>
-        /* sortable 컨테이너 - 기본 표시 보장 */
-        div[data-testid="stCustomComponentV1"] {
-            min-height: 60px;
-            display: block !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-        }
-        
-        /* 칩 아이템 기본 스타일 */
-        .sortable-item {
-            display: inline-block;
-            padding: 6px 12px;
-            margin: 4px;
-            border-radius: 16px;
-            font-size: 0.85rem;
-            cursor: grab;
-            background-color: #e3f2fd;
-            border: 1px solid #90caf9;
-        }
-        
-        .sortable-item:hover {
-            background-color: #bbdefb;
-        }
-    </style>
-    """, unsafe_allow_html=True)
+    render_page_header(2, "그룹화 설정", "이메일 발송을 위한 그룹화 기준을 설정하세요")
     
     df = st.session_state.df
     if df is None:
         st.warning("먼저 파일을 업로드하세요", icon="⚠")
         return
     
-    columns = df.columns.tolist()  # 엑셀 원본 순서
+    columns = df.columns.tolist()  # 엑셀 원본 순서 그대로 사용
     df_email = st.session_state.df_email
     use_separate = st.session_state.use_separate_email_sheet
-    sheet_name = st.session_state.get('selected_data_sheet', 'default')
     
     # ============================================================
-    # 초기 설정 로드 (최초 1회만 + display_cols 비어있으면 재초기화)
-    # - 이메일 표시: 모든 컬럼
-    # - 형식 설정: 컬럼명 매칭으로 복원
+    # 엑셀 원본 컬럼 그대로 사용 (선택/순서 설정 없음)
     # ============================================================
+    st.session_state.display_cols = columns.copy()
+    st.session_state.display_cols_order = columns.copy()
+    st.session_state.excluded_cols = []
     
-    # 조건 1: 최초 로드
-    # 조건 2: display_cols가 비어있는 경우 (세션 초기화 등)
-    current_display_cols = st.session_state.get('display_cols', [])
-    need_init = ('step2_config_loaded' not in st.session_state) or (not current_display_cols)
+    # 금액 컬럼 자동 감지 (천단위 콤마용)
+    st.session_state.amount_cols = [c for c in columns if any(k in c for k in ['금액', '수수료', '처방액', '합계'])]
+    st.session_state.percent_cols = [c for c in columns if '율' in c or '%' in c or '퍼센트' in c]
+    st.session_state.date_cols = [c for c in columns if '일' in c or '월' in c or '날짜' in c or 'date' in c.lower()]
+    st.session_state.id_cols = [c for c in columns if '번호' in c or 'ID' in c.lower() or '코드' in c]
     
-    if need_init:
-        saved_config = load_column_config_from_json()
-        
-        # 저장된 설정에서 display_cols 복원 시도
-        if saved_config:
-            # display_cols 복원 (저장된 순서 유지, 현재 파일에 있는 컬럼만)
-            saved_display = saved_config.get('display_cols', [])
-            saved_excluded = saved_config.get('excluded_cols', [])
-            
-            # 저장된 컬럼 중 현재 파일에 있는 것만 필터링 (순서 유지)
-            restored_display = [c for c in saved_display if c in columns]
-            restored_excluded = [c for c in saved_excluded if c in columns]
-            
-            # 새로 추가된 컬럼은 표시 목록에 추가
-            all_restored = set(restored_display + restored_excluded)
-            new_columns = [c for c in columns if c not in all_restored]
-            
-            if restored_display:
-                st.session_state.display_cols = restored_display + new_columns
-                st.session_state.display_cols_order = restored_display + new_columns
-                st.session_state.excluded_cols = restored_excluded
-            else:
-                # 저장된 display_cols가 없으면 전체 컬럼 사용
-                st.session_state.display_cols = columns.copy()
-                st.session_state.display_cols_order = columns.copy()
-                st.session_state.excluded_cols = []
-            
-            # 형식 설정 복원
-            matched_formats = []
-            for fmt_key, fmt_name in [('amount_cols', '금액'), ('percent_cols', '퍼센트'), 
-                                       ('date_cols', '날짜'), ('id_cols', 'ID')]:
-                saved_list = saved_config.get(fmt_key, [])
-                matched = [c for c in saved_list if c in columns]
-                st.session_state[fmt_key] = matched
-                if matched:
-                    matched_formats.append(f"{fmt_name} {len(matched)}개")
-            
-            # 복원 알림
-            restore_info = []
-            if restored_display:
-                restore_info.append(f"컬럼순서 {len(restored_display)}개")
-            if matched_formats:
-                restore_info.append(', '.join(matched_formats))
-            
-            if restore_info:
-                st.toast(f"💾 설정 복원: {' | '.join(restore_info)}", icon="✅")
-        else:
-            # 저장된 설정이 없으면 전체 컬럼으로 초기화
-            st.session_state.display_cols = columns.copy()
-            st.session_state.display_cols_order = columns.copy()
-            st.session_state.excluded_cols = []
-            st.session_state.amount_cols = []
-            st.session_state.percent_cols = []
-            st.session_state.date_cols = []
-            st.session_state.id_cols = []
-        
-        st.session_state.step2_config_loaded = True
+    # NaN/0 처리 - 항상 강제 적용
+    st.session_state.zero_as_blank = True
     
     # 데이터 병합 설정 (별도 이메일 시트 사용 시)
     if use_separate and df_email is not None:
@@ -3388,128 +3302,63 @@ def render_step2():
             st.session_state.email_col = None
     
     # ============================================================
-    # 📧 이메일 표시 설정 - 엑셀 원본 컬럼 순서 그대로 사용
+    # 📧 이메일 표 설정 - 간소화된 UI
     # ============================================================
     st.markdown("""
     <div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); 
                 padding: 12px 16px; border-radius: 8px; margin-bottom: 8px;
                 border-left: 4px solid #1976d2;">
         <strong style="color: #1565c0;">📧 이메일 표 설정</strong>
-        <br><small style="color: #1976d2;">엑셀 원본 컬럼 순서 그대로 표시 | NaN/빈값 자동 제거 | 숫자 0은 빈칸 처리</small>
+        <br><small style="color: #1976d2;">엑셀 원본 그대로 표시 | NaN 자동 제거 | 숫자 0은 빈칸 처리</small>
     </div>
     """, unsafe_allow_html=True)
     
     with st.container(border=True):
-        # 엑셀 원본 컬럼 순서 그대로 사용
-        st.session_state.display_cols = columns.copy()
-        st.session_state.display_cols_order = columns.copy()
-        st.session_state.excluded_cols = []
+        # 컬럼 수 표시
+        st.success(f"✅ **{len(columns)}개** 컬럼이 엑셀 원본 순서대로 표시됩니다")
         
-        # 컬럼 미리보기
-        st.success(f"✅ **{len(columns)}개** 컬럼이 엑셀 순서대로 표시됩니다")
+        # 컬럼 목록 (접힌 상태로)
+        with st.expander("컬럼 목록 보기"):
+            col_list = " → ".join([f"`{c}`" for c in columns])
+            st.markdown(col_list)
         
-        # 컬럼 목록 표시
-        col_preview = " | ".join([f"`{c}`" for c in columns[:10]])
-        if len(columns) > 10:
-            col_preview += f" ... (+{len(columns)-10}개)"
-        st.caption(f"컬럼: {col_preview}")
-        
-        st.markdown("---")
-        
-        # 데이터 처리 옵션 (고정)
-        st.markdown("**🔧 자동 데이터 처리:**")
-        st.markdown("""
-        - ✅ **NaN/빈값**: 자동 제거 (빈칸으로 표시)
-        - ✅ **숫자 0**: 빈칸으로 표시
-        - ✅ **숫자 형식**: 천단위 콤마 자동 적용
-        """)
-        
-        # 금액 컬럼 자동 감지 (천단위 콤마용)
-        amount_cols_auto = [c for c in columns if any(k in c for k in ['금액', '수수료', '처방액', '합계'])]
-        if amount_cols_auto:
-            st.caption(f"💰 금액 컬럼 자동 감지: {', '.join(amount_cols_auto[:5])}")
-        
-        # 세션에 저장 (형식 설정)
-        st.session_state.amount_cols = amount_cols_auto
-        st.session_state.percent_cols = [c for c in columns if '율' in c or '%' in c or '퍼센트' in c]
-        st.session_state.date_cols = [c for c in columns if '일' in c or '월' in c or '날짜' in c or 'date' in c.lower()]
-        st.session_state.id_cols = [c for c in columns if '번호' in c or 'ID' in c.lower() or '코드' in c]
-    
-    st.markdown("<div style='height: 16px'></div>", unsafe_allow_html=True)
+        # 자동 처리 안내
+        st.info("**🔧 자동 데이터 처리**: NaN/빈값 제거 ✓ | 숫자 0 → 빈칸 ✓ | 천단위 콤마 ✓", icon="ℹ️")
     
     # ============================================================
-    # 불필요한 영역 2 제거 - 형식 설정 자동화
+    # 이메일 충돌 처리
     # ============================================================
-    # 기존 영역 2 코드 삭제 - 형식 자동 감지로 대체
-    
-    # 더미 변수 (기존 코드 호환용)
-    new_amount = st.session_state.amount_cols
-    new_percent = st.session_state.percent_cols
-    new_date = st.session_state.date_cols
-    new_id = st.session_state.id_cols
-    
-    # NaN/0 처리 옵션 - 항상 빈칸으로 처리 (고정)
-    st.session_state.zero_as_blank = True
-    
-    # 충돌 해결 + 설정 초기화 (한 줄에)
     with st.container(border=True):
-        col_conf1, col_conf2 = st.columns([3, 1])
-        
-        with col_conf1:
-            st.markdown("##### 이메일 충돌 처리")
-            saved_resolution = st.session_state.get('conflict_resolution', 'first')
-            options = ['first', 'most_common', 'skip']
-            conflict_resolution = st.radio(
-                "충돌 해결",
-                options,
-                index=options.index(saved_resolution) if saved_resolution in options else 0,
-                format_func=lambda x: {'first': '첫 번째 이메일', 'most_common': '가장 많이 등장', 'skip': '건너뛰기'}[x],
-                horizontal=True,
-                label_visibility="collapsed",
-                key="conflict_resolution_radio"
-            )
-            st.session_state.conflict_resolution = conflict_resolution
-        
-        with col_conf2:
-            st.markdown("##### ")  # 높이 맞춤
-            if st.button("🔄 초기화", width='stretch', key="step2_reset"):
-                # 세션 상태 초기화
-                st.session_state.display_cols = columns.copy()
-                st.session_state.excluded_cols = []
-                st.session_state.amount_cols = []
-                st.session_state.percent_cols = []
-                st.session_state.date_cols = []
-                st.session_state.id_cols = []
-                st.session_state.step2_config_loaded = False
-                # JSON 파일도 초기화
-                save_column_config_to_json({})
-                st.toast("설정이 초기화되었습니다", icon="🔄")
-                st.rerun()
+        st.markdown("##### 이메일 충돌 처리")
+        saved_resolution = st.session_state.get('conflict_resolution', 'first')
+        options = ['first', 'most_common', 'skip']
+        conflict_resolution = st.radio(
+            "충돌 해결",
+            options,
+            index=options.index(saved_resolution) if saved_resolution in options else 0,
+            format_func=lambda x: {'first': '첫 번째 이메일', 'most_common': '가장 많이 등장', 'skip': '건너뛰기'}[x],
+            horizontal=True,
+            label_visibility="collapsed",
+            key="conflict_resolution_radio"
+        )
+        st.session_state.conflict_resolution = conflict_resolution
     
     # ============================================================
-    # 네비게이션 버튼 - move_step() 호출 시에만 JSON 저장
+    # 네비게이션 버튼
     # ============================================================
     st.markdown("<div style='height: 20px'></div>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col1:
         if st.button("← 이전", width='stretch', key="step2_prev"):
-            # 이전으로 가기 전에 설정 저장 후 이동
-            _save_step2_config_and_move(1, columns, df, df_email, use_separate, sheet_name)
+            st.session_state.current_step = 1
+            st.rerun()
     
     with col3:
-        # 다음 버튼 활성화 조건 - 세션 상태에서 직접 읽기
-        current_display_cols = st.session_state.get('display_cols', [])
-        can_proceed = len(current_display_cols) > 0
-        
-        if st.button("다음 단계 →", type="primary", width='stretch', 
-                    key="step2_next", disabled=not can_proceed):
-            if not current_display_cols:
-                st.error("표시할 컬럼을 1개 이상 배치하세요", icon="❌")
-            else:
-                _save_step2_config_and_move(3, columns, df, df_email, use_separate, sheet_name,
-                                           process_data=True, group_key_col=group_key_col,
-                                           use_wildcard=use_wildcard, conflict_resolution=conflict_resolution)
+        if st.button("다음 단계 →", type="primary", width='stretch', key="step2_next"):
+            _save_step2_config_and_move(3, columns, df, df_email, use_separate,
+                                       process_data=True, group_key_col=group_key_col,
+                                       use_wildcard=use_wildcard, conflict_resolution=conflict_resolution)
 
 
 def _save_step2_config_and_move(target_step: int, columns: list, df, df_email, 
@@ -3957,143 +3806,142 @@ def render_step4():
     
     st.divider()
     
-    # 미리보기 섹션
+    # 미리보기 섹션 (버튼 방식)
     grouped = st.session_state.grouped_data
     valid_list = [(k, v) for k, v in grouped.items() if v['recipient_email'] and validate_email(v['recipient_email'])]
     
     if valid_list:
-        st.markdown("##### 👁️ 미리보기")
+        st.markdown("---")
         
-        preview_options = [f"{k}" for k, v in valid_list[:20]]
-        selected_idx = st.selectbox(
-            "미리보기 대상 선택",
-            range(len(preview_options)),
-            format_func=lambda x: preview_options[x],
-            label_visibility="collapsed"
-        )
+        # 적용 버튼과 미리보기 버튼을 나란히
+        col_apply, col_preview = st.columns([1, 1])
         
-        # 선택된 데이터로 미리보기 생성
-        sample_key, sample_data = valid_list[selected_idx]
+        with col_apply:
+            if st.button("✅ 템플릿 적용", type="primary", width='stretch', key="step4_apply"):
+                st.toast("템플릿이 적용되었습니다", icon="✅")
         
-        try:
-            # 제목 렌더링
-            subject_preview = Template(subject).render(
-                company_name=sample_key,
-                period=datetime.now().strftime('%Y년 %m월')
+        with col_preview:
+            preview_btn = st.button("👁️ 미리보기", width='stretch', key="step4_preview_btn")
+        
+        # 미리보기 버튼 클릭 시 표시
+        if preview_btn or st.session_state.get('show_preview', False):
+            st.session_state.show_preview = True
+            
+            st.markdown("##### 📬 이메일 미리보기")
+            
+            preview_options = [f"{k}" for k, v in valid_list[:20]]
+            selected_idx = st.selectbox(
+                "미리보기 대상",
+                range(len(preview_options)),
+                format_func=lambda x: preview_options[x],
+                key="step4_preview_select"
             )
             
-            # 인사말 렌더링
-            greeting_rendered = Template(body_text).render(
-                company_name=sample_key,
-                company_code=sample_key,
-                period=datetime.now().strftime('%Y년 %m월')
-            ).replace('\n', '<br>')
+            sample_key, sample_data = valid_list[selected_idx]
             
-            # 실제 이메일 HTML 생성 (테이블 포함)
-            display_cols = st.session_state.get('display_cols', [])
-            amount_cols = st.session_state.get('amount_cols', [])
-            
-            # 세금계산서 발행 정보 추출 (4단계 미리보기용)
-            tax_invoice_html = ""
-            show_tax_invoice = st.session_state.get('show_tax_invoice_info', False)
-            tax_amount_col = st.session_state.get('tax_amount_col')
-            
-            if show_tax_invoice and tax_amount_col:
-                # 합계 행에서 세금계산서 금액 추출
-                rows = sample_data.get('rows', [])
-                tax_amount = 0
+            try:
+                # 제목 렌더링
+                subject_preview = Template(subject).render(
+                    company_name=sample_key,
+                    period=datetime.now().strftime('%Y년 %m월')
+                )
                 
-                for row in rows:
-                    # 합계 행 찾기
-                    row_values = list(row.values())
-                    is_total_row = any('합계' in str(v) for v in row_values)
+                # 인사말 렌더링
+                greeting_rendered = Template(body_text).render(
+                    company_name=sample_key,
+                    company_code=sample_key,
+                    period=datetime.now().strftime('%Y년 %m월')
+                ).replace('\n', '<br>')
+                
+                display_cols = st.session_state.get('display_cols', [])
+                amount_cols = st.session_state.get('amount_cols', [])
+                
+                # 세금계산서 발행 정보 추출
+                tax_invoice_html = ""
+                show_tax_invoice = st.session_state.get('show_tax_invoice_info', False)
+                tax_amount_col = st.session_state.get('tax_amount_col')
+                
+                if show_tax_invoice and tax_amount_col:
+                    rows = sample_data.get('rows', [])
+                    tax_amount = 0
                     
-                    if is_total_row and tax_amount_col in row:
-                        try:
-                            amt_str = str(row[tax_amount_col]).replace(',', '').replace('원', '').strip()
-                            if amt_str and amt_str not in ['', '-', 'nan', 'None']:
-                                tax_amount = float(amt_str)
-                        except (ValueError, TypeError):
-                            pass
-                
-                # 합계 행에서 못 찾으면 totals에서
-                if tax_amount == 0:
-                    totals = sample_data.get('totals', {})
-                    if tax_amount_col in totals:
-                        try:
-                            amt_str = str(totals[tax_amount_col]).replace(',', '').replace('원', '').strip()
-                            if amt_str and amt_str not in ['', '-', 'nan', 'None']:
-                                tax_amount = float(amt_str)
-                        except (ValueError, TypeError):
-                            pass
-                
-                if tax_amount > 0:
-                    # 노란색 배경 + 금액 white-space: nowrap
-                    tax_invoice_html = f'''
-                    <div style="background: linear-gradient(135deg, #fff9c4 0%, #fff59d 100%); 
-                                padding: 16px 20px; border-radius: 10px; margin: 16px 0;
-                                border-left: 4px solid #ffc107; border: 1px solid #ffca28;">
-                        <strong style="color: #856404; font-size: 1.1em;">🧾 세금계산서 발행 정보</strong>
-                        <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                            <div>
-                                <span style="color: #665c00;">CSO관리업체명:</span>
-                                <strong style="color: #333; margin-left: 8px;">{sample_key}</strong>
-                            </div>
-                            <div style="white-space: nowrap;">
-                                <span style="color: #665c00;">발행 금액:</span>
-                                <strong style="color: #856404; font-size: 1.3em; margin-left: 8px; white-space: nowrap;">₩{tax_amount:,.0f}</strong>
+                    for row in rows:
+                        row_values = list(row.values())
+                        is_total_row = any('합계' in str(v) for v in row_values)
+                        
+                        if is_total_row and tax_amount_col in row:
+                            try:
+                                amt_str = str(row[tax_amount_col]).replace(',', '').replace('원', '').strip()
+                                if amt_str and amt_str not in ['', '-', 'nan', 'None']:
+                                    tax_amount = float(amt_str)
+                            except (ValueError, TypeError):
+                                pass
+                    
+                    if tax_amount == 0:
+                        totals = sample_data.get('totals', {})
+                        if tax_amount_col in totals:
+                            try:
+                                amt_str = str(totals[tax_amount_col]).replace(',', '').replace('원', '').strip()
+                                if amt_str and amt_str not in ['', '-', 'nan', 'None']:
+                                    tax_amount = float(amt_str)
+                            except (ValueError, TypeError):
+                                pass
+                    
+                    if tax_amount > 0:
+                        tax_invoice_html = f'''
+                        <div style="background: linear-gradient(135deg, #fff9c4 0%, #fff59d 100%); 
+                                    padding: 16px 20px; border-radius: 10px; margin: 16px 0;
+                                    border-left: 4px solid #ffc107; border: 1px solid #ffca28;">
+                            <strong style="color: #856404; font-size: 1.1em;">🧾 세금계산서 발행 정보</strong>
+                            <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                <div>
+                                    <span style="color: #665c00;">CSO관리업체명:</span>
+                                    <strong style="color: #333; margin-left: 8px;">{sample_key}</strong>
+                                </div>
+                                <div style="white-space: nowrap;">
+                                    <span style="color: #665c00;">발행 금액:</span>
+                                    <strong style="color: #856404; font-size: 1.3em; margin-left: 8px;">₩{tax_amount:,.0f}</strong>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    '''
-            
-            # 미리보기용 행 데이터 (최소 3행 보장)
-            preview_rows = sample_data.get('rows', [])
-            
-            # 행이 3개 미만이면 빈 행 추가하여 최소 3행 표시
-            if len(preview_rows) < 3 and display_cols:
-                # 원본 데이터 복사
-                preview_rows = list(preview_rows)
-                empty_row = {col: '' for col in display_cols}
-                while len(preview_rows) < 3:
-                    preview_rows.append(empty_row.copy())
-            
-            email_html = render_email(
-                subject=subject_preview,
-                header_title=header,
-                greeting=greeting_rendered,
-                columns=display_cols,
-                rows=preview_rows,  # 최소 3행 보장된 데이터
-                amount_columns=amount_cols,
-                totals=sample_data.get('totals'),
-                footer_text=footer.replace('\n', '<br>') if footer else None,
-                extra_html_before_table=tax_invoice_html  # 세금계산서 정보 추가
-            )
-            
-            # 미리보기 정보 표시
-            with st.container(border=True):
-                st.markdown(f"**📧 수신자:** `{sample_data.get('recipient_email', 'N/A')}`")
-                st.markdown(f"**📋 제목:** {subject_preview}")
-                st.markdown(f"**📊 데이터:** {sample_data.get('row_count', 0)}행")
-            
-            # 이메일 본문 미리보기
-            st.markdown("**📬 이메일 본문 미리보기**")
-            
-            # 행 수에 따라 높이 동적 계산
-            row_count = len(sample_data.get('rows', []))
-            base_height = 400  # 기본 높이 (헤더, 인사말, 푸터)
-            row_height = 40    # 행당 높이
-            calculated_height = base_height + (row_count * row_height)
-            iframe_height = min(max(calculated_height, 500), 1200)  # 최소 500, 최대 1200
-            
-            # components.html로 실제 HTML 렌더링
-            components.html(email_html, height=iframe_height, scrolling=True)
+                        '''
                 
-        except Exception as e:
-            st.error(f"미리보기 오류: {e}")
-            with st.expander("오류 상세"):
-                import traceback
-                st.code(traceback.format_exc())
+                # 미리보기 정보 (컴팩트하게)
+                with st.container(border=True):
+                    col_info1, col_info2, col_info3 = st.columns(3)
+                    with col_info1:
+                        st.markdown(f"**수신:** `{sample_data.get('recipient_email', 'N/A')}`")
+                    with col_info2:
+                        st.markdown(f"**제목:** {subject_preview}")
+                    with col_info3:
+                        st.markdown(f"**데이터:** {sample_data.get('row_count', 0)}행")
+                    
+                    # 세금계산서 정보 표시 (있으면)
+                    if tax_invoice_html:
+                        st.markdown(tax_invoice_html, unsafe_allow_html=True)
+                    
+                    # 테이블 미리보기 (DataFrame으로)
+                    st.markdown("**📋 표 미리보기:**")
+                    preview_rows = sample_data.get('rows', [])[:5]  # 최대 5행만
+                    if preview_rows:
+                        preview_df = pd.DataFrame(preview_rows)
+                        # 표시할 컬럼만 필터링
+                        cols_to_show = [c for c in display_cols if c in preview_df.columns]
+                        if cols_to_show:
+                            st.dataframe(preview_df[cols_to_show], hide_index=True, use_container_width=True)
+                        else:
+                            st.dataframe(preview_df, hide_index=True, use_container_width=True)
+                        
+                        if len(sample_data.get('rows', [])) > 5:
+                            st.caption(f"... 외 {len(sample_data.get('rows', [])) - 5}행")
+                    
+                    # 미리보기 닫기 버튼
+                    if st.button("❌ 미리보기 닫기", key="step4_close_preview"):
+                        st.session_state.show_preview = False
+                        st.rerun()
+                        
+            except Exception as e:
+                st.error(f"미리보기 오류: {e}")
     else:
         st.info("미리보기할 데이터가 없습니다. 먼저 데이터를 업로드하고 설정을 완료하세요.", icon="ℹ️")
     
