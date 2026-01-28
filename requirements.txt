@@ -16,27 +16,32 @@ xlrd>=2.0.0            # Excel .xls read (legacy)
 # Template Engine
 Jinja2>=3.1.0
 
-# Data Validation
-pydantic>=2.0.0
-email-validator>=2.0.0  # Email format validation
-
-# Utilities
-python-dateutil>=2.8.0  # Date parsing
-
-# Cookie Management
-extra-streamlit-components>=0.1.60  # Cookie-based settings storage
+# Cookie Management (for settings persistence)
+extra-streamlit-components>=0.1.60
 
 # Drag & Drop UI
-streamlit-sortables>=0.2.0          # Drag and drop column config
+streamlit-sortables>=0.2.0
 
 # Visualization (History Dashboard)
-plotly>=5.18.0          # Statistics charts
+plotly>=5.18.0
 
 # =============================================================================
-# Note: Below libraries are Python standard library (no install needed)
+# Python Standard Library (no install needed)
 # =============================================================================
 # smtplib          - SMTP email sending
 # ssl              - SSL/TLS encryption
 # socket           - Network connection
 # email.mime.*     - Email message composition
+# sqlite3          - Database for mail history
+# json             - JSON parsing
+# base64           - Encoding/decoding
+# datetime         - Date/time handling
+# re               - Regular expressions
+# io               - I/O operations
+# os               - OS operations
+# time             - Time operations
+# math             - Math operations
+# html             - HTML escaping
+# dataclasses      - Data classes
+# typing           - Type hints
 # =============================================================================
