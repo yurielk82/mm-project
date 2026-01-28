@@ -243,6 +243,11 @@ EMAIL_TEMPLATE = """
             </div>
             {% endif %}
             
+            {% if extra_html_before_table %}
+            <!-- 세금계산서 발행 정보 등 추가 HTML -->
+            {{ extra_html_before_table | safe }}
+            {% endif %}
+            
             <!-- 데이터 테이블 -->
             <div style="{{ styles.table_container }}">
                 <table style="{{ styles.table }}">
@@ -347,7 +352,8 @@ def render_email(
     header_subtitle: Optional[str] = None,
     info_message: Optional[str] = None,
     additional_message: Optional[str] = None,
-    footer_text: Optional[str] = None
+    footer_text: Optional[str] = None,
+    extra_html_before_table: Optional[str] = None  # 세금계산서 정보 등
 ) -> str:
     """
     이메일 HTML을 렌더링합니다.
@@ -364,6 +370,7 @@ def render_email(
         info_message: 정보 박스 메시지
         additional_message: 테이블 아래 추가 메시지
         footer_text: 푸터 텍스트
+        extra_html_before_table: 테이블 위에 삽입할 추가 HTML (세금계산서 정보 등)
     
     Returns:
         렌더링된 HTML 문자열
@@ -395,6 +402,7 @@ def render_email(
         non_amount_count=non_amount_count,
         additional_message=additional_message,
         footer_text=footer_text,
+        extra_html_before_table=extra_html_before_table,
         styles=get_styles()
     )
 

@@ -221,6 +221,10 @@ SESSION_STATE_DEFAULTS: Dict[str, Any] = {
     'show_smtp_settings': False,
     'zero_as_blank': True,
     'step2_config_loaded': False,
+    
+    # 세금계산서 발행 정보
+    'show_tax_invoice_info': True,  # 기본 활성화
+    'tax_amount_col': None,  # 발행 금액 컬럼
 }
 
 

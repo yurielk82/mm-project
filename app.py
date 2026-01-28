@@ -3263,11 +3263,11 @@ def render_step2():
                 base_keys = [k for k in base_keys if k and k.lower() not in ['nan', '(비어 있음)']]
                 st.success(f"예상 그룹 수: **{len(base_keys)}개**", icon="📊")
         
-        # 세금계산서 발행 정보 체크박스
+        # 세금계산서 발행 정보 체크박스 (기본 활성화)
         st.markdown("---")
         show_tax_invoice = st.checkbox(
             "🧾 세금계산서 발행 정보 표시",
-            value=st.session_state.get('show_tax_invoice_info', False),
+            value=st.session_state.get('show_tax_invoice_info', True),  # 기본값 True
             help="활성화 시 각 그룹의 세금계산서 발행 금액(합계 행의 총 수수료액)을 요약 표시합니다"
         )
         st.session_state.show_tax_invoice_info = show_tax_invoice
@@ -4137,6 +4137,59 @@ def render_step4():
             display_cols = st.session_state.get('display_cols', [])
             amount_cols = st.session_state.get('amount_cols', [])
             
+            # 세금계산서 발행 정보 추출 (4단계 미리보기용)
+            tax_invoice_html = ""
+            show_tax_invoice = st.session_state.get('show_tax_invoice_info', False)
+            tax_amount_col = st.session_state.get('tax_amount_col')
+            
+            if show_tax_invoice and tax_amount_col:
+                # 합계 행에서 세금계산서 금액 추출
+                rows = sample_data.get('rows', [])
+                tax_amount = 0
+                
+                for row in rows:
+                    # 합계 행 찾기
+                    row_values = list(row.values())
+                    is_total_row = any('합계' in str(v) for v in row_values)
+                    
+                    if is_total_row and tax_amount_col in row:
+                        try:
+                            amt_str = str(row[tax_amount_col]).replace(',', '').replace('원', '').strip()
+                            if amt_str and amt_str not in ['', '-', 'nan', 'None']:
+                                tax_amount = float(amt_str)
+                        except (ValueError, TypeError):
+                            pass
+                
+                # 합계 행에서 못 찾으면 totals에서
+                if tax_amount == 0:
+                    totals = sample_data.get('totals', {})
+                    if tax_amount_col in totals:
+                        try:
+                            amt_str = str(totals[tax_amount_col]).replace(',', '').replace('원', '').strip()
+                            if amt_str and amt_str not in ['', '-', 'nan', 'None']:
+                                tax_amount = float(amt_str)
+                        except (ValueError, TypeError):
+                            pass
+                
+                if tax_amount > 0:
+                    tax_invoice_html = f'''
+                    <div style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); 
+                                padding: 16px 20px; border-radius: 10px; margin: 16px 0;
+                                border-left: 4px solid #4caf50;">
+                        <strong style="color: #2e7d32; font-size: 1.1em;">🧾 세금계산서 발행 정보</strong>
+                        <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <span style="color: #555;">CSO관리업체명:</span>
+                                <strong style="color: #333; margin-left: 8px;">{sample_key}</strong>
+                            </div>
+                            <div>
+                                <span style="color: #555;">발행 금액:</span>
+                                <strong style="color: #2e7d32; font-size: 1.2em; margin-left: 8px;">₩{tax_amount:,.0f}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    '''
+            
             email_html = render_email(
                 subject=subject_preview,
                 header_title=header,
@@ -4145,7 +4198,8 @@ def render_step4():
                 rows=sample_data.get('rows', []),
                 amount_columns=amount_cols,
                 totals=sample_data.get('totals'),
-                footer_text=footer.replace('\n', '<br>') if footer else None
+                footer_text=footer.replace('\n', '<br>') if footer else None,
+                extra_html_before_table=tax_invoice_html  # 세금계산서 정보 추가
             )
             
             # 미리보기 정보 표시
