@@ -1697,17 +1697,22 @@ def group_data_with_wildcard(df, group_key_col, email_col, amount_cols, percent_
             rows.append(row_dict)
         
         totals = {}
-        if calculate_totals and use_wildcard:
-            non_total_mask = ~group_df[group_key_col].apply(
-                lambda x: any(str(x).endswith(s) for s in wildcard_suffixes))
-            non_total_df = group_df[non_total_mask]
-            for col in amount_cols:
-                if col in non_total_df.columns:
-                    totals[col] = format_currency(non_total_df[col].sum(), zero_as_blank=zero_as_blank)
-        else:
-            for col in amount_cols:
-                if col in group_df.columns:
-                    totals[col] = format_currency(group_df[col].sum(), zero_as_blank=zero_as_blank)
+        if calculate_totals:
+            # 합계 자동 계산이 활성화된 경우에만 totals 생성
+            if use_wildcard:
+                # 와일드카드 사용 시: 합계 행을 제외한 데이터만 합산
+                non_total_mask = ~group_df[group_key_col].apply(
+                    lambda x: any(str(x).endswith(s) for s in wildcard_suffixes))
+                non_total_df = group_df[non_total_mask]
+                for col in amount_cols:
+                    if col in non_total_df.columns:
+                        totals[col] = format_currency(non_total_df[col].sum(), zero_as_blank=zero_as_blank)
+            else:
+                # 와일드카드 미사용 시: 전체 데이터 합산
+                for col in amount_cols:
+                    if col in group_df.columns:
+                        totals[col] = format_currency(group_df[col].sum(), zero_as_blank=zero_as_blank)
+        # calculate_totals가 False이면 totals는 빈 딕셔너리 유지 (합계 행 표시 안함)
         
         grouped_data[base_key_str] = {
             'recipient_email': recipient_email,
