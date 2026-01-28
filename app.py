@@ -1475,11 +1475,24 @@ def load_excel_file(uploaded_file) -> Tuple[Optional[pd.ExcelFile], List[str], O
 
 
 def load_sheet(xlsx: pd.ExcelFile, sheet_name: str) -> Tuple[Optional[pd.DataFrame], Optional[str]]:
-    """시트 로드 - 항상 (DataFrame, error_message) 튜플 반환"""
+    """시트 로드 - 항상 (DataFrame, error_message) 튜플 반환
+    
+    엑셀 원본 형식 유지:
+    - 숫자에 콤마 있으면 콤마 포함 문자열로 보존
+    - 바코드/코드는 숫자 그대로 유지
+    """
     try:
+        # 먼저 문자열로 읽어서 원본 형식 보존
+        df_str = pd.read_excel(xlsx, sheet_name=sheet_name, dtype=str)
+        # 일반 파싱도 수행 (숫자 계산용)
         df = pd.read_excel(xlsx, sheet_name=sheet_name)
+        
         if df.empty:
             return None, "시트에 데이터가 없습니다."
+        
+        # 원본 문자열 데이터 저장 (컬럼별 원본 형식 확인용)
+        df.attrs['original_str'] = df_str
+        
         return df, None  # 성공 시 (df, None) 반환
     except Exception as e:
         return None, f"시트 로드 오류: {str(e)}"
@@ -1581,10 +1594,15 @@ def group_data_with_wildcard(df, group_key_col, email_col, amount_cols, percent_
             group_df = group_df.loc[sorted_indices]
         
         # ============================================================
-        # 엑셀 원본 형식 유지 + NaN/0만 빈칸 처리
+        # 엑셀 원본 형식 완전 유지 + NaN/0만 빈칸 처리
+        # - 엑셀에서 콤마 있으면 콤마 그대로
+        # - 바코드/코드 등 콤마 없는 숫자는 그대로
         # ============================================================
+        # 원본 문자열 데이터 가져오기
+        original_str_df = df.attrs.get('original_str', None)
+        
         rows = []
-        for _, row in group_df.iterrows():
+        for idx, row in group_df.iterrows():
             row_dict = {}
             for col in display_cols:
                 if col in row.index:
@@ -1595,27 +1613,42 @@ def group_data_with_wildcard(df, group_key_col, email_col, amount_cols, percent_
                         row_dict[col] = ''
                         continue
                     
-                    # 숫자 0 체크
-                    if isinstance(value, (int, float)):
-                        if value == 0:
-                            row_dict[col] = ''
-                            continue
-                        # 정수면 정수로, 소수면 소수로 (엑셀 원본 유지)
-                        if isinstance(value, float) and value == int(value):
-                            row_dict[col] = f"{int(value):,}"  # 정수로 표시 (콤마 추가)
-                        elif isinstance(value, int):
-                            row_dict[col] = f"{value:,}"  # 정수 (콤마 추가)
-                        else:
-                            # 소수점 있는 경우 - 엑셀 원본 소수점 자릿수 유지
-                            row_dict[col] = f"{value:,.2f}".rstrip('0').rstrip('.')
+                    # 원본 문자열 확인
+                    orig_str = None
+                    if original_str_df is not None and col in original_str_df.columns:
+                        try:
+                            orig_val = original_str_df.loc[idx, col]
+                            if pd.notna(orig_val):
+                                orig_str = str(orig_val).strip()
+                        except:
+                            pass
+                    
+                    # 숫자 0 체크 (빈칸 처리)
+                    if isinstance(value, (int, float)) and value == 0:
+                        row_dict[col] = ''
                         continue
                     
-                    # 문자열 처리
-                    str_val = str(value).strip()
-                    if str_val.lower() in ['nan', 'none', 'nat', '', '0', '0.0']:
-                        row_dict[col] = ''
+                    # 원본 문자열이 있으면 그대로 사용 (NaN/0 제외)
+                    if orig_str:
+                        # 원본이 '0' 또는 빈값이면 빈칸
+                        if orig_str.lower() in ['nan', 'none', 'nat', '', '0', '0.0', '0.00']:
+                            row_dict[col] = ''
+                        else:
+                            row_dict[col] = orig_str
+                        continue
+                    
+                    # 원본 없으면 값 그대로 변환 (콤마 없이)
+                    if isinstance(value, (int, float)):
+                        if isinstance(value, float) and value == int(value):
+                            row_dict[col] = str(int(value))
+                        else:
+                            row_dict[col] = str(value)
                     else:
-                        row_dict[col] = str_val
+                        str_val = str(value).strip()
+                        if str_val.lower() in ['nan', 'none', 'nat', '', '0', '0.0']:
+                            row_dict[col] = ''
+                        else:
+                            row_dict[col] = str_val
                 else:
                     row_dict[col] = ''
             rows.append(row_dict)
