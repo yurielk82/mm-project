@@ -3842,10 +3842,14 @@ def render_step4():
     if 'email_body_text' not in st.session_state:
         st.session_state.email_body_text = TEMPLATE_PRESETS["기본 (정산서)"].body
     
+    # 본문 높이: 내용 줄 수에 따라 동적 계산 (최소 100px, 줄당 24px)
+    body_lines = st.session_state.email_body_text.count('\n') + 1
+    body_height = max(100, min(400, body_lines * 24 + 20))
+    
     body_text = st.text_area(
         "본문",
         st.session_state.email_body_text,
-        height=180,
+        height=body_height,
         label_visibility="collapsed",
         placeholder="안녕하세요, {{ company_name }} 담당자님..."
     )
@@ -3860,10 +3864,15 @@ def render_step4():
     
     # 5. 푸터 (회사 정보)
     st.markdown("##### 📝 푸터 (회사 정보)")
+    
+    # 푸터 높이: 내용 줄 수에 따라 동적 계산 (최소 80px, 줄당 24px)
+    footer_lines = st.session_state.footer_template.count('\n') + 1
+    footer_height = max(80, min(300, footer_lines * 24 + 20))
+    
     footer = st.text_area(
         "푸터",
         st.session_state.footer_template,
-        height=150,
+        height=footer_height,
         label_visibility="collapsed",
         placeholder="""본 메일은 발신 전용입니다.
 
