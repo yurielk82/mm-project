@@ -3272,17 +3272,36 @@ def render_step2():
         )
         st.session_state.show_tax_invoice_info = show_tax_invoice
         
+        # 금액 컬럼 후보 탐지 (체크박스 상태와 관계없이)
+        amount_col_candidates = [c for c in columns if '총' in c and '수수료' in c]  # '총 수수료액' 우선
+        if not amount_col_candidates:
+            amount_col_candidates = [c for c in columns if '수수료' in c]
+        if not amount_col_candidates:
+            amount_col_candidates = [c for c in columns if '금액' in c or '합계' in c]
+        
+        # 기본 세금계산서 금액 컬럼 자동 설정 (없으면)
+        if 'tax_amount_col' not in st.session_state or not st.session_state.tax_amount_col:
+            if amount_col_candidates:
+                st.session_state.tax_amount_col = amount_col_candidates[0]
+        
         if show_tax_invoice:
             # 세금계산서 발행 금액 컬럼 선택
-            amount_col_candidates = [c for c in columns if '수수료' in c or '금액' in c or '합계' in c]
+            current_tax_col = st.session_state.get('tax_amount_col', '')
+            default_idx = 0
+            if current_tax_col in columns:
+                default_idx = columns.index(current_tax_col)
+            elif amount_col_candidates and amount_col_candidates[0] in columns:
+                default_idx = columns.index(amount_col_candidates[0])
+            
             tax_amount_col = st.selectbox(
-                "발행 금액 컬럼",
+                "발행 금액 컬럼 (합계 행에서 추출)",
                 columns,
-                index=columns.index(amount_col_candidates[0]) if amount_col_candidates else 0,
+                index=default_idx,
                 help="합계 행에서 가져올 금액 컬럼 (예: 총 수수료액)",
                 key="tax_amount_col_select"
             )
             st.session_state.tax_amount_col = tax_amount_col
+            st.caption(f"ℹ️ 선택된 컬럼: **{tax_amount_col}**의 합계 행 값이 발행 금액으로 표시됩니다")
     
     # ============================================================
     # 이메일 컬럼 자동 감지 (별도 시트 미사용 시)
@@ -3639,6 +3658,22 @@ def render_step3():
     # ============================================================
     show_tax_invoice = st.session_state.get('show_tax_invoice_info', False)
     tax_amount_col = st.session_state.get('tax_amount_col', None)
+    
+    # tax_amount_col이 없으면 자동 탐지 시도
+    if show_tax_invoice and not tax_amount_col and grouped:
+        # 첫 번째 그룹의 row에서 컬럼 추출
+        first_group = next(iter(grouped.values()), {})
+        first_rows = first_group.get('rows', [])
+        if first_rows:
+            available_cols = list(first_rows[0].keys())
+            candidates = [c for c in available_cols if '총' in str(c) and '수수료' in str(c)]
+            if not candidates:
+                candidates = [c for c in available_cols if '수수료' in str(c)]
+            if not candidates:
+                candidates = [c for c in available_cols if '금액' in str(c)]
+            if candidates:
+                tax_amount_col = candidates[0]
+                st.session_state.tax_amount_col = tax_amount_col
     
     if show_tax_invoice and tax_amount_col:
         st.markdown("""
