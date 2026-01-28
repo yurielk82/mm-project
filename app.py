@@ -3202,7 +3202,7 @@ def render_step2():
                 st.success(f"예상 그룹 수: **{len(base_keys)}개**", icon="📊")
     
     # ============================================================
-    # 📧 영역 1: 이메일 본문에 표시될 컬럼
+    # 📧 영역 1: 이메일 본문에 표시될 컬럼 (display_cols 배열)
     # ============================================================
     st.markdown("""
     <div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); 
@@ -3214,52 +3214,70 @@ def render_step2():
     """, unsafe_allow_html=True)
     
     with st.container(border=True):
-        # 세션에서 현재 상태 가져오기 (드래그 결과 유지)
-        display_cols = st.session_state.get('display_cols', columns.copy())
-        excluded_cols = st.session_state.get('excluded_cols', [])
+        # ▼▼▼ 영역 1 전용 배열 (display_cols, excluded_cols) ▼▼▼
+        # 세션에서 현재 상태 가져오기 - 없으면 전체 컬럼으로 초기화
+        area1_display = list(st.session_state.get('display_cols', []))
+        area1_excluded = list(st.session_state.get('excluded_cols', []))
         
-        # 드래그 앤 드롭 UI (key로 상태 안정화)
-        dnd_display_items = [
-            {"header": "📧 이메일에 표시 (순서대로)", "items": list(display_cols)},
-            {"header": "🚫 제외", "items": list(excluded_cols)},
+        # 초기 상태 확인: 둘 다 비어있으면 전체 컬럼으로 초기화
+        if not area1_display and not area1_excluded:
+            area1_display = columns.copy()
+            st.session_state.display_cols = area1_display.copy()
+            st.session_state.display_cols_order = area1_display.copy()
+        
+        # 드래그 앤 드롭 UI - 영역 1 전용 key
+        dnd_area1_items = [
+            {"header": "📧 이메일에 표시 (순서대로)", "items": area1_display},
+            {"header": "🚫 제외", "items": area1_excluded},
         ]
         
-        # sort_items 호출 - key 추가로 상태 유지
-        sorted_display = sort_items(
-            dnd_display_items, 
+        # sort_items 호출 - 영역 1 전용 key
+        sorted_area1 = sort_items(
+            dnd_area1_items, 
             multi_containers=True, 
             direction="horizontal",
-            key="dnd_display_cols"
+            key="step2_area1_display_dnd"  # 고유 key로 영역 1 식별
         )
         
-        # 결과를 세션에 저장 (rerun 호출 없이)
-        if sorted_display:
-            for container in sorted_display:
-                header = container.get('header', '')
-                items = container.get('items', [])
-                if '표시' in header and '제외' not in header:
-                    display_cols = items
-                    st.session_state.display_cols = items
-                    st.session_state.display_cols_order = items
-                elif '제외' in header:
-                    excluded_cols = items
-                    st.session_state.excluded_cols = items
+        # ▼▼▼ 결과를 세션에 저장 (영역 1 전용) ▼▼▼
+        if sorted_area1 and isinstance(sorted_area1, list):
+            new_display = []
+            new_excluded = []
+            
+            for container in sorted_area1:
+                if isinstance(container, dict):
+                    header = container.get('header', '')
+                    items = container.get('items', [])
+                    
+                    if '표시' in header and '제외' not in header:
+                        new_display = list(items) if items else []
+                    elif '제외' in header:
+                        new_excluded = list(items) if items else []
+            
+            # 세션 상태 업데이트 (영역 1 전용 배열)
+            st.session_state.display_cols = new_display
+            st.session_state.display_cols_order = new_display
+            st.session_state.excluded_cols = new_excluded
+            
+            # 로컬 변수도 업데이트 (요약 표시용)
+            area1_display = new_display
+            area1_excluded = new_excluded
         
-        # 표시 컬럼 요약 (간단하게)
+        # 표시 컬럼 요약 (영역 1 결과)
         col_info1, col_info2 = st.columns(2)
         with col_info1:
-            if display_cols:
-                st.caption(f"✅ 표시: **{len(display_cols)}개** 컬럼")
+            if area1_display:
+                st.caption(f"✅ 표시: **{len(area1_display)}개** 컬럼")
             else:
-                st.caption("⚠️ 표시할 컬럼 없음")
+                st.warning("⚠️ 표시할 컬럼이 없습니다!")
         with col_info2:
-            if excluded_cols:
-                st.caption(f"🚫 제외: {len(excluded_cols)}개")
+            if area1_excluded:
+                st.caption(f"🚫 제외: {len(area1_excluded)}개")
     
-    st.markdown("<div style='height: 12px'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height: 16px'></div>", unsafe_allow_html=True)
     
     # ============================================================
-    # 🏷️ 영역 2: 컬럼 형식 설정
+    # 🏷️ 영역 2: 컬럼 형식 설정 (amount_cols, percent_cols 등 배열)
     # ============================================================
     st.markdown("""
     <div style="background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); 
@@ -3271,59 +3289,78 @@ def render_step2():
     """, unsafe_allow_html=True)
     
     with st.container(border=True):
-        # 세션에서 현재 형식 설정 가져오기
-        amount_cols = st.session_state.get('amount_cols', [])
-        percent_cols = st.session_state.get('percent_cols', [])
-        date_cols = st.session_state.get('date_cols', [])
-        id_cols = st.session_state.get('id_cols', [])
+        # ▼▼▼ 영역 2 전용 배열 (형식 설정용) ▼▼▼
+        # 영역 2는 columns(전체 컬럼)를 기준으로 형식 설정
+        area2_amount = list(st.session_state.get('amount_cols', []))
+        area2_percent = list(st.session_state.get('percent_cols', []))
+        area2_date = list(st.session_state.get('date_cols', []))
+        area2_id = list(st.session_state.get('id_cols', []))
         
-        # 형식 미지정 컬럼
-        all_formatted = set(amount_cols + percent_cols + date_cols + id_cols)
-        unformatted_cols = [c for c in columns if c not in all_formatted]
+        # 형식 미지정 컬럼 (영역 2 전용 - 전체 컬럼 기준)
+        area2_formatted = set(area2_amount + area2_percent + area2_date + area2_id)
+        area2_unformatted = [c for c in columns if c not in area2_formatted]
         
-        # 드래그 앤 드롭 UI - 형식 설정 (key로 상태 안정화)
-        dnd_format_items = [
-            {"header": "📦 미지정", "items": list(unformatted_cols)},
-            {"header": "💰 금액", "items": list(amount_cols)},
-            {"header": "📊 퍼센트", "items": list(percent_cols)},
-            {"header": "📅 날짜", "items": list(date_cols)},
-            {"header": "🔢 ID", "items": list(id_cols)},
+        # 드래그 앤 드롭 UI - 영역 2 전용 key
+        dnd_area2_items = [
+            {"header": "📦 미지정", "items": area2_unformatted},
+            {"header": "💰 금액", "items": area2_amount},
+            {"header": "📊 퍼센트", "items": area2_percent},
+            {"header": "📅 날짜", "items": area2_date},
+            {"header": "🔢 ID", "items": area2_id},
         ]
         
-        sorted_format = sort_items(
-            dnd_format_items, 
+        # sort_items 호출 - 영역 2 전용 key
+        sorted_area2 = sort_items(
+            dnd_area2_items, 
             multi_containers=True, 
             direction="horizontal",
-            key="dnd_format_cols"
+            key="step2_area2_format_dnd"  # 고유 key로 영역 2 식별
         )
         
-        # 결과를 세션에 저장 (rerun 호출 없이)
-        if sorted_format:
-            for container in sorted_format:
-                header = container.get('header', '')
-                items = container.get('items', [])
-                if '금액' in header:
-                    amount_cols = items
-                    st.session_state.amount_cols = items
-                elif '퍼센트' in header:
-                    percent_cols = items
-                    st.session_state.percent_cols = items
-                elif '날짜' in header:
-                    date_cols = items
-                    st.session_state.date_cols = items
-                elif 'ID' in header:
-                    id_cols = items
-                    st.session_state.id_cols = items
+        # ▼▼▼ 결과를 세션에 저장 (영역 2 전용) ▼▼▼
+        if sorted_area2 and isinstance(sorted_area2, list):
+            new_amount = []
+            new_percent = []
+            new_date = []
+            new_id = []
+            
+            for container in sorted_area2:
+                if isinstance(container, dict):
+                    header = container.get('header', '')
+                    items = container.get('items', [])
+                    
+                    if '금액' in header:
+                        new_amount = list(items) if items else []
+                    elif '퍼센트' in header:
+                        new_percent = list(items) if items else []
+                    elif '날짜' in header:
+                        new_date = list(items) if items else []
+                    elif 'ID' in header:
+                        new_id = list(items) if items else []
+            
+            # 세션 상태 업데이트 (영역 2 전용 배열)
+            st.session_state.amount_cols = new_amount
+            st.session_state.percent_cols = new_percent
+            st.session_state.date_cols = new_date
+            st.session_state.id_cols = new_id
+            
+            # 로컬 변수도 업데이트 (요약 표시용)
+            area2_amount = new_amount
+            area2_percent = new_percent
+            area2_date = new_date
+            area2_id = new_id
         
-        # 형식 설정 요약 (간단하게 한 줄)
-        format_parts = []
-        if amount_cols: format_parts.append(f"💰{len(amount_cols)}")
-        if percent_cols: format_parts.append(f"📊{len(percent_cols)}")
-        if date_cols: format_parts.append(f"📅{len(date_cols)}")
-        if id_cols: format_parts.append(f"🔢{len(id_cols)}")
+        # 형식 설정 요약 (영역 2 결과)
+        format_summary = []
+        if area2_amount: format_summary.append(f"💰 금액: {len(area2_amount)}개")
+        if area2_percent: format_summary.append(f"📊 퍼센트: {len(area2_percent)}개")
+        if area2_date: format_summary.append(f"📅 날짜: {len(area2_date)}개")
+        if area2_id: format_summary.append(f"🔢 ID: {len(area2_id)}개")
         
-        if format_parts:
-            st.caption(f"형식 지정: {' | '.join(format_parts)}")
+        if format_summary:
+            st.info(f"형식 지정: {' | '.join(format_summary)}")
+        else:
+            st.caption("형식이 지정된 컬럼이 없습니다")
         
         # NaN/0 처리 옵션
         st.markdown("---")
@@ -3333,7 +3370,7 @@ def render_step2():
             index=0 if st.session_state.get('zero_as_blank', True) else 1,
             horizontal=True,
             help="금액 컬럼에서 NaN이나 0 값을 어떻게 표시할지 선택",
-            key="zero_option_radio"
+            key="step2_zero_option"  # 고유 key
         )
         st.session_state.zero_as_blank = (zero_option == "빈칸으로 표시")
     
