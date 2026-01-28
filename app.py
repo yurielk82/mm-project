@@ -1283,6 +1283,30 @@ def init_session_state():
                 st.session_state[key] = value
 
 
+def reset_and_restart():
+    """세션 초기화 후 Step 1로 이동"""
+    # 보존할 설정 (SMTP 등)
+    smtp_config = st.session_state.get('smtp_config')
+    
+    # 모든 세션 상태 초기화
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
+    
+    # 기본값 다시 설정
+    for key, value in SESSION_STATE_DEFAULTS.items():
+        if isinstance(value, (set, list, dict)):
+            st.session_state[key] = value.copy() if hasattr(value, 'copy') else value
+        else:
+            st.session_state[key] = value
+    
+    # SMTP 설정 복원
+    if smtp_config:
+        st.session_state.smtp_config = smtp_config
+    
+    st.session_state.current_step = 1
+    st.rerun()
+
+
 def save_column_settings(sheet_name: str):
     """현재 컬럼 설정을 캐시에 저장"""
     if 'column_settings_cache' not in st.session_state:
@@ -2988,40 +3012,6 @@ def render_step1():
         
         # ============================================================
         # 📊 데이터 분석 요약 (파일 업로드 직후 - 초록색 박스)
-        # ============================================================
-        if st.session_state.df is not None:
-            stats = analyze_data(
-                st.session_state.df, 
-                df_email_loaded, 
-                use_separate
-            )
-            
-            # 분석 결과 표시 (초록색 success 박스)
-            summary_parts = []
-            
-            # 전체 데이터 행
-            summary_parts.append(f"📊 전체 데이터: **{stats['total_rows']:,}행**")
-            
-            # 전체 업체 수
-            if stats['total_groups'] > 0:
-                summary_parts.append(f"🏢 전체 업체: **{stats['total_groups']}개**")
-            
-            # 이메일 보유/미보유
-            if stats['has_email'] > 0 or stats['no_email'] > 0:
-                summary_parts.append(f"✉️ 이메일 보유: **{stats['has_email']}개**")
-                if stats['no_email'] > 0:
-                    summary_parts.append(f"❌ 이메일 없음: **{stats['no_email']}개**")
-            
-            # 데이터 없음 (필수 값 누락)
-            if stats['no_data'] > 0:
-                summary_parts.append(f"📭 데이터 없음: **{stats['no_data']}개**")
-            
-            # 발송 가능 (전체 업체 - 이메일 없음 - 데이터 없음)
-            summary_parts.append(f"🚀 발송 가능: **{stats['valid_for_send']}개**")
-            
-            # 요약 표시
-            st.success(" | ".join(summary_parts))
-        
         # 데이터 미리보기 (접힘)
         if st.session_state.df is not None:
             with st.expander(f"📋 데이터 미리보기 ({len(st.session_state.df):,}행)", expanded=False):
@@ -3315,28 +3305,116 @@ def render_step2():
             st.session_state.email_col = None
     
     # ============================================================
-    # 📧 이메일 표 설정 - 간소화된 UI
+    # 📧 이메일 표시 컬럼 선택
     # ============================================================
     st.markdown("""
     <div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); 
                 padding: 12px 16px; border-radius: 8px; margin-bottom: 8px;
                 border-left: 4px solid #1976d2;">
-        <strong style="color: #1565c0;">📧 이메일 표 설정</strong>
-        <br><small style="color: #1976d2;">엑셀 원본 그대로 표시 | NaN 자동 제거 | 숫자 0은 빈칸 처리</small>
+        <strong style="color: #1565c0;">📧 이메일 표시 컬럼</strong>
+        <br><small style="color: #1976d2;">이메일에 포함할 컬럼을 선택하세요</small>
     </div>
     """, unsafe_allow_html=True)
     
     with st.container(border=True):
-        # 컬럼 수 표시
-        st.success(f"✅ **{len(columns)}개** 컬럼이 엑셀 원본 순서대로 표시됩니다")
+        # 표시 컬럼 선택
+        current_display = st.session_state.get('display_cols', columns.copy())
+        # 유효한 컬럼만 필터링
+        current_display = [c for c in current_display if c in columns]
+        if not current_display:
+            current_display = columns.copy()
         
-        # 컬럼 목록 (접힌 상태로)
-        with st.expander("컬럼 목록 보기"):
-            col_list = " → ".join([f"`{c}`" for c in columns])
-            st.markdown(col_list)
+        display_cols = st.multiselect(
+            "표시할 컬럼 선택",
+            options=columns,
+            default=current_display,
+            key="step2_display_cols",
+            help="선택한 컬럼만 이메일 표에 표시됩니다"
+        )
         
-        # 자동 처리 안내
-        st.info("**🔧 자동 데이터 처리**: NaN/빈값 제거 ✓ | 숫자 0 → 빈칸 ✓ | 천단위 콤마 ✓", icon="ℹ️")
+        if not display_cols:
+            st.warning("⚠️ 최소 1개 이상의 컬럼을 선택하세요")
+            display_cols = columns.copy()
+        
+        st.session_state.display_cols = display_cols
+        st.caption(f"✅ **{len(display_cols)}개** 컬럼 선택됨")
+    
+    # ============================================================
+    # 🏷️ 컬럼 형식 지정 (금액, 퍼센트, 날짜, ID)
+    # ============================================================
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); 
+                padding: 12px 16px; border-radius: 8px; margin-bottom: 8px;
+                border-left: 4px solid #f57c00;">
+        <strong style="color: #e65100;">🏷️ 컬럼 형식 지정</strong>
+        <br><small style="color: #f57c00;">각 컬럼의 데이터 형식을 지정하세요 (자동 감지됨)</small>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    with st.container(border=True):
+        # 자동 감지
+        auto_amount = [c for c in columns if any(k in c for k in ['금액', '수수료', '처방액', '합계', '원'])]
+        auto_percent = [c for c in columns if '율' in c or '%' in c or '퍼센트' in c]
+        auto_date = [c for c in columns if '일' in c or '월' in c or '날짜' in c or 'date' in c.lower()]
+        auto_id = [c for c in columns if '번호' in c or 'ID' in c.lower() or '코드' in c]
+        
+        # 현재 설정 또는 자동 감지 사용
+        current_amount = st.session_state.get('amount_cols', auto_amount)
+        current_amount = [c for c in current_amount if c in columns]
+        current_percent = st.session_state.get('percent_cols', auto_percent)
+        current_percent = [c for c in current_percent if c in columns]
+        current_date = st.session_state.get('date_cols', auto_date)
+        current_date = [c for c in current_date if c in columns]
+        current_id = st.session_state.get('id_cols', auto_id)
+        current_id = [c for c in current_id if c in columns]
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            amount_cols = st.multiselect(
+                "💰 금액 컬럼 (합계 계산용)",
+                options=columns,
+                default=current_amount,
+                key="step2_amount_cols",
+                help="숫자 합계 계산에 사용될 컬럼"
+            )
+            st.session_state.amount_cols = amount_cols
+            
+            percent_cols = st.multiselect(
+                "📊 퍼센트 컬럼",
+                options=columns,
+                default=current_percent,
+                key="step2_percent_cols",
+                help="백분율 데이터가 포함된 컬럼"
+            )
+            st.session_state.percent_cols = percent_cols
+        
+        with col2:
+            date_cols = st.multiselect(
+                "📅 날짜 컬럼",
+                options=columns,
+                default=current_date,
+                key="step2_date_cols",
+                help="날짜/월 데이터가 포함된 컬럼"
+            )
+            st.session_state.date_cols = date_cols
+            
+            id_cols = st.multiselect(
+                "🔢 ID/코드 컬럼",
+                options=columns,
+                default=current_id,
+                key="step2_id_cols",
+                help="바코드, 사업자번호 등 숫자 코드 컬럼"
+            )
+            st.session_state.id_cols = id_cols
+        
+        # 요약
+        total_formatted = len(amount_cols) + len(percent_cols) + len(date_cols) + len(id_cols)
+        if total_formatted > 0:
+            st.caption(f"🏷️ 형식 지정: 금액 {len(amount_cols)}개 | 퍼센트 {len(percent_cols)}개 | 날짜 {len(date_cols)}개 | ID {len(id_cols)}개")
+        
+        # NaN/0 처리 안내
+        st.info("**🔧 자동 처리**: 엑셀 원본 형식 유지 ✓ | NaN → 빈칸 ✓ | 0 → 빈칸 ✓", icon="ℹ️")
     
     # ============================================================
     # 이메일 충돌 처리
@@ -3363,9 +3441,8 @@ def render_step2():
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col1:
-        if st.button("← 이전", width='stretch', key="step2_prev"):
-            st.session_state.current_step = 1
-            st.rerun()
+        if st.button("🔄 다시 시작", width='stretch', key="step2_prev"):
+            reset_and_restart()
     
     with col3:
         if st.button("다음 단계 →", type="primary", width='stretch', key="step2_next"):
@@ -3701,9 +3778,8 @@ def render_step3():
     st.markdown("<div style='height: 24px'></div>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
-        if st.button("← 이전", width='stretch', key="step3_prev"):
-            st.session_state.current_step = 2
-            st.rerun()
+        if st.button("🔄 다시 시작", width='stretch', key="step3_prev"):
+            reset_and_restart()
     with col3:
         if st.button("다음 단계 →", type="primary", width='stretch', disabled=valid==0, key="step3_next"):
             st.session_state.current_step = 4
@@ -3922,9 +3998,8 @@ def render_step4():
     st.markdown("<div style='height: 24px'></div>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
-        if st.button("← 이전", width='stretch', key="step4_prev"):
-            st.session_state.current_step = 3
-            st.rerun()
+        if st.button("🔄 다시 시작", width='stretch', key="step4_prev"):
+            reset_and_restart()
     with col3:
         if st.button("발송 단계로 →", type="primary", width='stretch', key="step4_next"):
             st.session_state.current_step = 5
@@ -4080,9 +4155,8 @@ def render_step5():
     col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
     
     with col1:
-        if st.button("← 이전", width='stretch', key="step5_prev"):
-            st.session_state.current_step = 4
-            st.rerun()
+        if st.button("🔄 다시 시작", width='stretch', key="step5_prev"):
+            reset_and_restart()
     
     with col2:
         test_btn = st.button(
