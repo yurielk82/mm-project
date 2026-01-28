@@ -1500,26 +1500,25 @@ def merge_email_data(df_data, df_email, join_col_data, join_col_email, email_col
 
 
 def clean_dataframe(df, amount_cols, percent_cols, date_cols, id_cols):
-    """데이터 정리"""
+    """데이터 정리 - 엑셀 원본 유지, 숫자 컬럼만 numeric 변환"""
     df_cleaned = df.copy()
-    for col in id_cols:
-        if col in df_cleaned.columns:
-            df_cleaned[col] = df_cleaned[col].apply(clean_id_column)
-    for col in date_cols:
-        if col in df_cleaned.columns:
-            df_cleaned[col] = df_cleaned[col].apply(format_date)
+    
+    # 숫자 컬럼만 numeric 변환 (합계 계산을 위해)
+    # 나머지는 엑셀 원본 그대로 유지
     for col in amount_cols:
         if col in df_cleaned.columns:
             df_cleaned[col] = pd.to_numeric(
-                df_cleaned[col].astype(str).str.replace(',', '').str.replace('₩', '').str.strip(),
+                df_cleaned[col].astype(str).str.replace(',', '').str.replace('₩', '').str.replace('원', '').str.strip(),
                 errors='coerce'
-            ).fillna(0)
+            )
     for col in percent_cols:
         if col in df_cleaned.columns:
             df_cleaned[col] = pd.to_numeric(
                 df_cleaned[col].astype(str).str.replace(',', '').str.replace('%', '').str.strip(),
                 errors='coerce'
-            ).fillna(0)
+            )
+    
+    # id_cols, date_cols는 원본 그대로 유지 (형식 변환 안 함)
     return df_cleaned
 
 
@@ -1581,33 +1580,42 @@ def group_data_with_wildcard(df, group_key_col, email_col, amount_cols, percent_
             sorted_indices = group_df[group_key_col].apply(sort_key).sort_values().index
             group_df = group_df.loc[sorted_indices]
         
-        # NaN/0 처리 옵션 가져오기
-        zero_as_blank = st.session_state.get('zero_as_blank', True)
-        
+        # ============================================================
+        # 엑셀 원본 형식 유지 + NaN/0만 빈칸 처리
+        # ============================================================
         rows = []
         for _, row in group_df.iterrows():
             row_dict = {}
             for col in display_cols:
                 if col in row.index:
                     value = row[col]
-                    # NaN/0 처리 옵션 적용
-                    if col in amount_cols:
-                        row_dict[col] = format_currency(value, zero_as_blank=zero_as_blank)
-                    elif col in percent_cols:
-                        row_dict[col] = format_percent(value)
-                    elif pd.isna(value) or value is None:
-                        row_dict[col] = '' if zero_as_blank else '0'
-                    elif isinstance(value, (int, float)):
-                        if value == 0 or pd.isna(value):
-                            row_dict[col] = '' if zero_as_blank else '0'
+                    
+                    # NaN 체크
+                    if pd.isna(value) or value is None:
+                        row_dict[col] = ''
+                        continue
+                    
+                    # 숫자 0 체크
+                    if isinstance(value, (int, float)):
+                        if value == 0:
+                            row_dict[col] = ''
+                            continue
+                        # 정수면 정수로, 소수면 소수로 (엑셀 원본 유지)
+                        if isinstance(value, float) and value == int(value):
+                            row_dict[col] = f"{int(value):,}"  # 정수로 표시 (콤마 추가)
+                        elif isinstance(value, int):
+                            row_dict[col] = f"{value:,}"  # 정수 (콤마 추가)
                         else:
-                            row_dict[col] = str(value)
+                            # 소수점 있는 경우 - 엑셀 원본 소수점 자릿수 유지
+                            row_dict[col] = f"{value:,.2f}".rstrip('0').rstrip('.')
+                        continue
+                    
+                    # 문자열 처리
+                    str_val = str(value).strip()
+                    if str_val.lower() in ['nan', 'none', 'nat', '', '0', '0.0']:
+                        row_dict[col] = ''
                     else:
-                        str_val = str(value).strip()
-                        if str_val.lower() in ['nan', 'none', 'nat', '']:
-                            row_dict[col] = '' if zero_as_blank else '0'
-                        else:
-                            row_dict[col] = str_val
+                        row_dict[col] = str_val
                 else:
                     row_dict[col] = ''
             rows.append(row_dict)
@@ -1622,12 +1630,14 @@ def group_data_with_wildcard(df, group_key_col, email_col, amount_cols, percent_
                 non_total_df = group_df[non_total_mask]
                 for col in amount_cols:
                     if col in non_total_df.columns:
-                        totals[col] = format_currency(non_total_df[col].sum(), zero_as_blank=zero_as_blank)
+                        total_val = non_total_df[col].sum()
+                        totals[col] = f"{total_val:,.0f}" if total_val != 0 else ''
             else:
                 # 와일드카드 미사용 시: 전체 데이터 합산
                 for col in amount_cols:
                     if col in group_df.columns:
-                        totals[col] = format_currency(group_df[col].sum(), zero_as_blank=zero_as_blank)
+                        total_val = group_df[col].sum()
+                        totals[col] = f"{total_val:,.0f}" if total_val != 0 else ''
         # calculate_totals가 False이면 totals는 빈 딕셔너리 유지 (합계 행 표시 안함)
         
         grouped_data[base_key_str] = {
