@@ -30,41 +30,35 @@ import os
 import extra_streamlit_components as stx
 from streamlit_sortables import sort_items
 
-# 로컬 모듈
-from style import (
-    render_email, render_preview, format_currency, format_percent, clean_id_column, format_date,
-    get_styles, STREAMLIT_CUSTOM_CSS,
+# 로컬 모듈 - 리팩토링된 통합 모듈
+from email_template import (
+    render_email, render_email_content, render_preview,
+    format_currency, format_percent, clean_id_column, format_date,
+    get_styles, EmailContext, EmailStyleConfig,
     DEFAULT_HEADER_TITLE, DEFAULT_HEADER_SUBTITLE, DEFAULT_GREETING,
     DEFAULT_INFO_MESSAGE, DEFAULT_ADDITIONAL_MESSAGE, DEFAULT_FOOTER_TEXT,
     DEFAULT_SUBJECT_TEMPLATE
 )
+from constants import (
+    APP_TITLE, APP_SUBTITLE, VERSION, STEPS,
+    SMTP_PROVIDERS, DEFAULT_SENDER_NAME,
+    DEFAULT_BATCH_SIZE, DEFAULT_EMAIL_DELAY_MIN, DEFAULT_EMAIL_DELAY_MAX, DEFAULT_BATCH_DELAY,
+    MAX_RETRY_COUNT, TEMPLATE_PRESETS, SemanticColors,
+    SESSION_STATE_DEFAULTS, CONFIG_COLUMNS_PATH, MAIL_HISTORY_DB_PATH,
+    validate_email as validate_email_pattern, get_default_period, get_template_variables
+)
+from style import STREAMLIT_CUSTOM_CSS
 
 
 # ============================================================================
-# CONFIGURATION & CONSTANTS
+# CONFIGURATION & CONSTANTS (constants.py에서 import)
 # ============================================================================
+# 주요 상수는 constants.py에서 중앙 관리됩니다.
+# APP_TITLE, APP_SUBTITLE, VERSION, STEPS, SMTP_PROVIDERS, 
+# DEFAULT_SENDER_NAME, DEFAULT_BATCH_SIZE 등
 
-APP_TITLE = "CSO 메일머지"
-APP_SUBTITLE = "CSO 정산서 자동 발송 시스템"
-VERSION = "3.0.0"
-
-# SMTP 설정 우선순위: st.secrets > session_state > 수동 입력
-DEFAULT_SENDER_NAME = "한국유니온제약"
-
-STEPS = ["파일 업로드", "컬럼 설정", "데이터 검토", "템플릿 편집", "발송"]
-
-SMTP_PROVIDERS = {
-    "Hiworks (하이웍스)": {"server": "smtps.hiworks.com", "port": 465},
-    "Gmail": {"server": "smtp.gmail.com", "port": 587},
-    "Naver": {"server": "smtp.naver.com", "port": 587},
-    "Daum/Kakao": {"server": "smtp.daum.net", "port": 465},
-    "Outlook": {"server": "smtp-mail.outlook.com", "port": 587},
-    "직접 입력": {"server": "", "port": 587},
-}
-
-DEFAULT_BATCH_SIZE = 10
-DEFAULT_EMAIL_DELAY = 2
-DEFAULT_BATCH_DELAY = 30
+# 하위 호환성을 위한 로컬 참조 (constants.py에서 import됨)
+DEFAULT_EMAIL_DELAY = 2  # 레거시 - DEFAULT_EMAIL_DELAY_MIN/MAX 사용 권장
 
 
 # ============================================================================
@@ -1275,65 +1269,18 @@ CUSTOM_CSS = """
 # ============================================================================
 
 def init_session_state():
-    """세션 상태 초기화"""
-    defaults = {
-        'current_step': 1,
-        'df': None,
-        'df_original': None,
-        'df_email': None,
-        'excel_file': None,
-        'sheet_names': [],
-        'selected_data_sheet': None,
-        'selected_email_sheet': None,
-        'use_separate_email_sheet': False,
-        'group_key_col': None,
-        'email_col': None,
-        'join_col_data': None,
-        'join_col_email': None,
-        'amount_cols': [],
-        'percent_cols': [],
-        'date_cols': [],
-        'id_cols': [],
-        'display_cols': [],
-        'display_cols_order': [],  # 컬럼 순서 저장
-        'use_wildcard_grouping': True,
-        'wildcard_suffixes': [' 합계'],
-        'calculate_totals_auto': False,
-        'grouped_data': {},
-        'email_conflicts': [],
-        'subject_template': DEFAULT_SUBJECT_TEMPLATE,
-        'header_title': DEFAULT_HEADER_TITLE,
-        'greeting_template': DEFAULT_GREETING,
-        'info_template': DEFAULT_INFO_MESSAGE,
-        'additional_template': DEFAULT_ADDITIONAL_MESSAGE,
-        'footer_template': DEFAULT_FOOTER_TEXT,
-        'send_results': [],
-        'sent_count': 0,
-        'failed_count': 0,
-        'smtp_config': None,
-        'conflict_resolution': 'first',
-        # 발송 설정 기억
-        'batch_size': DEFAULT_BATCH_SIZE,
-        'email_delay_min': 5,
-        'email_delay_max': 10,
-        'batch_delay': DEFAULT_BATCH_DELAY,
-        # 시트별 컬럼 설정 기억 (캐시)
-        'column_settings_cache': {},
-        # 운영 로그 (Operation First)
-        'activity_log': [],
-        'emergency_stop': False,
-        # 발송 상태 추적 (멱등성 보장)
-        'sent_groups': set(),  # 이미 발송 완료된 그룹
-        # UI 상태
-        'show_smtp_settings': False,  # SMTP 설정 패널 열기
-        'current_page': '📧 메일 발송',  # 현재 페이지 (메일 발송 / 발송 이력)
-        # NaN/0 처리 옵션
-        'zero_as_blank': True,  # True: NaN/0을 빈칸, False: 0으로 표시
-    }
-    
-    for key, value in defaults.items():
+    """
+    세션 상태 초기화
+    기본값은 constants.py의 SESSION_STATE_DEFAULTS에서 중앙 관리됩니다.
+    """
+    # SESSION_STATE_DEFAULTS를 기반으로 초기화
+    for key, value in SESSION_STATE_DEFAULTS.items():
         if key not in st.session_state:
-            st.session_state[key] = value
+            # set 타입은 복사해서 사용 (참조 문제 방지)
+            if isinstance(value, (set, list, dict)):
+                st.session_state[key] = value.copy() if hasattr(value, 'copy') else value
+            else:
+                st.session_state[key] = value
 
 
 def save_column_settings(sheet_name: str):
@@ -1370,8 +1317,7 @@ def load_column_settings(sheet_name: str) -> bool:
 # ============================================================================
 # 컬럼 설정 JSON 파일 관리 (Drag & Drop 설정 영속성)
 # ============================================================================
-
-CONFIG_COLUMNS_PATH = os.path.join(os.path.dirname(__file__), 'config_columns.json')
+# CONFIG_COLUMNS_PATH는 constants.py에서 import됨
 
 
 def load_column_config_from_json() -> dict:
@@ -1848,48 +1794,8 @@ def send_email(server, sender_email, recipient, subject, html_content, sender_na
         return False, str(e)
 
 
-def render_email_content(group_key, group_data, display_cols, amount_cols, templates):
-    template_vars = {
-        'company_name': group_key,
-        'company_code': group_key,
-        'period': datetime.now().strftime('%Y년 %m월'),
-        'date': datetime.now().strftime('%Y-%m-%d'),
-        'row_count': group_data['row_count'],
-    }
-    
-    try:
-        # 새로운 단순 본문 형식 지원
-        greeting_text = templates.get('greeting', '')
-        # 줄바꿈을 <br>로 변환
-        greeting = Template(greeting_text).render(**template_vars)
-        greeting = greeting.replace('\n', '<br>')
-        
-        info_text = templates.get('info', '')
-        info_message = Template(info_text).render(**template_vars) if info_text else ''
-        
-        additional_text = templates.get('additional', '')
-        additional = Template(additional_text).render(**template_vars) if additional_text else ''
-        
-        footer_text = templates.get('footer', '')
-        footer = Template(footer_text).render(**template_vars) if footer_text else ''
-    except Exception as e:
-        greeting = templates.get('greeting', '').replace('\n', '<br>')
-        info_message = templates.get('info', '')
-        additional = templates.get('additional', '')
-        footer = templates.get('footer', '')
-    
-    return render_email(
-        subject=templates['subject'],
-        header_title=templates['header_title'],
-        greeting=greeting,
-        columns=display_cols,
-        rows=group_data['rows'],
-        amount_columns=amount_cols,
-        totals=group_data['totals'],
-        info_message=info_message,
-        additional_message=additional,
-        footer_text=footer
-    )
+# render_email_content는 email_template.py에서 import됨
+# 단일 소스 원칙 (Single Source of Truth) 적용
 
 
 # ============================================================================
@@ -3647,43 +3553,8 @@ def render_step4():
     # 페이지 헤더
     render_page_header(4, "템플릿 편집", "이메일 제목과 본문을 커스터마이징하세요")
     
-    # 템플릿 프리셋 정의
-    TEMPLATE_PRESETS = {
-        "기본 (정산서)": {
-            "subject": "[한국유니온제약] {{ company_name }} {{ period }} 정산서",
-            "header": "정산 내역 안내",
-            "body": """안녕하세요, {{ company_name }} 담당자님.
-
-{{ period }} 정산 내역을 안내드립니다.
-아래 표를 확인해 주시기 바랍니다.
-
-문의사항이 있으시면 회신 부탁드립니다.
-감사합니다.""",
-            "footer": "본 메일은 발신 전용입니다.\n문의: 영업관리팀"
-        },
-        "간단형": {
-            "subject": "{{ company_name }} {{ period }} 정산 안내",
-            "header": "정산서",
-            "body": """{{ company_name }} 담당자님께,
-
-{{ period }} 정산 내역 송부드립니다.
-확인 부탁드립니다.""",
-            "footer": ""
-        },
-        "상세형": {
-            "subject": "[한국유니온제약] {{ company_name }} 귀하 - {{ period }} 월간 정산서",
-            "header": "{{ period }} 월간 정산 내역서",
-            "body": """안녕하세요, {{ company_name }} 담당자님.
-
-항상 저희 한국유니온제약과 협력해 주셔서 감사합니다.
-
-{{ period }} 정산 내역을 아래와 같이 송부 드리오니 
-내용 확인 후 이상이 있으시면 연락 부탁드립니다.
-
-감사합니다.""",
-            "footer": "본 메일은 자동 발송되었습니다.\n문의사항: 영업관리팀 (내선 XXX)"
-        }
-    }
+    # 템플릿 프리셋은 constants.py에서 import (TEMPLATE_PRESETS)
+    # to_dict() 메서드로 딕셔너리 형태로 변환하여 사용
     
     # 템플릿 선택
     col_preset, col_apply = st.columns([3, 1])
@@ -3697,10 +3568,10 @@ def render_step4():
     with col_apply:
         if st.button("적용", use_container_width=True):
             preset = TEMPLATE_PRESETS[preset_name]
-            st.session_state.subject_template = preset["subject"]
-            st.session_state.header_title = preset["header"]
-            st.session_state.email_body_text = preset["body"]
-            st.session_state.footer_template = preset["footer"]
+            st.session_state.subject_template = preset.subject
+            st.session_state.header_title = preset.header
+            st.session_state.email_body_text = preset.body
+            st.session_state.footer_template = preset.footer
             st.rerun()
     
     st.divider()
@@ -3730,7 +3601,7 @@ def render_step4():
     st.caption("테이블 위에 표시될 내용 ({{ company_name }}, {{ period }} 변수 사용 가능)")
     
     if 'email_body_text' not in st.session_state:
-        st.session_state.email_body_text = TEMPLATE_PRESETS["기본 (정산서)"]["body"]
+        st.session_state.email_body_text = TEMPLATE_PRESETS["기본 (정산서)"].body
     
     body_text = st.text_area(
         "본문",
