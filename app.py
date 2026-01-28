@@ -3388,245 +3388,68 @@ def render_step2():
             st.session_state.email_col = None
     
     # ============================================================
-    # 📧 영역 1: 이메일 본문에 표시될 컬럼 (display_cols 배열)
+    # 📧 이메일 표시 설정 - 엑셀 원본 컬럼 순서 그대로 사용
     # ============================================================
     st.markdown("""
     <div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); 
                 padding: 12px 16px; border-radius: 8px; margin-bottom: 8px;
                 border-left: 4px solid #1976d2;">
-        <strong style="color: #1565c0;">📧 영역 1: 이메일 본문에 표시될 컬럼</strong>
-        <br><small style="color: #1976d2;">드래그하여 순서 변경 | 필요 없는 컬럼은 '제외' 박스로 이동</small>
+        <strong style="color: #1565c0;">📧 이메일 표 설정</strong>
+        <br><small style="color: #1976d2;">엑셀 원본 컬럼 순서 그대로 표시 | NaN/빈값 자동 제거 | 숫자 0은 빈칸 처리</small>
     </div>
     """, unsafe_allow_html=True)
     
     with st.container(border=True):
-        # ▼▼▼ 영역 1 전용 배열 (display_cols, excluded_cols) ▼▼▼
-        # 세션에서 현재 상태 가져오기 - 없으면 전체 컬럼으로 초기화
-        area1_display = list(st.session_state.get('display_cols', []))
-        area1_excluded = list(st.session_state.get('excluded_cols', []))
+        # 엑셀 원본 컬럼 순서 그대로 사용
+        st.session_state.display_cols = columns.copy()
+        st.session_state.display_cols_order = columns.copy()
+        st.session_state.excluded_cols = []
         
-        # ★ 핵심 안전장치: display_cols가 비어있거나 유효하지 않은 경우 재초기화
-        # 로컬 실행 시 세션 초기화 등으로 인해 빈 배열이 될 수 있음
-        if not area1_display or not any(c in columns for c in area1_display):
-            # 현재 columns에서 excluded를 제외한 나머지로 초기화
-            if area1_excluded:
-                area1_display = [c for c in columns if c not in area1_excluded]
-            else:
-                area1_display = columns.copy()
-            
-            # 여전히 비어있으면 전체 컬럼 사용
-            if not area1_display:
-                area1_display = columns.copy()
-                area1_excluded = []
-            
-            st.session_state.display_cols = area1_display.copy()
-            st.session_state.display_cols_order = area1_display.copy()
-            st.session_state.excluded_cols = area1_excluded
-            st.toast("📋 컬럼 목록이 초기화되었습니다", icon="ℹ️")
+        # 컬럼 미리보기
+        st.success(f"✅ **{len(columns)}개** 컬럼이 엑셀 순서대로 표시됩니다")
         
-        # 컬럼 유효성 검사: 현재 데이터에 없는 컬럼 제거
-        area1_display = [c for c in area1_display if c in columns]
-        area1_excluded = [c for c in area1_excluded if c in columns]
+        # 컬럼 목록 표시
+        col_preview = " | ".join([f"`{c}`" for c in columns[:10]])
+        if len(columns) > 10:
+            col_preview += f" ... (+{len(columns)-10}개)"
+        st.caption(f"컬럼: {col_preview}")
         
-        # 새로 추가된 컬럼이 있으면 display에 추가
-        all_in_lists = set(area1_display + area1_excluded)
-        new_cols = [c for c in columns if c not in all_in_lists]
-        if new_cols:
-            area1_display.extend(new_cols)
-            st.session_state.display_cols = area1_display.copy()
+        st.markdown("---")
         
-        # ============================================================
-        # 컬럼 선택 및 순서 변경 UI (로컬/배포 환경 모두 호환)
-        # ============================================================
+        # 데이터 처리 옵션 (고정)
+        st.markdown("**🔧 자동 데이터 처리:**")
+        st.markdown("""
+        - ✅ **NaN/빈값**: 자동 제거 (빈칸으로 표시)
+        - ✅ **숫자 0**: 빈칸으로 표시
+        - ✅ **숫자 형식**: 천단위 콤마 자동 적용
+        """)
         
-        # 현재 표시 컬럼 목록을 칩 형태로 표시
-        st.caption("📝 이메일에 표시할 컬럼을 선택하고 순서를 조정하세요")
+        # 금액 컬럼 자동 감지 (천단위 콤마용)
+        amount_cols_auto = [c for c in columns if any(k in c for k in ['금액', '수수료', '처방액', '합계'])]
+        if amount_cols_auto:
+            st.caption(f"💰 금액 컬럼 자동 감지: {', '.join(amount_cols_auto[:5])}")
         
-        # 컬럼 선택 (멀티셀렉트)
-        new_display = st.multiselect(
-            "표시할 컬럼 선택",
-            options=columns,
-            default=area1_display if area1_display else columns,
-            key="step2_area1_multiselect",
-            help="선택한 컬럼이 이메일 표에 표시됩니다"
-        )
-        
-        new_excluded = [c for c in columns if c not in new_display]
-        
-        if not new_display:
-            st.warning("⚠️ 최소 1개 이상의 컬럼을 선택해야 합니다")
-            new_display = columns.copy()
-            new_excluded = []
-        
-        # 컬럼 순서 조정 UI (순수 Streamlit - 100% 로컬 호환)
-        if len(new_display) > 1:
-            with st.expander("🔀 컬럼 순서 변경", expanded=False):
-                st.caption("컬럼을 선택하고 ▲/▼ 버튼으로 순서를 변경하세요")
-                
-                # 현재 순서 표시
-                order_cols = st.columns([3, 1, 1])
-                with order_cols[0]:
-                    selected_col = st.selectbox(
-                        "이동할 컬럼",
-                        options=new_display,
-                        key="step2_col_to_move"
-                    )
-                
-                with order_cols[1]:
-                    if st.button("▲ 위로", key="step2_move_up", width='stretch'):
-                        if selected_col in new_display:
-                            idx = new_display.index(selected_col)
-                            if idx > 0:
-                                new_display[idx], new_display[idx-1] = new_display[idx-1], new_display[idx]
-                                st.session_state.display_cols = new_display
-                                st.rerun()
-                
-                with order_cols[2]:
-                    if st.button("▼ 아래로", key="step2_move_down", width='stretch'):
-                        if selected_col in new_display:
-                            idx = new_display.index(selected_col)
-                            if idx < len(new_display) - 1:
-                                new_display[idx], new_display[idx+1] = new_display[idx+1], new_display[idx]
-                                st.session_state.display_cols = new_display
-                                st.rerun()
-                
-                # 현재 컬럼 순서 미리보기
-                st.markdown("**현재 순서:**")
-                order_preview = " → ".join([f"`{c}`" for c in new_display[:8]])
-                if len(new_display) > 8:
-                    order_preview += f" ... (+{len(new_display)-8}개)"
-                st.markdown(order_preview)
-        
-        # 세션 상태 업데이트
-        st.session_state.display_cols = new_display
-        st.session_state.display_cols_order = new_display
-        st.session_state.excluded_cols = new_excluded
-        
-        area1_display = new_display
-        area1_excluded = new_excluded
-        
-        # 표시 컬럼 요약
-        col_info1, col_info2 = st.columns(2)
-        with col_info1:
-            if area1_display:
-                st.success(f"✅ 표시: **{len(area1_display)}개** 컬럼")
-            else:
-                st.warning("⚠️ 표시할 컬럼이 없습니다!")
-        with col_info2:
-            if area1_excluded:
-                st.caption(f"🚫 제외: {len(area1_excluded)}개")
+        # 세션에 저장 (형식 설정)
+        st.session_state.amount_cols = amount_cols_auto
+        st.session_state.percent_cols = [c for c in columns if '율' in c or '%' in c or '퍼센트' in c]
+        st.session_state.date_cols = [c for c in columns if '일' in c or '월' in c or '날짜' in c or 'date' in c.lower()]
+        st.session_state.id_cols = [c for c in columns if '번호' in c or 'ID' in c.lower() or '코드' in c]
     
     st.markdown("<div style='height: 16px'></div>", unsafe_allow_html=True)
     
     # ============================================================
-    # 🏷️ 영역 2: 컬럼 형식 설정 (amount_cols, percent_cols 등 배열)
+    # 불필요한 영역 2 제거 - 형식 설정 자동화
     # ============================================================
-    st.markdown("""
-    <div style="background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); 
-                padding: 12px 16px; border-radius: 8px; margin-bottom: 8px;
-                border-left: 4px solid #f57c00;">
-        <strong style="color: #e65100;">🏷️ 영역 2: 컬럼 형식 설정</strong>
-        <br><small style="color: #f57c00;">표시 컬럼과 별개로 형식 지정 | 중복 선택 가능</small>
-    </div>
-    """, unsafe_allow_html=True)
+    # 기존 영역 2 코드 삭제 - 형식 자동 감지로 대체
     
-    with st.container(border=True):
-        # ▼▼▼ 영역 2 전용 배열 (형식 설정용) ▼▼▼
-        area2_amount = list(st.session_state.get('amount_cols', []))
-        area2_percent = list(st.session_state.get('percent_cols', []))
-        area2_date = list(st.session_state.get('date_cols', []))
-        area2_id = list(st.session_state.get('id_cols', []))
-        
-        # 멀티셀렉트 UI로 형식 설정
-        col_fmt1, col_fmt2 = st.columns(2)
-        
-        with col_fmt1:
-            new_amount = st.multiselect(
-                "💰 금액 형식 (₩1,234,567)",
-                options=columns,
-                default=area2_amount,
-                key="step2_amount_cols",
-                help="선택된 컬럼은 통화 형식으로 표시됩니다"
-            )
-            
-            new_percent = st.multiselect(
-                "📊 퍼센트 형식 (12.5%)",
-                options=columns,
-                default=area2_percent,
-                key="step2_percent_cols",
-                help="선택된 컬럼은 퍼센트 형식으로 표시됩니다"
-            )
-        
-        with col_fmt2:
-            new_date = st.multiselect(
-                "📅 날짜 형식 (2025-01-28)",
-                options=columns,
-                default=area2_date,
-                key="step2_date_cols",
-                help="선택된 컬럼은 날짜 형식으로 표시됩니다"
-            )
-            
-            new_id = st.multiselect(
-                "🔢 ID 형식 (텍스트 유지)",
-                options=columns,
-                default=area2_id,
-                key="step2_id_cols",
-                help="선택된 컬럼은 숫자가 아닌 텍스트로 유지됩니다"
-            )
-        
-        # 변경 감지 및 저장
-        prev_amount = st.session_state.get('amount_cols', [])
-        prev_percent = st.session_state.get('percent_cols', [])
-        prev_date = st.session_state.get('date_cols', [])
-        prev_id = st.session_state.get('id_cols', [])
-        
-        format_changed = (
-            new_amount != prev_amount or
-            new_percent != prev_percent or
-            new_date != prev_date or
-            new_id != prev_id
-        )
-        
-        # 세션 상태 업데이트
-        st.session_state.amount_cols = new_amount
-        st.session_state.percent_cols = new_percent
-        st.session_state.date_cols = new_date
-        st.session_state.id_cols = new_id
-        
-        # 변경 시 JSON에 자동 저장
-        if format_changed and (new_amount or new_percent or new_date or new_id):
-            auto_save_config = {
-                'amount_cols': new_amount,
-                'percent_cols': new_percent,
-                'date_cols': new_date,
-                'id_cols': new_id,
-                'saved_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            }
-            save_column_config_to_json(auto_save_config)
-        
-        # 형식 설정 요약
-        format_summary = []
-        if new_amount: format_summary.append(f"💰 금액: {len(new_amount)}개")
-        if new_percent: format_summary.append(f"📊 퍼센트: {len(new_percent)}개")
-        if new_date: format_summary.append(f"📅 날짜: {len(new_date)}개")
-        if new_id: format_summary.append(f"🔢 ID: {len(new_id)}개")
-        
-        if format_summary:
-            st.info(f"형식 지정: {' | '.join(format_summary)}")
-        else:
-            st.caption("형식이 지정된 컬럼이 없습니다")
-        
-        # NaN/0 처리 옵션
-        st.markdown("---")
-        zero_option = st.radio(
-            "NaN/0 값 처리",
-            options=["빈칸으로 표시", "0으로 표시"],
-            index=0 if st.session_state.get('zero_as_blank', True) else 1,
-            horizontal=True,
-            help="금액 컬럼에서 NaN이나 0 값을 어떻게 표시할지 선택",
-            key="step2_zero_option"  # 고유 key
-        )
-        st.session_state.zero_as_blank = (zero_option == "빈칸으로 표시")
+    # 더미 변수 (기존 코드 호환용)
+    new_amount = st.session_state.amount_cols
+    new_percent = st.session_state.percent_cols
+    new_date = st.session_state.date_cols
+    new_id = st.session_state.id_cols
+    
+    # NaN/0 처리 옵션 - 항상 빈칸으로 처리 (고정)
+    st.session_state.zero_as_blank = True
     
     # 충돌 해결 + 설정 초기화 (한 줄에)
     with st.container(border=True):
