@@ -3338,11 +3338,35 @@ def render_step2():
                     elif 'ID' in header:
                         new_id = list(items) if items else []
             
+            # 변경 감지 (이전 상태와 비교)
+            prev_amount = st.session_state.get('amount_cols', [])
+            prev_percent = st.session_state.get('percent_cols', [])
+            prev_date = st.session_state.get('date_cols', [])
+            prev_id = st.session_state.get('id_cols', [])
+            
+            format_changed = (
+                new_amount != prev_amount or
+                new_percent != prev_percent or
+                new_date != prev_date or
+                new_id != prev_id
+            )
+            
             # 세션 상태 업데이트 (영역 2 전용 배열)
             st.session_state.amount_cols = new_amount
             st.session_state.percent_cols = new_percent
             st.session_state.date_cols = new_date
             st.session_state.id_cols = new_id
+            
+            # 변경 시 JSON에 자동 저장 (소스 수정 후에도 유지되도록)
+            if format_changed and (new_amount or new_percent or new_date or new_id):
+                auto_save_config = {
+                    'amount_cols': new_amount,
+                    'percent_cols': new_percent,
+                    'date_cols': new_date,
+                    'id_cols': new_id,
+                    'saved_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                }
+                save_column_config_to_json(auto_save_config)
             
             # 로컬 변수도 업데이트 (요약 표시용)
             area2_amount = new_amount
@@ -3421,12 +3445,13 @@ def render_step2():
             _save_step2_config_and_move(1, columns, df, df_email, use_separate, sheet_name)
     
     with col3:
-        # 다음 버튼 활성화 조건
-        can_proceed = len(display_cols) > 0
+        # 다음 버튼 활성화 조건 - 세션 상태에서 직접 읽기
+        current_display_cols = st.session_state.get('display_cols', [])
+        can_proceed = len(current_display_cols) > 0
         
         if st.button("다음 단계 →", type="primary", use_container_width=True, 
                     key="step2_next", disabled=not can_proceed):
-            if not display_cols:
+            if not current_display_cols:
                 st.error("표시할 컬럼을 1개 이상 배치하세요", icon="❌")
             else:
                 _save_step2_config_and_move(3, columns, df, df_email, use_separate, sheet_name,
