@@ -1,7 +1,7 @@
 # =============================================================================
-# 📧 지능형 그룹핑 메일머지 시스템 - Dependencies
+# CSO Mail Merge System - Dependencies
 # =============================================================================
-# 설치 명령: pip install -r requirements.txt
+# Install: pip install -r requirements.txt
 # =============================================================================
 
 # Core Framework
@@ -10,33 +10,33 @@ streamlit>=1.28.0
 # Data Processing
 pandas>=2.0.0
 numpy>=1.24.0
-openpyxl>=3.1.0        # Excel .xlsx 파일 읽기/쓰기
-xlrd>=2.0.0            # Excel .xls 파일 읽기 (레거시)
+openpyxl>=3.1.0        # Excel .xlsx read/write
+xlrd>=2.0.0            # Excel .xls read (legacy)
 
 # Template Engine
 Jinja2>=3.1.0
 
 # Data Validation
 pydantic>=2.0.0
-email-validator>=2.0.0  # 이메일 형식 검증
+email-validator>=2.0.0  # Email format validation
 
 # Utilities
-python-dateutil>=2.8.0  # 날짜 파싱
+python-dateutil>=2.8.0  # Date parsing
 
 # Cookie Management
-extra-streamlit-components>=0.1.60  # 쿠키 기반 설정 저장
+extra-streamlit-components>=0.1.60  # Cookie-based settings storage
 
 # Drag & Drop UI
-streamlit-sortables>=0.2.0          # 드래그 앤 드롭 컬럼 설정
+streamlit-sortables>=0.2.0          # Drag and drop column config
 
 # Visualization (History Dashboard)
-plotly>=5.18.0          # 통계 차트
+plotly>=5.18.0          # Statistics charts
 
 # =============================================================================
-# 📌 참고: 아래 라이브러리는 Python 표준 라이브러리 (설치 불필요)
+# Note: Below libraries are Python standard library (no install needed)
 # =============================================================================
-# smtplib          - SMTP 이메일 발송
-# ssl              - SSL/TLS 암호화
-# socket           - 네트워크 연결
-# email.mime.*     - 이메일 메시지 구성
+# smtplib          - SMTP email sending
+# ssl              - SSL/TLS encryption
+# socket           - Network connection
+# email.mime.*     - Email message composition
 # =============================================================================
