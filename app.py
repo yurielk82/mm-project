@@ -3459,8 +3459,12 @@ def render_step2():
             {"header": "🚫 제외", "items": area1_excluded},
         ]
         
-        # ★ 디버깅: sort_items 호출 전 데이터 확인
-        # st.caption(f"🔍 DEBUG: area1_display={len(area1_display)}개, area1_excluded={len(area1_excluded)}개")
+        # ★ 디버깅 모드: 문제 파악용 (임시)
+        with st.expander("🔍 DEBUG: 컬럼 상태 확인", expanded=False):
+            st.write(f"**입력 데이터:**")
+            st.write(f"- columns (전체): {len(columns)}개 → {columns[:5]}...")
+            st.write(f"- area1_display: {len(area1_display)}개 → {area1_display[:3] if area1_display else '없음'}...")
+            st.write(f"- area1_excluded: {len(area1_excluded)}개")
         
         # sort_items 호출 - 영역 1 전용 key
         try:
@@ -3473,6 +3477,11 @@ def render_step2():
         except Exception as e:
             st.error(f"sort_items 오류: {e}")
             sorted_area1 = None
+        
+        # ★ 디버깅: sort_items 반환값 확인
+        with st.expander("🔍 DEBUG: sort_items 반환값", expanded=False):
+            st.write(f"**sorted_area1 타입:** {type(sorted_area1)}")
+            st.write(f"**sorted_area1 값:** {sorted_area1}")
         
         # ▼▼▼ 결과를 세션에 저장 (영역 1 전용) ▼▼▼
         new_display = area1_display  # 기본값으로 초기화
@@ -3498,6 +3507,11 @@ def render_step2():
         # ★ 최종 안전장치: new_display가 비어있으면 columns로 복원
         if not new_display:
             new_display = [c for c in columns if c not in new_excluded] if new_excluded else columns.copy()
+        
+        # ★ 디버깅: 최종 결과 확인
+        with st.expander("🔍 DEBUG: 최종 결과", expanded=False):
+            st.write(f"**new_display:** {len(new_display)}개 → {new_display[:3] if new_display else '없음'}...")
+            st.write(f"**new_excluded:** {len(new_excluded)}개")
         
         # 세션 상태 업데이트 (영역 1 전용 배열)
         st.session_state.display_cols = new_display
