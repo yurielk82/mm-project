@@ -3200,6 +3200,27 @@ def render_step2():
                 base_keys = set(get_base(k) for k in unique_keys)
                 base_keys = [k for k in base_keys if k and k.lower() not in ['nan', '(비어 있음)']]
                 st.success(f"예상 그룹 수: **{len(base_keys)}개**", icon="📊")
+        
+        # 세금계산서 발행 정보 체크박스
+        st.markdown("---")
+        show_tax_invoice = st.checkbox(
+            "🧾 세금계산서 발행 정보 표시",
+            value=st.session_state.get('show_tax_invoice_info', False),
+            help="활성화 시 각 그룹의 세금계산서 발행 금액(합계 행의 총 수수료액)을 요약 표시합니다"
+        )
+        st.session_state.show_tax_invoice_info = show_tax_invoice
+        
+        if show_tax_invoice:
+            # 세금계산서 발행 금액 컬럼 선택
+            amount_col_candidates = [c for c in columns if '수수료' in c or '금액' in c or '합계' in c]
+            tax_amount_col = st.selectbox(
+                "발행 금액 컬럼",
+                columns,
+                index=columns.index(amount_col_candidates[0]) if amount_col_candidates else 0,
+                help="합계 행에서 가져올 금액 컬럼 (예: 총 수수료액)",
+                key="tax_amount_col_select"
+            )
+            st.session_state.tax_amount_col = tax_amount_col
     
     # ============================================================
     # 이메일 컬럼 자동 감지 (별도 시트 미사용 시)
@@ -3534,7 +3555,7 @@ def _save_step2_config_and_move(target_step: int, columns: list, df, df_email,
 
 
 def render_step3():
-    """Step 3: 데이터 검토"""
+    """Step 3: 데이터 검토 - 필터 기능 및 세금계산서 발행 정보 포함"""
     
     # 페이지 헤더
     render_page_header(3, "데이터 검토", "발송될 그룹 데이터를 확인하세요")
@@ -3544,11 +3565,92 @@ def render_step3():
         st.warning("그룹 데이터가 없습니다", icon="⚠")
         return
     
-    # 요약 메트릭 (상단 고정)
+    # 요약 메트릭 계산
     total = len(grouped)
     valid = sum(1 for g in grouped.values() if g['recipient_email'] and validate_email(g['recipient_email']))
-    no_email = total - valid
+    no_email = sum(1 for g in grouped.values() if not g['recipient_email'] or not validate_email(g.get('recipient_email', '')))
+    # 데이터 없는 거래처 = 행이 0이거나 필수 값 누락
+    no_data = sum(1 for g in grouped.values() if g['row_count'] == 0)
     
+    # ============================================================
+    # 세금계산서 발행 정보 배너 (활성화 시)
+    # ============================================================
+    show_tax_invoice = st.session_state.get('show_tax_invoice_info', False)
+    tax_amount_col = st.session_state.get('tax_amount_col', None)
+    
+    if show_tax_invoice and tax_amount_col:
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); 
+                    padding: 16px 20px; border-radius: 10px; margin-bottom: 16px;
+                    border-left: 4px solid #4caf50;">
+            <strong style="color: #2e7d32; font-size: 1.1em;">🧾 세금계산서 발행 정보</strong>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # 각 그룹의 합계 행에서 총 수수료액 추출
+        tax_invoice_data = []
+        total_tax_amount = 0
+        
+        for group_key, group_data in grouped.items():
+            # 합계 행 찾기 (CSO관리업체 합계 또는 마지막 행)
+            rows = group_data.get('rows', [])
+            tax_amount = 0
+            
+            for row in rows:
+                # 그룹명 + ' 합계' 패턴의 행에서 금액 추출
+                row_values = list(row.values())
+                is_total_row = any('합계' in str(v) for v in row_values)
+                
+                if is_total_row and tax_amount_col in row:
+                    try:
+                        amt_str = str(row[tax_amount_col]).replace(',', '').replace('원', '').strip()
+                        if amt_str and amt_str not in ['', '-', 'nan', 'None']:
+                            tax_amount = float(amt_str)
+                    except (ValueError, TypeError):
+                        pass
+            
+            # 합계 행이 없으면 totals에서 가져오기
+            if tax_amount == 0 and group_data.get('totals'):
+                totals = group_data.get('totals', {})
+                if tax_amount_col in totals:
+                    try:
+                        amt_str = str(totals[tax_amount_col]).replace(',', '').replace('원', '').strip()
+                        if amt_str and amt_str not in ['', '-', 'nan', 'None']:
+                            tax_amount = float(amt_str)
+                    except (ValueError, TypeError):
+                        pass
+            
+            if tax_amount > 0:
+                tax_invoice_data.append({
+                    'CSO관리업체명': group_key,
+                    '발행 금액': tax_amount
+                })
+                total_tax_amount += tax_amount
+        
+        if tax_invoice_data:
+            col_summary, col_total = st.columns([3, 1])
+            with col_summary:
+                tax_df = pd.DataFrame(tax_invoice_data)
+                st.dataframe(
+                    tax_df,
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config={
+                        "CSO관리업체명": st.column_config.TextColumn("CSO관리업체명", width="medium"),
+                        "발행 금액": st.column_config.NumberColumn("발행 금액", format="₩%,.0f", width="medium")
+                    },
+                    height=min(150, 50 + len(tax_invoice_data) * 35)
+                )
+            with col_total:
+                st.metric("총 발행 금액", f"₩{total_tax_amount:,.0f}")
+        else:
+            st.info("세금계산서 발행 정보가 없습니다", icon="ℹ️")
+        
+        st.markdown("<div style='height: 8px'></div>", unsafe_allow_html=True)
+    
+    # ============================================================
+    # 요약 메트릭 (상단 고정)
+    # ============================================================
     col1, col2, col3 = st.columns(3)
     with col1:
         st.metric("전체 그룹", f"{total:,}개")
@@ -3557,45 +3659,147 @@ def render_step3():
     with col3:
         st.metric("이메일 없음", f"{no_email:,}개", delta=f"-{no_email}" if no_email > 0 else None, delta_color="inverse")
     
+    # ============================================================
+    # 필터 버튼 3종
+    # ============================================================
+    st.markdown("##### 🔍 필터")
+    
+    # 필터 상태 초기화
+    if 'step3_filter' not in st.session_state:
+        st.session_state.step3_filter = 'all'
+    
+    col_f1, col_f2, col_f3 = st.columns(3)
+    
+    with col_f1:
+        if st.button(
+            f"📧 전체 발송 대상 ({valid})",
+            use_container_width=True,
+            type="primary" if st.session_state.step3_filter == 'all' else "secondary",
+            key="filter_all"
+        ):
+            st.session_state.step3_filter = 'all'
+            st.rerun()
+    
+    with col_f2:
+        if st.button(
+            f"📭 이메일 없음 ({no_email})",
+            use_container_width=True,
+            type="primary" if st.session_state.step3_filter == 'no_email' else "secondary",
+            key="filter_no_email"
+        ):
+            st.session_state.step3_filter = 'no_email'
+            st.rerun()
+    
+    with col_f3:
+        if st.button(
+            f"📋 데이터 없음 ({no_data})",
+            use_container_width=True,
+            type="primary" if st.session_state.step3_filter == 'no_data' else "secondary",
+            key="filter_no_data"
+        ):
+            st.session_state.step3_filter = 'no_data'
+            st.rerun()
+    
     st.divider()
     
-    # 상세 검토 (위로 이동)
-    with st.container(border=True):
-        st.markdown("##### 상세 데이터 검토")
-        st.caption("그룹을 선택하여 실제 발송될 데이터를 확인하세요")
-        
-        selected = st.selectbox(
-            "그룹 선택",
-            list(grouped.keys()),
-            format_func=lambda x: f"{x} ({grouped[x]['row_count']}행)",
-            label_visibility="collapsed"
-        )
-        
-        if selected:
-            g = grouped[selected]
-            
-            st.markdown(f"**수신자:** `{g['recipient_email'] or '없음'}`")
-            if g['has_conflict']:
-                st.warning(f"이메일 충돌: {', '.join(g['conflict_emails'])}", icon="⚠")
-            
-            st.dataframe(
-                pd.DataFrame(g['rows']), 
-                use_container_width=True, 
-                hide_index=True,
-                height=250
-            )
+    # ============================================================
+    # 필터링된 데이터 표시
+    # ============================================================
+    current_filter = st.session_state.step3_filter
     
-    # 발송 대상 목록 (아래로 이동)
+    # 필터 적용
+    if current_filter == 'all':
+        filtered_groups = {k: v for k, v in grouped.items() 
+                         if v['recipient_email'] and validate_email(v['recipient_email'])}
+        filter_title = "전체 발송 대상"
+    elif current_filter == 'no_email':
+        filtered_groups = {k: v for k, v in grouped.items() 
+                         if not v['recipient_email'] or not validate_email(v.get('recipient_email', ''))}
+        filter_title = "이메일 없는 거래처"
+    elif current_filter == 'no_data':
+        filtered_groups = {k: v for k, v in grouped.items() if v['row_count'] == 0}
+        filter_title = "데이터 없는 거래처"
+    else:
+        filtered_groups = grouped
+        filter_title = "전체"
+    
+    # 상세 검토
     with st.container(border=True):
-        st.markdown("##### 발송 대상 목록")
+        st.markdown(f"##### 상세 데이터 검토 - {filter_title} ({len(filtered_groups)}개)")
         
-        valid_list = [(k, v) for k, v in grouped.items() if v['recipient_email'] and validate_email(v['recipient_email'])]
+        if filtered_groups:
+            # 그룹 선택 상태 유지
+            group_keys = list(filtered_groups.keys())
+            prev_selected = st.session_state.get('step3_selected_group', None)
+            default_idx = group_keys.index(prev_selected) if prev_selected in group_keys else 0
+            
+            selected = st.selectbox(
+                "그룹 선택",
+                group_keys,
+                index=default_idx,
+                format_func=lambda x: f"{x} ({filtered_groups[x]['row_count']}행)",
+                label_visibility="collapsed",
+                key="step3_group_select"
+            )
+            st.session_state.step3_selected_group = selected
+            
+            if selected:
+                g = filtered_groups[selected]
+                
+                # 수신자 정보
+                email_status = g['recipient_email'] if g['recipient_email'] else '❌ 없음'
+                st.markdown(f"**수신자:** `{email_status}`")
+                
+                if g['has_conflict']:
+                    st.warning(f"이메일 충돌: {', '.join(g['conflict_emails'])}", icon="⚠")
+                
+                # 데이터 테이블 - 사용자가 설정한 컬럼 순서 유지
+                display_cols = st.session_state.get('display_cols', [])
+                rows_data = g['rows']
+                
+                if rows_data:
+                    # DataFrame 생성 시 컬럼 순서 유지
+                    df_display = pd.DataFrame(rows_data)
+                    
+                    # 표시할 컬럼만 필터링 (순서 유지)
+                    if display_cols:
+                        available_cols = [c for c in display_cols if c in df_display.columns]
+                        if available_cols:
+                            df_display = df_display[available_cols]
+                    
+                    # '합계' 행의 거래처명 위치에 '총 합계' 표시
+                    group_key_col = st.session_state.get('group_key_col', '')
+                    if group_key_col and group_key_col in df_display.columns:
+                        df_display[group_key_col] = df_display[group_key_col].apply(
+                            lambda x: '📊 총 합계' if '합계' in str(x) else x
+                        )
+                    
+                    st.dataframe(
+                        df_display, 
+                        use_container_width=True, 
+                        hide_index=True,
+                        height=250
+                    )
+                else:
+                    st.info("데이터가 없습니다", icon="ℹ️")
+        else:
+            st.info(f"{filter_title}에 해당하는 항목이 없습니다", icon="ℹ️")
+    
+    # 발송 대상 목록
+    with st.container(border=True):
+        st.markdown(f"##### 📋 {filter_title} 목록")
         
-        if valid_list:
-            preview_df = pd.DataFrame([
-                {'업체명': k, '이메일': v['recipient_email'], '데이터 행수': v['row_count']}
-                for k, v in valid_list
-            ])
+        if filtered_groups:
+            preview_data = []
+            for k, v in filtered_groups.items():
+                preview_data.append({
+                    '업체명': k, 
+                    '이메일': v['recipient_email'] or '-',
+                    '데이터 행수': v['row_count'],
+                    '상태': '✅ 발송 가능' if v['recipient_email'] and validate_email(v['recipient_email']) else '❌ 발송 불가'
+                })
+            
+            preview_df = pd.DataFrame(preview_data)
             
             st.dataframe(
                 preview_df,
@@ -3604,11 +3808,12 @@ def render_step3():
                 column_config={
                     "업체명": st.column_config.TextColumn("업체명", width="medium"),
                     "이메일": st.column_config.TextColumn("이메일", width="large"),
-                    "데이터 행수": st.column_config.NumberColumn("행수", format="%d", width="small")
+                    "데이터 행수": st.column_config.NumberColumn("행수", format="%d", width="small"),
+                    "상태": st.column_config.TextColumn("상태", width="small")
                 }
             )
         else:
-            st.info("발송 가능한 대상이 없습니다", icon="ℹ")
+            st.info("표시할 항목이 없습니다", icon="ℹ")
     
     # 네비게이션
     st.markdown("<div style='height: 24px'></div>", unsafe_allow_html=True)
