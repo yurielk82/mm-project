@@ -131,12 +131,15 @@ class EmailStyleConfig:
             "table_container": """
                 margin: 25px 0;
                 overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
             """,
             "table": """
+                min-width: 800px;
                 width: 100%;
                 border-collapse: collapse;
                 font-size: 14px;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                table-layout: auto;
             """,
             "th": f"""
                 background-color: {self.table_header_bg};
@@ -145,6 +148,7 @@ class EmailStyleConfig:
                 text-align: left;
                 font-weight: 600;
                 border-bottom: 2px solid {self.table_border_color};
+                white-space: nowrap;
             """,
             "th_amount": f"""
                 background-color: {self.table_header_bg};
@@ -153,6 +157,7 @@ class EmailStyleConfig:
                 text-align: right;
                 font-weight: 600;
                 border-bottom: 2px solid {self.table_border_color};
+                white-space: nowrap;
             """,
             "tr_even": f"""
                 background-color: {self.table_row_even};
@@ -164,6 +169,10 @@ class EmailStyleConfig:
                 padding: {self.table_cell_padding};
                 border-bottom: 1px solid {self.table_border_color};
                 color: {self.text_color};
+                max-height: 4.5em;
+                line-height: 1.5em;
+                overflow: hidden;
+                vertical-align: top;
             """,
             "td_amount": f"""
                 padding: {self.table_cell_padding};
@@ -171,6 +180,7 @@ class EmailStyleConfig:
                 text-align: right;
                 font-family: 'Consolas', 'Monaco', monospace;
                 color: {self.text_color};
+                white-space: nowrap;
             """,
             "tr_total": f"""
                 background-color: {self.table_total_bg};
@@ -179,6 +189,7 @@ class EmailStyleConfig:
                 padding: {self.table_cell_padding};
                 color: {self.table_header_color};
                 font-weight: bold;
+                white-space: nowrap;
             """,
             "td_total_amount": f"""
                 padding: {self.table_cell_padding};
@@ -186,6 +197,7 @@ class EmailStyleConfig:
                 color: {self.table_header_color};
                 font-weight: bold;
                 font-family: 'Consolas', 'Monaco', monospace;
+                white-space: nowrap;
             """,
             "footer": f"""
                 background-color: {self.footer_bg};
@@ -260,6 +272,11 @@ EMAIL_TEMPLATE = """
             <div style="{{ styles.info_box }}">
                 {{ info_message | safe }}
             </div>
+            {% endif %}
+            
+            {% if extra_html_before_table %}
+            <!-- 세금계산서 발행 정보 등 추가 HTML -->
+            {{ extra_html_before_table | safe }}
             {% endif %}
             
             <!-- 데이터 테이블 -->
@@ -499,6 +516,7 @@ class EmailContext:
     additional_message: Optional[str] = None
     footer_text: Optional[str] = None
     totals: Optional[Dict[str, str]] = None
+    extra_html_before_table: Optional[str] = None  # 세금계산서 발행 정보 등 테이블 위 추가 HTML
     
     # 템플릿 변수
     company_name: str = ""
@@ -548,6 +566,7 @@ def render_email_html(
         header_subtitle=context.header_subtitle,
         greeting=context.greeting,
         info_message=context.info_message,
+        extra_html_before_table=context.extra_html_before_table,  # 세금계산서 정보 등
         columns=context.columns,
         rows=context.rows,
         amount_columns=context.amount_columns,
@@ -570,7 +589,8 @@ def render_email(
     header_subtitle: Optional[str] = None,
     info_message: Optional[str] = None,
     additional_message: Optional[str] = None,
-    footer_text: Optional[str] = None
+    footer_text: Optional[str] = None,
+    extra_html_before_table: Optional[str] = None  # 세금계산서 발행 정보 등
 ) -> str:
     """
     기존 API와의 호환성을 위한 래퍼 함수.
@@ -588,6 +608,7 @@ def render_email(
         info_message: 정보 박스 메시지
         additional_message: 테이블 아래 추가 메시지
         footer_text: 푸터 텍스트
+        extra_html_before_table: 테이블 위에 삽입할 추가 HTML (세금계산서 발행 정보 등)
     
     Returns:
         렌더링된 HTML 문자열
@@ -604,6 +625,7 @@ def render_email(
         info_message=info_message,
         additional_message=additional_message,
         footer_text=footer_text,
+        extra_html_before_table=extra_html_before_table,
         row_count=len(rows)
     )
     return render_email_html(context)
