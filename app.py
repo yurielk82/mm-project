@@ -3414,18 +3414,67 @@ def render_step2():
                               help="체크 해제 시 기본 멀티셀렉트 UI를 사용합니다")
         
         if use_dnd:
-            # 드래그 앤 드롭 UI
+            # 드래그 앤 드롭 UI - custom_style로 가시성 보장
             dnd_area1_items = [
                 {"header": "📧 이메일에 표시 (순서대로)", "items": area1_display},
                 {"header": "🚫 제외", "items": area1_excluded},
             ]
+            
+            # 컴포넌트 내부 스타일 정의
+            dnd_custom_style = """
+            .sortable-component {
+                display: flex !important;
+                flex-wrap: wrap;
+                gap: 10px;
+                padding: 10px;
+                min-height: 80px;
+            }
+            .sortable-container {
+                flex: 1;
+                min-width: 200px;
+                background-color: #f8f9fa;
+                border-radius: 8px;
+                padding: 10px;
+                border: 1px solid #dee2e6;
+            }
+            .sortable-container-header {
+                font-weight: bold;
+                padding: 8px;
+                background-color: #e9ecef;
+                border-radius: 4px;
+                margin-bottom: 8px;
+            }
+            .sortable-container-body {
+                min-height: 50px;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 5px;
+            }
+            .sortable-item {
+                display: inline-block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+                padding: 6px 12px;
+                margin: 3px;
+                background-color: #4dabf7;
+                color: white;
+                border-radius: 16px;
+                font-size: 0.85rem;
+                cursor: grab;
+                user-select: none;
+            }
+            .sortable-item:hover {
+                background-color: #339af0;
+            }
+            """
             
             try:
                 sorted_area1 = sort_items(
                     dnd_area1_items, 
                     multi_containers=True, 
                     direction="horizontal",
-                    key="step2_area1_display_dnd"
+                    key="step2_area1_display_dnd",
+                    custom_style=dnd_custom_style
                 )
             except Exception as e:
                 st.error(f"sort_items 오류: {e}")
