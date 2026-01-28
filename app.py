@@ -3805,142 +3805,116 @@ def render_step4():
     
     st.divider()
     
-    # 미리보기 섹션 (버튼 방식)
+    # ============================================================
+    # 실제 발송 이메일 미리보기
+    # ============================================================
     grouped = st.session_state.grouped_data
     valid_list = [(k, v) for k, v in grouped.items() if v['recipient_email'] and validate_email(v['recipient_email'])]
     
     if valid_list:
-        st.markdown("---")
+        st.markdown("##### 📬 실제 발송 이메일 미리보기")
         
-        # 적용 버튼과 미리보기 버튼을 나란히
-        col_apply, col_preview = st.columns([1, 1])
+        # 업체 선택
+        preview_options = [f"{k} ({v['recipient_email']})" for k, v in valid_list[:20]]
+        selected_idx = st.selectbox(
+            "미리보기 대상 선택",
+            range(len(preview_options)),
+            format_func=lambda x: preview_options[x],
+            key="step4_preview_select"
+        )
         
-        with col_apply:
-            if st.button("✅ 템플릿 적용", type="primary", width='stretch', key="step4_apply"):
-                st.toast("템플릿이 적용되었습니다", icon="✅")
+        sample_key, sample_data = valid_list[selected_idx]
         
-        with col_preview:
-            preview_btn = st.button("👁️ 미리보기", width='stretch', key="step4_preview_btn")
-        
-        # 미리보기 버튼 클릭 시 표시
-        if preview_btn or st.session_state.get('show_preview', False):
-            st.session_state.show_preview = True
+        try:
+            # 템플릿 데이터 준비
+            templates = {
+                'subject': subject,
+                'header': header,
+                'greeting': body_text,
+                'info': '',
+                'additional': '',
+                'footer': footer
+            }
             
-            st.markdown("##### 📬 이메일 미리보기")
+            display_cols = st.session_state.get('display_cols', [])
+            amount_cols = st.session_state.get('amount_cols', [])
             
-            preview_options = [f"{k}" for k, v in valid_list[:20]]
-            selected_idx = st.selectbox(
-                "미리보기 대상",
-                range(len(preview_options)),
-                format_func=lambda x: preview_options[x],
-                key="step4_preview_select"
-            )
+            # 세금계산서 발행 정보 HTML 생성
+            tax_invoice_html = ""
+            show_tax_invoice = st.session_state.get('show_tax_invoice_info', False)
+            tax_amount_col = st.session_state.get('tax_amount_col')
             
-            sample_key, sample_data = valid_list[selected_idx]
-            
-            try:
-                # 제목 렌더링
-                subject_preview = Template(subject).render(
-                    company_name=sample_key,
-                    period=datetime.now().strftime('%Y년 %m월')
-                )
+            if show_tax_invoice and tax_amount_col:
+                rows = sample_data.get('rows', [])
+                tax_amount = 0
                 
-                # 인사말 렌더링
-                greeting_rendered = Template(body_text).render(
-                    company_name=sample_key,
-                    company_code=sample_key,
-                    period=datetime.now().strftime('%Y년 %m월')
-                ).replace('\n', '<br>')
-                
-                display_cols = st.session_state.get('display_cols', [])
-                amount_cols = st.session_state.get('amount_cols', [])
-                
-                # 세금계산서 발행 정보 추출
-                tax_invoice_html = ""
-                show_tax_invoice = st.session_state.get('show_tax_invoice_info', False)
-                tax_amount_col = st.session_state.get('tax_amount_col')
-                
-                if show_tax_invoice and tax_amount_col:
-                    rows = sample_data.get('rows', [])
-                    tax_amount = 0
+                for row in rows:
+                    row_values = list(row.values())
+                    is_total_row = any('합계' in str(v) for v in row_values)
                     
-                    for row in rows:
-                        row_values = list(row.values())
-                        is_total_row = any('합계' in str(v) for v in row_values)
-                        
-                        if is_total_row and tax_amount_col in row:
-                            try:
-                                amt_str = str(row[tax_amount_col]).replace(',', '').replace('원', '').strip()
-                                if amt_str and amt_str not in ['', '-', 'nan', 'None']:
-                                    tax_amount = float(amt_str)
-                            except (ValueError, TypeError):
-                                pass
-                    
-                    if tax_amount == 0:
-                        totals = sample_data.get('totals', {})
-                        if tax_amount_col in totals:
-                            try:
-                                amt_str = str(totals[tax_amount_col]).replace(',', '').replace('원', '').strip()
-                                if amt_str and amt_str not in ['', '-', 'nan', 'None']:
-                                    tax_amount = float(amt_str)
-                            except (ValueError, TypeError):
-                                pass
-                    
-                    if tax_amount > 0:
-                        tax_invoice_html = f'''
-                        <div style="background: linear-gradient(135deg, #fff9c4 0%, #fff59d 100%); 
-                                    padding: 16px 20px; border-radius: 10px; margin: 16px 0;
-                                    border-left: 4px solid #ffc107; border: 1px solid #ffca28;">
-                            <strong style="color: #856404; font-size: 1.1em;">🧾 세금계산서 발행 정보</strong>
-                            <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                                <div>
-                                    <span style="color: #665c00;">CSO관리업체명:</span>
-                                    <strong style="color: #333; margin-left: 8px;">{sample_key}</strong>
-                                </div>
-                                <div style="white-space: nowrap;">
-                                    <span style="color: #665c00;">발행 금액:</span>
-                                    <strong style="color: #856404; font-size: 1.3em; margin-left: 8px;">₩{tax_amount:,.0f}</strong>
-                                </div>
+                    if is_total_row and tax_amount_col in row:
+                        try:
+                            amt_str = str(row[tax_amount_col]).replace(',', '').replace('원', '').strip()
+                            if amt_str and amt_str not in ['', '-', 'nan', 'None']:
+                                tax_amount = float(amt_str)
+                        except (ValueError, TypeError):
+                            pass
+                
+                if tax_amount == 0:
+                    totals = sample_data.get('totals', {})
+                    if tax_amount_col in totals:
+                        try:
+                            amt_str = str(totals[tax_amount_col]).replace(',', '').replace('원', '').strip()
+                            if amt_str and amt_str not in ['', '-', 'nan', 'None']:
+                                tax_amount = float(amt_str)
+                        except (ValueError, TypeError):
+                            pass
+                
+                if tax_amount > 0:
+                    tax_invoice_html = f'''
+                    <div style="background: linear-gradient(135deg, #fff9c4 0%, #fff59d 100%); 
+                                padding: 16px 20px; border-radius: 10px; margin: 16px 0;
+                                border-left: 4px solid #ffc107; border: 1px solid #ffca28;">
+                        <strong style="color: #856404; font-size: 1.1em;">🧾 세금계산서 발행 정보</strong>
+                        <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                            <div>
+                                <span style="color: #665c00;">CSO관리업체명:</span>
+                                <strong style="color: #333; margin-left: 8px;">{sample_key}</strong>
+                            </div>
+                            <div style="white-space: nowrap;">
+                                <span style="color: #665c00;">발행 금액:</span>
+                                <strong style="color: #856404; font-size: 1.3em; margin-left: 8px;">₩{tax_amount:,.0f}</strong>
                             </div>
                         </div>
-                        '''
-                
-                # 미리보기 정보 (컴팩트하게)
-                with st.container(border=True):
-                    col_info1, col_info2, col_info3 = st.columns(3)
-                    with col_info1:
-                        st.markdown(f"**수신:** `{sample_data.get('recipient_email', 'N/A')}`")
-                    with col_info2:
-                        st.markdown(f"**제목:** {subject_preview}")
-                    with col_info3:
-                        st.markdown(f"**데이터:** {sample_data.get('row_count', 0)}행")
+                    </div>
+                    '''
+            
+            # render_email_content로 실제 이메일 HTML 생성
+            email_html = render_email_content(
+                sample_key, 
+                sample_data, 
+                display_cols, 
+                amount_cols, 
+                templates,
+                extra_html_before_table=tax_invoice_html
+            )
+            
+            # 제목 미리보기
+            subject_preview = Template(subject).render(
+                company_name=sample_key,
+                period=datetime.now().strftime('%Y년 %m월')
+            )
+            
+            # 발송 정보 표시
+            st.info(f"**수신:** {sample_data.get('recipient_email')} | **제목:** {subject_preview}", icon="📧")
+            
+            # 실제 이메일 HTML 미리보기
+            st.components.v1.html(email_html, height=600, scrolling=True)
                     
-                    # 세금계산서 정보 표시 (있으면)
-                    if tax_invoice_html:
-                        st.markdown(tax_invoice_html, unsafe_allow_html=True)
-                    
-                    # 테이블 미리보기 (DataFrame으로)
-                    st.markdown("**📋 표 미리보기:**")
-                    preview_rows = sample_data.get('rows', [])[:5]  # 최대 5행만
-                    if preview_rows:
-                        preview_df = pd.DataFrame(preview_rows)
-                        # 표시할 컬럼만 필터링
-                        cols_to_show = [c for c in display_cols if c in preview_df.columns]
-                        if cols_to_show:
-                            st.dataframe(preview_df[cols_to_show], hide_index=True, use_container_width=True)
-                        else:
-                            st.dataframe(preview_df, hide_index=True, use_container_width=True)
-                        
-                        if len(sample_data.get('rows', [])) > 5:
-                            st.caption(f"... 외 {len(sample_data.get('rows', [])) - 5}행")
-                    
-                    # 미리보기 닫기 버튼
-                    if st.button("❌ 미리보기 닫기", key="step4_close_preview"):
-                        st.session_state.show_preview = False
-                        st.rerun()
-                        
-            except Exception as e:
-                st.error(f"미리보기 오류: {e}")
+        except Exception as e:
+            st.error(f"미리보기 오류: {e}")
+            import traceback
+            st.code(traceback.format_exc())
     else:
         st.info("미리보기할 데이터가 없습니다. 먼저 데이터를 업로드하고 설정을 완료하세요.", icon="ℹ️")
     

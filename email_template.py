@@ -35,10 +35,10 @@ class EmailStyleConfig:
     # 폰트
     font_family: str = "'Malgun Gothic', 'Apple SD Gothic Neo', Arial, sans-serif"
     
-    # 컨테이너
-    container_max_width: str = "800px"
+    # 컨테이너 - 좌우 여백 5%만, 가로 제한 없음
+    container_max_width: str = "100%"
     container_bg: str = "#f8f9fa"
-    container_padding: str = "20px"
+    container_padding: str = "0 5%"  # 좌우 5% 여백
     
     # 헤더
     header_gradient: str = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
@@ -85,10 +85,11 @@ class EmailStyleConfig:
         styles = {
             "container": f"""
                 font-family: {self.font_family};
-                max-width: {self.container_max_width};
-                margin: 0 auto;
+                width: 100%;
+                margin: 0;
                 padding: {self.container_padding};
                 background-color: {self.container_bg};
+                box-sizing: border-box;
             """,
             "header": f"""
                 background: {self.header_gradient};
