@@ -1,26 +1,26 @@
 @echo off
-chcp 65001 > nul
-title 메일머지 시스템 실행
+chcp 65001 > nul 2>&1
+title Mail Merge System
 
 echo ============================================
-echo   📧 지능형 그룹핑 메일머지 시스템
+echo   CSO Mail Merge System
 echo ============================================
 echo.
 
-:: Python 확인
+:: Check Python
 python --version > nul 2>&1
 if errorlevel 1 (
-    echo ❌ Python이 설치되어 있지 않습니다.
-    echo    https://www.python.org/downloads/ 에서 설치해주세요.
+    echo [ERROR] Python is not installed.
+    echo         Please install from https://www.python.org/downloads/
     pause
     exit /b 1
 )
 
-echo ✅ Python 확인 완료
-echo 🚀 앱을 시작합니다...
+echo [OK] Python found
+echo [INFO] Starting application...
 echo.
-echo    브라우저에서 http://localhost:8501 이 자동으로 열립니다.
-echo    종료하려면 이 창에서 Ctrl+C를 누르세요.
+echo    Browser will open at http://localhost:8501
+echo    Press Ctrl+C to stop the server.
 echo.
 
 streamlit run app.py
