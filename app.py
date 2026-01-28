@@ -3202,6 +3202,20 @@ def render_step2():
                 st.success(f"예상 그룹 수: **{len(base_keys)}개**", icon="📊")
     
     # ============================================================
+    # 이메일 컬럼 자동 감지 (별도 시트 미사용 시)
+    # ============================================================
+    if not use_separate:
+        # 현재 데이터에서 이메일 컬럼 자동 감지
+        email_col_candidates = [c for c in columns if '이메일' in c or 'mail' in c.lower() or 'email' in c.lower()]
+        if email_col_candidates:
+            # 기존 설정이 있으면 유지, 없으면 첫 번째 후보 사용
+            current_email_col = st.session_state.get('email_col')
+            if current_email_col not in email_col_candidates:
+                st.session_state.email_col = email_col_candidates[0]
+        else:
+            st.session_state.email_col = None
+    
+    # ============================================================
     # 📧 영역 1: 이메일 본문에 표시될 컬럼 (display_cols 배열)
     # ============================================================
     st.markdown("""
