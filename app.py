@@ -1379,42 +1379,12 @@ def apply_saved_config_to_columns(saved_config: dict, available_columns: list) -
 def move_step(target_step: int, save_config: bool = True):
     """
     공통 스텝 이동 함수 - 본문/사이드바 버튼 모두 이 함수 사용
-    이동 전에 현재 설정을 JSON 파일과 세션에 자동 저장
     
     Args:
         target_step: 이동할 스텝 번호 (1-5)
-        save_config: True이면 이동 전 현재 설정 저장
+        save_config: 미사용 (하위 호환용)
     """
     current_step = st.session_state.get('current_step', 1)
-    
-    # Step 2에서 이동할 때 설정 저장
-    if save_config and current_step == 2:
-        # 현재 설정 수집
-        display_cols = st.session_state.get('display_cols', [])
-        excluded_cols = st.session_state.get('excluded_cols', [])
-        amount_cols = st.session_state.get('amount_cols', [])
-        percent_cols = st.session_state.get('percent_cols', [])
-        date_cols = st.session_state.get('date_cols', [])
-        id_cols = st.session_state.get('id_cols', [])
-        
-        config_to_save = {
-            'display_cols': display_cols,
-            'excluded_cols': excluded_cols,
-            'amount_cols': amount_cols,
-            'percent_cols': percent_cols,
-            'date_cols': date_cols,
-            'id_cols': id_cols,
-            'saved_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        }
-        
-        # JSON 파일에 저장
-        save_column_config_to_json(config_to_save)
-        
-        # 세션 캐시에도 저장
-        sheet_name = st.session_state.get('selected_data_sheet', 'default')
-        save_column_settings(sheet_name)
-        
-        add_log(f"Step 2 설정 저장 완료 (표시: {len(display_cols)}개, 형식: {len(amount_cols)+len(percent_cols)+len(date_cols)+len(id_cols)}개)")
     
     # 스텝 이동
     st.session_state.current_step = target_step
@@ -3362,35 +3332,21 @@ def render_step2():
 
 
 def _save_step2_config_and_move(target_step: int, columns: list, df, df_email, 
-                                 use_separate: bool, sheet_name: str,
+                                 use_separate: bool,
                                  process_data: bool = False, group_key_col: str = None,
                                  use_wildcard: bool = False, conflict_resolution: str = 'first'):
-    """Step 2 설정 저장 후 스텝 이동 (내부 헬퍼 함수)
+    """Step 2 설정 후 스텝 이동 (내부 헬퍼 함수)
     
-    - JSON 저장은 이 함수에서만 수행 (드래그 중에는 저장 안 함)
-    - 데이터 처리가 필요한 경우 process_data=True
+    간소화: JSON 저장 제거, 엑셀 원본 그대로 사용
     """
-    # 현재 세션에서 최종 상태 가져오기
-    display_cols = st.session_state.get('display_cols', columns.copy())
-    excluded_cols = st.session_state.get('excluded_cols', [])
+    # 엑셀 원본 컬럼 그대로 사용
+    display_cols = columns.copy()
     amount_cols = st.session_state.get('amount_cols', [])
     percent_cols = st.session_state.get('percent_cols', [])
     date_cols = st.session_state.get('date_cols', [])
     id_cols = st.session_state.get('id_cols', [])
     
-    # JSON 파일에 설정 저장 (형식 설정만 - 컬럼명 매칭용)
-    config_to_save = {
-        'amount_cols': amount_cols,
-        'percent_cols': percent_cols,
-        'date_cols': date_cols,
-        'id_cols': id_cols,
-        'saved_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    }
-    save_column_config_to_json(config_to_save)
-    
-    # 세션 캐시에도 저장
-    save_column_settings(sheet_name)
-    add_log(f"Step 2 설정 저장: 표시 {len(display_cols)}개, 형식 {len(amount_cols)+len(percent_cols)+len(date_cols)+len(id_cols)}개")
+    add_log(f"Step 2 완료: {len(display_cols)}개 컬럼")
     
     # 데이터 처리 (다음 단계로 갈 때만)
     if process_data and target_step == 3:
