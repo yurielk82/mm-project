@@ -4190,12 +4190,23 @@ def render_step4():
                     </div>
                     '''
             
+            # 미리보기용 행 데이터 (최소 3행 보장)
+            preview_rows = sample_data.get('rows', [])
+            
+            # 행이 3개 미만이면 빈 행 추가하여 최소 3행 표시
+            if len(preview_rows) < 3 and display_cols:
+                # 원본 데이터 복사
+                preview_rows = list(preview_rows)
+                empty_row = {col: '' for col in display_cols}
+                while len(preview_rows) < 3:
+                    preview_rows.append(empty_row.copy())
+            
             email_html = render_email(
                 subject=subject_preview,
                 header_title=header,
                 greeting=greeting_rendered,
                 columns=display_cols,
-                rows=sample_data.get('rows', []),
+                rows=preview_rows,  # 최소 3행 보장된 데이터
                 amount_columns=amount_cols,
                 totals=sample_data.get('totals'),
                 footer_text=footer.replace('\n', '<br>') if footer else None,
