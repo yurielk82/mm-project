@@ -3126,15 +3126,22 @@ def render_step2():
     sheet_name = st.session_state.get('selected_data_sheet', 'default')
     
     # ============================================================
-    # 초기 설정 로드 (최초 1회만)
+    # 초기 설정 로드 (최초 1회만 + display_cols 비어있으면 재초기화)
     # - 이메일 표시: 모든 컬럼
     # - 형식 설정: 컬럼명 매칭으로 복원
     # ============================================================
-    if 'step2_config_loaded' not in st.session_state:
+    
+    # 조건 1: 최초 로드
+    # 조건 2: display_cols가 비어있는 경우 (세션 초기화 등)
+    current_display_cols = st.session_state.get('display_cols', [])
+    need_init = ('step2_config_loaded' not in st.session_state) or (not current_display_cols)
+    
+    if need_init:
         saved_config = load_column_config_from_json()
         
         # 이메일 표시 컬럼: 항상 현재 파일의 모든 컬럼
         st.session_state.display_cols = columns.copy()
+        st.session_state.display_cols_order = columns.copy()
         st.session_state.excluded_cols = []
         
         # 형식 설정: 저장된 컬럼명과 매칭
@@ -3416,11 +3423,35 @@ def render_step2():
         area1_display = list(st.session_state.get('display_cols', []))
         area1_excluded = list(st.session_state.get('excluded_cols', []))
         
-        # 초기 상태 확인: 둘 다 비어있으면 전체 컬럼으로 초기화
-        if not area1_display and not area1_excluded:
-            area1_display = columns.copy()
+        # ★ 핵심 안전장치: display_cols가 비어있거나 유효하지 않은 경우 재초기화
+        # 로컬 실행 시 세션 초기화 등으로 인해 빈 배열이 될 수 있음
+        if not area1_display or not any(c in columns for c in area1_display):
+            # 현재 columns에서 excluded를 제외한 나머지로 초기화
+            if area1_excluded:
+                area1_display = [c for c in columns if c not in area1_excluded]
+            else:
+                area1_display = columns.copy()
+            
+            # 여전히 비어있으면 전체 컬럼 사용
+            if not area1_display:
+                area1_display = columns.copy()
+                area1_excluded = []
+            
             st.session_state.display_cols = area1_display.copy()
             st.session_state.display_cols_order = area1_display.copy()
+            st.session_state.excluded_cols = area1_excluded
+            st.toast("📋 컬럼 목록이 초기화되었습니다", icon="ℹ️")
+        
+        # 컬럼 유효성 검사: 현재 데이터에 없는 컬럼 제거
+        area1_display = [c for c in area1_display if c in columns]
+        area1_excluded = [c for c in area1_excluded if c in columns]
+        
+        # 새로 추가된 컬럼이 있으면 display에 추가
+        all_in_lists = set(area1_display + area1_excluded)
+        new_cols = [c for c in columns if c not in all_in_lists]
+        if new_cols:
+            area1_display.extend(new_cols)
+            st.session_state.display_cols = area1_display.copy()
         
         # 드래그 앤 드롭 UI - 영역 1 전용 key
         dnd_area1_items = [
@@ -3450,6 +3481,16 @@ def render_step2():
                         new_display = list(items) if items else []
                     elif '제외' in header:
                         new_excluded = list(items) if items else []
+            
+            # ★ 안전장치: sort_items가 빈 배열을 반환한 경우 기존 값 유지
+            # (드래그 중 일시적으로 빈 배열이 반환될 수 있음)
+            if not new_display and not new_excluded:
+                # 둘 다 비어있으면 기존 값 유지
+                new_display = area1_display
+                new_excluded = area1_excluded
+            elif not new_display and new_excluded:
+                # display만 비어있고 모든 컬럼이 excluded에 있는 경우는 허용
+                pass  # 사용자가 의도적으로 모든 컬럼 제외
             
             # 세션 상태 업데이트 (영역 1 전용 배열)
             st.session_state.display_cols = new_display
