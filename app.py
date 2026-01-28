@@ -3459,47 +3459,54 @@ def render_step2():
             {"header": "🚫 제외", "items": area1_excluded},
         ]
         
+        # ★ 디버깅: sort_items 호출 전 데이터 확인
+        # st.caption(f"🔍 DEBUG: area1_display={len(area1_display)}개, area1_excluded={len(area1_excluded)}개")
+        
         # sort_items 호출 - 영역 1 전용 key
-        sorted_area1 = sort_items(
-            dnd_area1_items, 
-            multi_containers=True, 
-            direction="horizontal",
-            key="step2_area1_display_dnd"  # 고유 key로 영역 1 식별
-        )
+        try:
+            sorted_area1 = sort_items(
+                dnd_area1_items, 
+                multi_containers=True, 
+                direction="horizontal",
+                key="step2_area1_display_dnd"  # 고유 key로 영역 1 식별
+            )
+        except Exception as e:
+            st.error(f"sort_items 오류: {e}")
+            sorted_area1 = None
         
         # ▼▼▼ 결과를 세션에 저장 (영역 1 전용) ▼▼▼
-        if sorted_area1 and isinstance(sorted_area1, list):
-            new_display = []
-            new_excluded = []
-            
-            for container in sorted_area1:
-                if isinstance(container, dict):
-                    header = container.get('header', '')
-                    items = container.get('items', [])
-                    
-                    if '표시' in header and '제외' not in header:
-                        new_display = list(items) if items else []
-                    elif '제외' in header:
-                        new_excluded = list(items) if items else []
-            
-            # ★ 안전장치: sort_items가 빈 배열을 반환한 경우 기존 값 유지
-            # (드래그 중 일시적으로 빈 배열이 반환될 수 있음)
-            if not new_display and not new_excluded:
-                # 둘 다 비어있으면 기존 값 유지
-                new_display = area1_display
-                new_excluded = area1_excluded
-            elif not new_display and new_excluded:
-                # display만 비어있고 모든 컬럼이 excluded에 있는 경우는 허용
-                pass  # 사용자가 의도적으로 모든 컬럼 제외
-            
-            # 세션 상태 업데이트 (영역 1 전용 배열)
-            st.session_state.display_cols = new_display
-            st.session_state.display_cols_order = new_display
-            st.session_state.excluded_cols = new_excluded
-            
-            # 로컬 변수도 업데이트 (요약 표시용)
-            area1_display = new_display
-            area1_excluded = new_excluded
+        new_display = area1_display  # 기본값으로 초기화
+        new_excluded = area1_excluded
+        
+        if sorted_area1:
+            # sorted_area1이 리스트인 경우 (multi_containers=True)
+            if isinstance(sorted_area1, list):
+                for container in sorted_area1:
+                    if isinstance(container, dict):
+                        header = container.get('header', '')
+                        items = container.get('items', [])
+                        
+                        if '표시' in header and '제외' not in header:
+                            if items:  # items가 있을 때만 업데이트
+                                new_display = list(items)
+                        elif '제외' in header:
+                            new_excluded = list(items) if items else []
+            # sorted_area1이 단일 리스트인 경우 (multi_containers=False 또는 버전 차이)
+            elif isinstance(sorted_area1[0], str) if sorted_area1 else False:
+                new_display = list(sorted_area1)
+        
+        # ★ 최종 안전장치: new_display가 비어있으면 columns로 복원
+        if not new_display:
+            new_display = [c for c in columns if c not in new_excluded] if new_excluded else columns.copy()
+        
+        # 세션 상태 업데이트 (영역 1 전용 배열)
+        st.session_state.display_cols = new_display
+        st.session_state.display_cols_order = new_display
+        st.session_state.excluded_cols = new_excluded
+        
+        # 로컬 변수도 업데이트 (요약 표시용)
+        area1_display = new_display
+        area1_excluded = new_excluded
         
         # 표시 컬럼 요약 (영역 1 결과)
         col_info1, col_info2 = st.columns(2)
@@ -3548,20 +3555,24 @@ def render_step2():
         ]
         
         # sort_items 호출 - 영역 2 전용 key
-        sorted_area2 = sort_items(
-            dnd_area2_items, 
-            multi_containers=True, 
-            direction="horizontal",
-            key="step2_area2_format_dnd"  # 고유 key로 영역 2 식별
-        )
+        try:
+            sorted_area2 = sort_items(
+                dnd_area2_items, 
+                multi_containers=True, 
+                direction="horizontal",
+                key="step2_area2_format_dnd"  # 고유 key로 영역 2 식별
+            )
+        except Exception as e:
+            st.error(f"sort_items 오류 (영역2): {e}")
+            sorted_area2 = None
         
         # ▼▼▼ 결과를 세션에 저장 (영역 2 전용) ▼▼▼
+        new_amount = area2_amount  # 기본값으로 초기화
+        new_percent = area2_percent
+        new_date = area2_date
+        new_id = area2_id
+        
         if sorted_area2 and isinstance(sorted_area2, list):
-            new_amount = []
-            new_percent = []
-            new_date = []
-            new_id = []
-            
             for container in sorted_area2:
                 if isinstance(container, dict):
                     header = container.get('header', '')
