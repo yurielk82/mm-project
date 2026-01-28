@@ -2815,13 +2815,16 @@ def render_step1():
         # 데이터 분석 요약 (파일 업로드 직후 표시)
         # ============================================================
         def analyze_data(df_data, df_email, use_separate, group_col=None):
-            """데이터 분석 및 통계 계산"""
+            """데이터 분석 및 통계 계산
+            
+            발송 가능 계산: 전체 업체 - 이메일 없음 - 데이터 없음
+            """
             stats = {
                 'total_rows': 0,
                 'total_groups': 0,
                 'has_email': 0,
                 'no_email': 0,
-                'no_data': 0,
+                'no_data': 0,  # 필수 데이터 없는 그룹
                 'valid_for_send': 0
             }
             
@@ -2841,29 +2844,85 @@ def render_step1():
             unique_groups = [g for g in unique_groups if not str(g).endswith(' 합계') and str(g).lower() not in ['nan', 'none', '']]
             stats['total_groups'] = len(unique_groups)
             
-            # 이메일 분석
-            if use_separate and df_email is not None:
-                # 별도 이메일 시트 사용
-                email_col_candidates = [c for c in df_email.columns if '이메일' in c or 'mail' in c.lower()]
-                if email_col_candidates:
-                    email_col = email_col_candidates[0]
-                    stats['has_email'] = df_email[email_col].notna().sum()
-                    stats['no_email'] = len(df_email) - stats['has_email']
-            else:
-                # 같은 시트에서 이메일
-                email_cols = [c for c in df_data.columns if '이메일' in c or 'mail' in c.lower()]
-                if email_cols:
-                    email_col = email_cols[0]
-                    # 그룹별 이메일 보유 여부
-                    for g in unique_groups:
-                        group_data = df_data[df_data[group_col] == g]
-                        if group_data[email_col].notna().any():
-                            stats['has_email'] += 1
-                        else:
-                            stats['no_email'] += 1
+            # 금액 컬럼 탐지 (필수 데이터 체크용)
+            amount_col_candidates = [c for c in df_data.columns 
+                                     if '수수료' in c or '금액' in c or '합계' in c]
             
-            # 데이터 없는 그룹 (행이 0인 경우는 없으므로 0으로 유지)
-            stats['valid_for_send'] = stats['has_email']
+            # 이메일 컬럼 탐지
+            email_cols = [c for c in df_data.columns if '이메일' in c or 'mail' in c.lower() or 'email' in c.lower()]
+            email_col_in_data = email_cols[0] if email_cols else None
+            
+            # 별도 이메일 시트 처리
+            email_lookup = {}
+            if use_separate and df_email is not None:
+                # 별도 이메일 시트에서 그룹별 이메일 매핑
+                email_col_candidates = [c for c in df_email.columns if '이메일' in c or 'mail' in c.lower()]
+                group_col_candidates = [c for c in df_email.columns if 'CSO' in c or '관리업체' in c or '업체' in c]
+                
+                if email_col_candidates and group_col_candidates:
+                    e_col = email_col_candidates[0]
+                    g_col = group_col_candidates[0]
+                    for _, row in df_email.iterrows():
+                        key = str(row.get(g_col, '')).strip()
+                        email_val = row.get(e_col)
+                        if key and pd.notna(email_val) and str(email_val).strip():
+                            email_lookup[key] = str(email_val).strip()
+            
+            # 그룹별 분석
+            for g in unique_groups:
+                group_data = df_data[df_data[group_col] == g]
+                
+                # 1. 이메일 보유 여부 체크
+                has_email_for_group = False
+                
+                if use_separate and df_email is not None:
+                    # 별도 시트에서 이메일 확인
+                    if str(g) in email_lookup:
+                        has_email_for_group = True
+                elif email_col_in_data:
+                    # 같은 시트에서 이메일 확인
+                    if group_data[email_col_in_data].notna().any():
+                        email_vals = group_data[email_col_in_data].dropna()
+                        if len(email_vals) > 0 and any(str(v).strip() for v in email_vals):
+                            has_email_for_group = True
+                
+                # 2. 필수 데이터 보유 여부 체크 (금액 컬럼에 값이 있는지)
+                has_required_data = True
+                if amount_col_candidates:
+                    # 합계 행 제외한 실제 데이터 행만 확인
+                    data_rows = group_data[~group_data[group_col].astype(str).str.endswith(' 합계')]
+                    if len(data_rows) == 0:
+                        has_required_data = False
+                    else:
+                        # 금액 컬럼 중 하나라도 유효한 값이 있는지
+                        has_any_amount = False
+                        for amt_col in amount_col_candidates:
+                            if amt_col in data_rows.columns:
+                                vals = data_rows[amt_col].dropna()
+                                if len(vals) > 0:
+                                    # 0이 아닌 값이 있는지 확인
+                                    numeric_vals = pd.to_numeric(vals, errors='coerce').dropna()
+                                    if len(numeric_vals) > 0 and numeric_vals.sum() != 0:
+                                        has_any_amount = True
+                                        break
+                        if not has_any_amount:
+                            has_required_data = False
+                
+                # 3. 통계 업데이트
+                if has_email_for_group:
+                    stats['has_email'] += 1
+                else:
+                    stats['no_email'] += 1
+                
+                if not has_required_data:
+                    stats['no_data'] += 1
+            
+            # 발송 가능 = 전체 업체 - 이메일 없음 - 데이터 없음
+            # 단, 이메일과 데이터가 모두 없는 그룹은 중복 카운트 방지
+            stats['valid_for_send'] = stats['total_groups'] - stats['no_email'] - stats['no_data']
+            # 이메일 없음과 데이터 없음이 겹치는 그룹이 있을 수 있으므로 보정
+            # 발송 가능 = 이메일 있고 AND 데이터 있는 그룹
+            stats['valid_for_send'] = max(0, stats['has_email'] - stats['no_data'])
             
             return stats
         
@@ -2940,9 +2999,12 @@ def render_step1():
                 if stats['no_email'] > 0:
                     summary_parts.append(f"❌ 이메일 없음: **{stats['no_email']}개**")
             
-            # 발송 가능
-            if stats['valid_for_send'] > 0:
-                summary_parts.append(f"🚀 발송 가능: **{stats['valid_for_send']}개**")
+            # 데이터 없음 (필수 값 누락)
+            if stats['no_data'] > 0:
+                summary_parts.append(f"📭 데이터 없음: **{stats['no_data']}개**")
+            
+            # 발송 가능 (전체 업체 - 이메일 없음 - 데이터 없음)
+            summary_parts.append(f"🚀 발송 가능: **{stats['valid_for_send']}개**")
             
             # 요약 표시
             st.success(" | ".join(summary_parts))
