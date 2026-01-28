@@ -78,18 +78,21 @@ EMAIL_STYLES = {
         border-radius: 0 5px 5px 0;
     """,
     
-    # 테이블 컨테이너
+    # 테이블 컨테이너 (가로 스크롤 허용)
     "table_container": """
         margin: 25px 0;
         overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     """,
     
-    # 메인 데이터 테이블
+    # 메인 데이터 테이블 (최소 너비 설정으로 가로 확장 허용)
     "table": """
+        min-width: 800px;
         width: 100%;
         border-collapse: collapse;
         font-size: 14px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        table-layout: auto;
     """,
     
     # 테이블 헤더
@@ -114,20 +117,25 @@ EMAIL_STYLES = {
         white-space: nowrap;
     """,
     
-    # 테이블 데이터 셀 (일반)
+    # 테이블 데이터 셀 (일반) - 세로 최대 3줄, 줄임표 없이 자연스럽게 가림
     "td": """
         padding: 12px;
         border: 1px solid #dee2e6;
         color: #333;
+        max-height: 4.5em;
+        line-height: 1.5em;
+        overflow: hidden;
+        vertical-align: top;
     """,
     
-    # 테이블 데이터 셀 (금액 - 우측 정렬)
+    # 테이블 데이터 셀 (금액 - 우측 정렬, 절대 줄바꿈 금지)
     "td_amount": """
         padding: 12px;
         border: 1px solid #dee2e6;
         color: #333;
         text-align: right;
         font-family: 'Consolas', 'Monaco', monospace;
+        white-space: nowrap;
     """,
     
     # 짝수 행 배경 (Striped)
@@ -152,9 +160,10 @@ EMAIL_STYLES = {
         border: 2px solid #ffc107;
         color: #856404;
         font-weight: bold;
+        white-space: nowrap;
     """,
     
-    # 합계 금액 셀
+    # 합계 금액 셀 (절대 줄바꿈 금지)
     "td_total_amount": """
         padding: 14px 12px;
         border: 2px solid #ffc107;
@@ -163,6 +172,7 @@ EMAIL_STYLES = {
         text-align: right;
         font-family: 'Consolas', 'Monaco', monospace;
         font-size: 15px;
+        white-space: nowrap;
     """,
     
     # 푸터 영역
