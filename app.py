@@ -3093,15 +3093,32 @@ def render_step2():
     if need_init:
         saved_config = load_column_config_from_json()
         
-        # 이메일 표시 컬럼: 항상 현재 파일의 모든 컬럼
-        st.session_state.display_cols = columns.copy()
-        st.session_state.display_cols_order = columns.copy()
-        st.session_state.excluded_cols = []
-        
-        # 형식 설정: 저장된 컬럼명과 매칭
+        # 저장된 설정에서 display_cols 복원 시도
         if saved_config:
-            matched_formats = []
+            # display_cols 복원 (저장된 순서 유지, 현재 파일에 있는 컬럼만)
+            saved_display = saved_config.get('display_cols', [])
+            saved_excluded = saved_config.get('excluded_cols', [])
             
+            # 저장된 컬럼 중 현재 파일에 있는 것만 필터링 (순서 유지)
+            restored_display = [c for c in saved_display if c in columns]
+            restored_excluded = [c for c in saved_excluded if c in columns]
+            
+            # 새로 추가된 컬럼은 표시 목록에 추가
+            all_restored = set(restored_display + restored_excluded)
+            new_columns = [c for c in columns if c not in all_restored]
+            
+            if restored_display:
+                st.session_state.display_cols = restored_display + new_columns
+                st.session_state.display_cols_order = restored_display + new_columns
+                st.session_state.excluded_cols = restored_excluded
+            else:
+                # 저장된 display_cols가 없으면 전체 컬럼 사용
+                st.session_state.display_cols = columns.copy()
+                st.session_state.display_cols_order = columns.copy()
+                st.session_state.excluded_cols = []
+            
+            # 형식 설정 복원
+            matched_formats = []
             for fmt_key, fmt_name in [('amount_cols', '금액'), ('percent_cols', '퍼센트'), 
                                        ('date_cols', '날짜'), ('id_cols', 'ID')]:
                 saved_list = saved_config.get(fmt_key, [])
@@ -3110,9 +3127,20 @@ def render_step2():
                 if matched:
                     matched_formats.append(f"{fmt_name} {len(matched)}개")
             
+            # 복원 알림
+            restore_info = []
+            if restored_display:
+                restore_info.append(f"컬럼순서 {len(restored_display)}개")
             if matched_formats:
-                st.toast(f"💾 형식 설정 복원: {', '.join(matched_formats)}", icon="✅")
+                restore_info.append(', '.join(matched_formats))
+            
+            if restore_info:
+                st.toast(f"💾 설정 복원: {' | '.join(restore_info)}", icon="✅")
         else:
+            # 저장된 설정이 없으면 전체 컬럼으로 초기화
+            st.session_state.display_cols = columns.copy()
+            st.session_state.display_cols_order = columns.copy()
+            st.session_state.excluded_cols = []
             st.session_state.amount_cols = []
             st.session_state.percent_cols = []
             st.session_state.date_cols = []
@@ -3408,115 +3436,66 @@ def render_step2():
             st.session_state.display_cols = area1_display.copy()
         
         # ============================================================
-        # 드래그 앤 드롭 UI vs 멀티셀렉트 UI 선택
+        # 컬럼 선택 및 순서 변경 UI (로컬/배포 환경 모두 호환)
         # ============================================================
-        use_dnd = st.checkbox("🔀 드래그 앤 드롭 UI 사용", value=False, 
-                              help="체크 해제 시 기본 멀티셀렉트 UI를 사용합니다")
         
-        if use_dnd:
-            # 드래그 앤 드롭 UI - custom_style로 가시성 보장
-            dnd_area1_items = [
-                {"header": "📧 이메일에 표시 (순서대로)", "items": area1_display},
-                {"header": "🚫 제외", "items": area1_excluded},
-            ]
-            
-            # 컴포넌트 내부 스타일 정의
-            dnd_custom_style = """
-            .sortable-component {
-                display: flex !important;
-                flex-wrap: wrap;
-                gap: 10px;
-                padding: 10px;
-                min-height: 80px;
-            }
-            .sortable-container {
-                flex: 1;
-                min-width: 200px;
-                background-color: #f8f9fa;
-                border-radius: 8px;
-                padding: 10px;
-                border: 1px solid #dee2e6;
-            }
-            .sortable-container-header {
-                font-weight: bold;
-                padding: 8px;
-                background-color: #e9ecef;
-                border-radius: 4px;
-                margin-bottom: 8px;
-            }
-            .sortable-container-body {
-                min-height: 50px;
-                display: flex;
-                flex-wrap: wrap;
-                gap: 5px;
-            }
-            .sortable-item {
-                display: inline-block !important;
-                visibility: visible !important;
-                opacity: 1 !important;
-                padding: 6px 12px;
-                margin: 3px;
-                background-color: #4dabf7;
-                color: white;
-                border-radius: 16px;
-                font-size: 0.85rem;
-                cursor: grab;
-                user-select: none;
-            }
-            .sortable-item:hover {
-                background-color: #339af0;
-            }
-            """
-            
-            try:
-                sorted_area1 = sort_items(
-                    dnd_area1_items, 
-                    multi_containers=True, 
-                    direction="horizontal",
-                    key="step2_area1_display_dnd",
-                    custom_style=dnd_custom_style
-                )
-            except Exception as e:
-                st.error(f"sort_items 오류: {e}")
-                sorted_area1 = None
-            
-            # 결과 처리
-            new_display = area1_display
-            new_excluded = area1_excluded
-            
-            if sorted_area1 and isinstance(sorted_area1, list):
-                for container in sorted_area1:
-                    if isinstance(container, dict):
-                        header = container.get('header', '')
-                        items = container.get('items', [])
-                        
-                        if '표시' in header and '제외' not in header:
-                            if items:
-                                new_display = list(items)
-                        elif '제외' in header:
-                            new_excluded = list(items) if items else []
-            
-            if not new_display:
-                new_display = [c for c in columns if c not in new_excluded] if new_excluded else columns.copy()
+        # 현재 표시 컬럼 목록을 칩 형태로 표시
+        st.caption("📝 이메일에 표시할 컬럼을 선택하고 순서를 조정하세요")
         
-        else:
-            # 멀티셀렉트 UI (폴백)
-            st.caption("📝 표시할 컬럼을 선택하세요 (선택 순서대로 이메일에 표시)")
-            
-            new_display = st.multiselect(
-                "이메일에 표시할 컬럼",
-                options=columns,
-                default=area1_display if area1_display else columns,
-                key="step2_area1_multiselect",
-                help="선택한 순서대로 이메일 표에 표시됩니다"
-            )
-            
-            new_excluded = [c for c in columns if c not in new_display]
-            
-            if not new_display:
-                st.warning("⚠️ 최소 1개 이상의 컬럼을 선택해야 합니다")
-                new_display = columns.copy()
-                new_excluded = []
+        # 컬럼 선택 (멀티셀렉트)
+        new_display = st.multiselect(
+            "표시할 컬럼 선택",
+            options=columns,
+            default=area1_display if area1_display else columns,
+            key="step2_area1_multiselect",
+            help="선택한 컬럼이 이메일 표에 표시됩니다"
+        )
+        
+        new_excluded = [c for c in columns if c not in new_display]
+        
+        if not new_display:
+            st.warning("⚠️ 최소 1개 이상의 컬럼을 선택해야 합니다")
+            new_display = columns.copy()
+            new_excluded = []
+        
+        # 컬럼 순서 조정 UI (순수 Streamlit - 100% 로컬 호환)
+        if len(new_display) > 1:
+            with st.expander("🔀 컬럼 순서 변경", expanded=False):
+                st.caption("컬럼을 선택하고 ▲/▼ 버튼으로 순서를 변경하세요")
+                
+                # 현재 순서 표시
+                order_cols = st.columns([3, 1, 1])
+                with order_cols[0]:
+                    selected_col = st.selectbox(
+                        "이동할 컬럼",
+                        options=new_display,
+                        key="step2_col_to_move"
+                    )
+                
+                with order_cols[1]:
+                    if st.button("▲ 위로", key="step2_move_up", width='stretch'):
+                        if selected_col in new_display:
+                            idx = new_display.index(selected_col)
+                            if idx > 0:
+                                new_display[idx], new_display[idx-1] = new_display[idx-1], new_display[idx]
+                                st.session_state.display_cols = new_display
+                                st.rerun()
+                
+                with order_cols[2]:
+                    if st.button("▼ 아래로", key="step2_move_down", width='stretch'):
+                        if selected_col in new_display:
+                            idx = new_display.index(selected_col)
+                            if idx < len(new_display) - 1:
+                                new_display[idx], new_display[idx+1] = new_display[idx+1], new_display[idx]
+                                st.session_state.display_cols = new_display
+                                st.rerun()
+                
+                # 현재 컬럼 순서 미리보기
+                st.markdown("**현재 순서:**")
+                order_preview = " → ".join([f"`{c}`" for c in new_display[:8]])
+                if len(new_display) > 8:
+                    order_preview += f" ... (+{len(new_display)-8}개)"
+                st.markdown(order_preview)
         
         # 세션 상태 업데이트
         st.session_state.display_cols = new_display
