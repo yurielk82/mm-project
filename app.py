@@ -2122,7 +2122,7 @@ SENDER_NAME = "한국유니온제약"''', language="toml")
         st.markdown("---")
         st.markdown('<div class="config-note">⚠️ <strong>주의:</strong> secrets.toml 파일은 절대 GitHub에 업로드하지 마세요! (.gitignore에 추가)</div>', unsafe_allow_html=True)
         
-        if st.button("닫기", use_container_width=True, type="primary"):
+        if st.button("닫기", width='stretch', type="primary"):
             st.rerun()
     
     return show_auto_login_guide
@@ -2178,9 +2178,9 @@ def render_local_guide_dialog():
         
         col1, col2 = st.columns(2)
         with col1:
-            st.link_button("📦 ZIP 다운로드", "https://github.com/yurielk82/mm-project/archive/refs/heads/main.zip", use_container_width=True)
+            st.link_button("📦 ZIP 다운로드", "https://github.com/yurielk82/mm-project/archive/refs/heads/main.zip", width='stretch')
         with col2:
-            st.link_button("🔗 GitHub 열기", "https://github.com/yurielk82/mm-project", use_container_width=True)
+            st.link_button("🔗 GitHub 열기", "https://github.com/yurielk82/mm-project", width='stretch')
         
         st.markdown('<div class="guide-code">git clone https://github.com/yurielk82/mm-project.git<br>cd mm-project</div>', unsafe_allow_html=True)
         st.caption("ZIP 다운로드 후 압축 해제하거나, 위 명령어로 클론")
@@ -2216,7 +2216,7 @@ pip install -r requirements.txt
 # 3. 앱 실행
 streamlit run app.py""", language="bash")
         
-        if st.button("닫기", use_container_width=True, type="primary"):
+        if st.button("닫기", width='stretch', type="primary"):
             st.rerun()
     
     return show_guide
@@ -2455,12 +2455,12 @@ def render_step_nav_buttons(current_step: int, total_steps: int):
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("‹ 이전", key="nav_prev", disabled=prev_disabled, use_container_width=True):
+        if st.button("‹ 이전", key="nav_prev", disabled=prev_disabled, width='stretch'):
             if execute_step_transition(current_step, "prev"):
                 st.rerun()
     
     with col2:
-        if st.button("다음 ›", key="nav_next", disabled=next_disabled, use_container_width=True):
+        if st.button("다음 ›", key="nav_next", disabled=next_disabled, width='stretch'):
             if execute_step_transition(current_step, "next"):
                 st.rerun()
 
@@ -2607,7 +2607,7 @@ def render_smtp_sidebar():
                 st.markdown('</div>', unsafe_allow_html=True)
             
             # 연결 테스트 버튼
-            if st.button("🔌 연결 테스트", use_container_width=True, type="primary"):
+            if st.button("🔌 연결 테스트", width='stretch', type="primary"):
                 final_username = smtp_username or smtp_defaults['username']
                 final_password = smtp_password or smtp_defaults['password']
                 
@@ -2643,13 +2643,13 @@ def render_smtp_sidebar():
         current_page = st.session_state.get('current_page', '📧 메일 발송')
         
         with st.expander("📋 메뉴", expanded=False):
-            if st.button("📧 메일 발송", use_container_width=True, 
+            if st.button("📧 메일 발송", width='stretch', 
                         type="primary" if current_page == "📧 메일 발송" else "secondary",
                         key="goto_mail"):
                 st.session_state.current_page = '📧 메일 발송'
                 st.rerun()
             
-            if st.button("📜 발송 이력", use_container_width=True,
+            if st.button("📜 발송 이력", width='stretch',
                         type="primary" if current_page == "📜 발송 이력" else "secondary",
                         key="goto_history"):
                 st.session_state.current_page = '📜 발송 이력'
@@ -2664,13 +2664,13 @@ def render_smtp_sidebar():
         with st.expander("📖 가이드", expanded=False):
             st.link_button("📦 로컬 실행 파일 다운", 
                           "https://github.com/yurielk82/mm-project/archive/refs/heads/main.zip",
-                          use_container_width=True)
+                          width='stretch')
             
-            if st.button("💻 로컬 실행 가이드", use_container_width=True, key="local_guide_btn"):
+            if st.button("💻 로컬 실행 가이드", width='stretch', key="local_guide_btn"):
                 st.session_state.show_local_guide = True
                 st.rerun()
             
-            if st.button("🔐 자동로그인 설정", use_container_width=True, key="auto_login_guide_btn"):
+            if st.button("🔐 자동로그인 설정", width='stretch', key="auto_login_guide_btn"):
                 st.session_state.show_auto_login_guide = True
                 st.rerun()
         
@@ -3012,14 +3012,14 @@ def render_step1():
         # 데이터 미리보기 (접힘)
         if st.session_state.df is not None:
             with st.expander(f"📋 데이터 미리보기 ({len(st.session_state.df):,}행)", expanded=False):
-                st.dataframe(st.session_state.df.head(10), use_container_width=True, hide_index=True)
+                st.dataframe(st.session_state.df.head(10), width='stretch', hide_index=True)
         
         # 네비게이션 (하단 고정 스타일)
         st.markdown("<div style='height: 24px'></div>", unsafe_allow_html=True)
         
         col1, col2, col3 = st.columns([1, 2, 1])
         with col3:
-            if st.button("다음 단계 →", type="primary", use_container_width=True, key="step1_next"):
+            if st.button("다음 단계 →", type="primary", width='stretch', key="step1_next"):
                 if st.session_state.df is not None:
                     st.session_state.current_step = 2
                     st.rerun()
@@ -3330,7 +3330,7 @@ def render_step2():
                     with col_preview:
                         st.dataframe(
                             preview_df,
-                            use_container_width=True,
+                            width='stretch',
                             hide_index=True,
                             column_config={
                                 "CSO관리업체명": st.column_config.TextColumn("CSO관리업체명", width="medium"),
@@ -3621,7 +3621,7 @@ def render_step2():
         
         with col_conf2:
             st.markdown("##### ")  # 높이 맞춤
-            if st.button("🔄 초기화", use_container_width=True, key="step2_reset"):
+            if st.button("🔄 초기화", width='stretch', key="step2_reset"):
                 # 세션 상태 초기화
                 st.session_state.display_cols = columns.copy()
                 st.session_state.excluded_cols = []
@@ -3642,7 +3642,7 @@ def render_step2():
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col1:
-        if st.button("← 이전", use_container_width=True, key="step2_prev"):
+        if st.button("← 이전", width='stretch', key="step2_prev"):
             # 이전으로 가기 전에 설정 저장 후 이동
             _save_step2_config_and_move(1, columns, df, df_email, use_separate, sheet_name)
     
@@ -3651,7 +3651,7 @@ def render_step2():
         current_display_cols = st.session_state.get('display_cols', [])
         can_proceed = len(current_display_cols) > 0
         
-        if st.button("다음 단계 →", type="primary", use_container_width=True, 
+        if st.button("다음 단계 →", type="primary", width='stretch', 
                     key="step2_next", disabled=not can_proceed):
             if not current_display_cols:
                 st.error("표시할 컬럼을 1개 이상 배치하세요", icon="❌")
@@ -3816,7 +3816,7 @@ def render_step3():
                 tax_df = pd.DataFrame(tax_invoice_data)
                 st.dataframe(
                     tax_df,
-                    use_container_width=True,
+                    width='stretch',
                     hide_index=True,
                     column_config={
                         "CSO관리업체명": st.column_config.TextColumn("CSO관리업체명", width="medium"),
@@ -3856,7 +3856,7 @@ def render_step3():
     with col_f1:
         if st.button(
             f"📧 전체 발송 대상 ({valid})",
-            use_container_width=True,
+            width='stretch',
             type="primary" if st.session_state.step3_filter == 'all' else "secondary",
             key="filter_all"
         ):
@@ -3866,7 +3866,7 @@ def render_step3():
     with col_f2:
         if st.button(
             f"📭 이메일 없음 ({no_email})",
-            use_container_width=True,
+            width='stretch',
             type="primary" if st.session_state.step3_filter == 'no_email' else "secondary",
             key="filter_no_email"
         ):
@@ -3876,7 +3876,7 @@ def render_step3():
     with col_f3:
         if st.button(
             f"📋 데이터 없음 ({no_data})",
-            use_container_width=True,
+            width='stretch',
             type="primary" if st.session_state.step3_filter == 'no_data' else "secondary",
             key="filter_no_data"
         ):
@@ -3959,7 +3959,7 @@ def render_step3():
                     
                     st.dataframe(
                         df_display, 
-                        use_container_width=True, 
+                        width='stretch', 
                         hide_index=True,
                         height=250
                     )
@@ -3986,7 +3986,7 @@ def render_step3():
             
             st.dataframe(
                 preview_df,
-                use_container_width=True,
+                width='stretch',
                 hide_index=True,
                 column_config={
                     "업체명": st.column_config.TextColumn("업체명", width="medium"),
@@ -4002,11 +4002,11 @@ def render_step3():
     st.markdown("<div style='height: 24px'></div>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
-        if st.button("← 이전", use_container_width=True, key="step3_prev"):
+        if st.button("← 이전", width='stretch', key="step3_prev"):
             st.session_state.current_step = 2
             st.rerun()
     with col3:
-        if st.button("다음 단계 →", type="primary", use_container_width=True, disabled=valid==0, key="step3_next"):
+        if st.button("다음 단계 →", type="primary", width='stretch', disabled=valid==0, key="step3_next"):
             st.session_state.current_step = 4
             st.rerun()
 
@@ -4030,7 +4030,7 @@ def render_step4():
             help="미리 정의된 템플릿을 선택하세요"
         )
     with col_apply:
-        if st.button("적용", use_container_width=True):
+        if st.button("적용", width='stretch'):
             preset = TEMPLATE_PRESETS[preset_name]
             st.session_state.subject_template = preset.subject
             st.session_state.header_title = preset.header
@@ -4250,11 +4250,11 @@ def render_step4():
     st.markdown("<div style='height: 24px'></div>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
-        if st.button("← 이전", use_container_width=True, key="step4_prev"):
+        if st.button("← 이전", width='stretch', key="step4_prev"):
             st.session_state.current_step = 3
             st.rerun()
     with col3:
-        if st.button("발송 단계로 →", type="primary", use_container_width=True, key="step4_next"):
+        if st.button("발송 단계로 →", type="primary", width='stretch', key="step4_next"):
             st.session_state.current_step = 5
             st.rerun()
 
@@ -4408,14 +4408,14 @@ def render_step5():
     col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
     
     with col1:
-        if st.button("← 이전", use_container_width=True, key="step5_prev"):
+        if st.button("← 이전", width='stretch', key="step5_prev"):
             st.session_state.current_step = 4
             st.rerun()
     
     with col2:
         test_btn = st.button(
             "📧 내게 테스트",
-            use_container_width=True,
+            width='stretch',
             disabled=not st.session_state.smtp_config,
             help="내 이메일로 샘플 1건 발송하여 미리 확인"
         )
@@ -4425,7 +4425,7 @@ def render_step5():
         failed_list = [r for r in st.session_state.get('send_results', []) if r.get('상태') == '실패']
         resend_btn = st.button(
             f"🔄 실패 재발송 ({len(failed_list)})",
-            use_container_width=True,
+            width='stretch',
             disabled=not st.session_state.smtp_config or len(failed_list) == 0,
             help="실패한 건만 다시 발송"
         )
@@ -4434,7 +4434,7 @@ def render_step5():
         send_btn = st.button(
             "🚀 전체 발송",
             type="primary",
-            use_container_width=True,
+            width='stretch',
             disabled=not st.session_state.smtp_config or len(valid_groups)==0,
             help=f"총 {len(valid_groups)}개 업체에 이메일 발송"
         )
@@ -4452,9 +4452,9 @@ def render_step5():
         st.warning(f"⚠️ **총 {len(valid_groups)}개 업체**에 이메일을 발송합니다. 계속하시겠습니까?")
         col_yes, col_no = st.columns(2)
         with col_yes:
-            confirmed = st.button("✅ 예, 발송합니다", type="primary", use_container_width=True)
+            confirmed = st.button("✅ 예, 발송합니다", type="primary", width='stretch')
         with col_no:
-            if st.button("❌ 취소", use_container_width=True):
+            if st.button("❌ 취소", width='stretch'):
                 st.session_state.confirm_send = False
                 st.rerun()
         
@@ -4522,7 +4522,7 @@ def render_step5():
             with col_progress:
                 progress_bar = st.progress(0)
             with col_stop:
-                if st.button("🛑 긴급 정지", type="secondary", use_container_width=True):
+                if st.button("🛑 긴급 정지", type="secondary", width='stretch'):
                     st.session_state.emergency_stop = True
             
             status_col1, status_col2 = st.columns([3, 1])
@@ -4656,7 +4656,7 @@ def render_step5():
                 failed_df = results_df[results_df['상태'] == '실패']
                 st.dataframe(
                     failed_df.style.apply(lambda x: ['background-color: #ffebee' if x['상태'] == '실패' else '' for _ in x], axis=1),
-                    use_container_width=True,
+                    width='stretch',
                     hide_index=True
                 )
             
@@ -4671,7 +4671,7 @@ def render_step5():
                 
                 st.dataframe(
                     results_df.style.apply(highlight_status, axis=1),
-                    use_container_width=True,
+                    width='stretch',
                     hide_index=True
                 )
             
@@ -4691,7 +4691,7 @@ def render_step5():
                     output.getvalue(),
                     f"발송결과_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True
+                    width='stretch'
                 )
             
             with col_dl2:
@@ -4705,7 +4705,7 @@ def render_step5():
                         output_fail.getvalue(),
                         f"발송실패_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=True
+                        width='stretch'
                     )
     
     # 운영 로그 (Activity Log) - Expander로 표시
@@ -4868,7 +4868,7 @@ def render_history_tab():
     
     with col3:
         st.markdown("<br>", unsafe_allow_html=True)
-        search_btn = st.button("🔍 검색", use_container_width=True)
+        search_btn = st.button("🔍 검색", width='stretch')
     
     # 통계 카드
     stats = get_statistics(period_filter if period_filter else None)
@@ -4892,7 +4892,7 @@ def render_history_tab():
                 chart_data = pd.DataFrame(stats['top_companies'], columns=['업체명', '발송 수'])
                 fig = px.bar(chart_data, x='업체명', y='발송 수', title='업체별 발송 빈도')
                 fig.update_layout(height=300)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
     
     st.divider()
     
@@ -4921,7 +4921,7 @@ def render_history_tab():
         df_display = df_history[display_cols].rename(columns=display_names)
         st.dataframe(
             df_display.style.apply(highlight_history, axis=1),
-            use_container_width=True,
+            width='stretch',
             hide_index=True
         )
     else:
