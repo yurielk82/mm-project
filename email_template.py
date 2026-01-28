@@ -636,7 +636,8 @@ def render_email_content(
     group_data: Dict[str, Any],
     display_cols: List[str],
     amount_cols: List[str],
-    templates: Dict[str, str]
+    templates: Dict[str, str],
+    extra_html_before_table: Optional[str] = None  # 세금계산서 정보 등
 ) -> str:
     """
     그룹 데이터와 템플릿으로 이메일 콘텐츠를 생성합니다.
@@ -647,6 +648,7 @@ def render_email_content(
         display_cols: 표시할 컬럼 목록
         amount_cols: 금액 컬럼 목록
         templates: 템플릿 딕셔너리 (subject, header_title, greeting, footer 등)
+        extra_html_before_table: 테이블 위에 삽입할 추가 HTML (세금계산서 발행 정보 등)
     
     Returns:
         렌더링된 HTML 문자열
@@ -694,6 +696,7 @@ def render_email_content(
         info_message=info_message if info_message else None,
         additional_message=additional if additional else None,
         footer_text=footer.replace('\n', '<br>') if footer else None,
+        extra_html_before_table=extra_html_before_table,  # 세금계산서 정보 등
         company_name=group_key,
         company_code=group_key,
         period=template_vars['period'],

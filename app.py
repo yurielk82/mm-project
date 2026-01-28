@@ -4257,6 +4257,62 @@ def render_step4():
 def render_step5():
     """Step 5: 발송 - UX 최적화 (안심 장치, 즉각적 피드백)"""
     
+    # 세금계산서 발행 정보 HTML 생성 헬퍼 함수
+    def get_tax_invoice_html(group_key: str, group_data: dict) -> str:
+        """그룹 데이터에서 세금계산서 발행 정보 HTML 생성"""
+        show_tax_invoice = st.session_state.get('show_tax_invoice_info', False)
+        tax_amount_col = st.session_state.get('tax_amount_col')
+        
+        if not show_tax_invoice or not tax_amount_col:
+            return ""
+        
+        # 합계 행에서 세금계산서 금액 추출
+        rows = group_data.get('rows', [])
+        tax_amount = 0
+        
+        for row in rows:
+            row_values = list(row.values())
+            is_total_row = any('합계' in str(v) for v in row_values)
+            
+            if is_total_row and tax_amount_col in row:
+                try:
+                    amt_str = str(row[tax_amount_col]).replace(',', '').replace('원', '').strip()
+                    if amt_str and amt_str not in ['', '-', 'nan', 'None']:
+                        tax_amount = float(amt_str)
+                except (ValueError, TypeError):
+                    pass
+        
+        # 합계 행에서 못 찾으면 totals에서
+        if tax_amount == 0:
+            totals = group_data.get('totals', {})
+            if tax_amount_col in totals:
+                try:
+                    amt_str = str(totals[tax_amount_col]).replace(',', '').replace('원', '').strip()
+                    if amt_str and amt_str not in ['', '-', 'nan', 'None']:
+                        tax_amount = float(amt_str)
+                except (ValueError, TypeError):
+                    pass
+        
+        if tax_amount > 0:
+            return f'''
+            <div style="background: linear-gradient(135deg, #fff9c4 0%, #fff59d 100%); 
+                        padding: 16px 20px; border-radius: 10px; margin: 16px 0;
+                        border-left: 4px solid #ffc107; border: 1px solid #ffca28;">
+                <strong style="color: #856404; font-size: 1.1em;">🧾 세금계산서 발행 정보</strong>
+                <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                        <span style="color: #665c00;">CSO관리업체명:</span>
+                        <strong style="color: #333; margin-left: 8px;">{group_key}</strong>
+                    </div>
+                    <div style="white-space: nowrap;">
+                        <span style="color: #665c00;">발행 금액:</span>
+                        <strong style="color: #856404; font-size: 1.3em; margin-left: 8px; white-space: nowrap;">₩{tax_amount:,.0f}</strong>
+                    </div>
+                </div>
+            </div>
+            '''
+        return ""
+    
     # 페이지 헤더
     render_page_header(5, "메일 발송", "최종 확인 후 이메일을 발송하세요")
     
@@ -4420,8 +4476,11 @@ def render_step5():
         with st.spinner("테스트 발송 중..."):
             server, error = create_smtp_connection(config)
             if server:
+                # 세금계산서 정보 HTML 생성
+                tax_html = get_tax_invoice_html(sample_key, sample_data)
                 html = render_email_content(sample_key, sample_data,
-                    st.session_state.display_cols, st.session_state.amount_cols, templates)
+                    st.session_state.display_cols, st.session_state.amount_cols, templates,
+                    extra_html_before_table=tax_html)
                 subject = Template(templates['subject']).render(company_name=sample_key,
                     period=datetime.now().strftime('%Y년 %m월'))
                 
@@ -4499,8 +4558,11 @@ def render_step5():
                 count_text.markdown(f"`{i+1}/{total}`")
                 
                 try:
+                    # 세금계산서 정보 HTML 생성
+                    tax_html = get_tax_invoice_html(gk, gd)
                     html = render_email_content(gk, gd, st.session_state.display_cols,
-                        st.session_state.amount_cols, templates)
+                        st.session_state.amount_cols, templates,
+                        extra_html_before_table=tax_html)
                     subject = Template(templates['subject']).render(company_name=gk,
                         period=datetime.now().strftime('%Y년 %m월'))
                     
